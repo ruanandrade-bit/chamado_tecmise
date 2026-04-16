@@ -1,10 +1,136 @@
+import { MongoClient } from 'mongodb'
+import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs'
+import { join, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { STATUSES, TICKETS } from '../data/mockData.js'
 
+// ─── File persistence (fallback for local dev) ──────────────────────
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const DATA_DIR = join(__dirname, '..', 'data')
+const STORE_PATH = join(DATA_DIR, 'store.json')
+
+function loadFromDisk() {
+  try {
+    if (existsSync(STORE_PATH)) {
+      const raw = readFileSync(STORE_PATH, 'utf-8')
+      const data = JSON.parse(raw)
+      if (Array.isArray(data.tickets)) {
+        console.log(`[store] 📁 Loaded ${data.tickets.length} tickets from disk.`)
+        return { tickets: data.tickets, notifications: data.notifications || [] }
+      }
+    }
+  } catch (err) {
+    console.warn('[store] ⚠️  Could not read store.json:', err.message)
+  }
+  return null
+}
+
+function saveToDisk() {
+  try {
+    if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true })
+    writeFileSync(STORE_PATH, JSON.stringify({
+      tickets: state.tickets,
+      notifications: state.notifications,
+      _savedAt: new Date().toISOString()
+    }, null, 2))
+  } catch (err) {
+    console.error('[store] ❌ Failed to save to disk:', err.message)
+  }
+}
+
+// ─── MongoDB persistence (production) ───────────────────────────────
+let mongoCollection = null
+
+async function connectMongo() {
+  const uri = process.env.MONGODB_URI
+  if (!uri) {
+    console.log('[store] ℹ️  MONGODB_URI not set — using local JSON file only.')
+    return false
+  }
+
+  try {
+    const client = new MongoClient(uri)
+    await client.connect()
+    mongoCollection = client.db('s4s_chamados').collection('state')
+    console.log('[store] ✅ Connected to MongoDB Atlas.')
+    return true
+  } catch (err) {
+    console.error('[store] ❌ MongoDB connection failed:', err.message)
+    return false
+  }
+}
+
+async function loadFromMongo() {
+  if (!mongoCollection) return null
+  try {
+    const doc = await mongoCollection.findOne({ _id: 'app_state' })
+    if (doc && Array.isArray(doc.tickets)) {
+      console.log(`[store] ☁️  Loaded ${doc.tickets.length} tickets from MongoDB.`)
+      return { tickets: doc.tickets, notifications: doc.notifications || [] }
+    }
+  } catch (err) {
+    console.warn('[store] ⚠️  Failed to load from MongoDB:', err.message)
+  }
+  return null
+}
+
+function saveToMongo() {
+  if (!mongoCollection) return
+  mongoCollection.replaceOne(
+    { _id: 'app_state' },
+    {
+      _id: 'app_state',
+      tickets: state.tickets,
+      notifications: state.notifications,
+      _savedAt: new Date()
+    },
+    { upsert: true }
+  ).catch((err) => {
+    console.error('[store] ❌ MongoDB save failed:', err.message)
+  })
+}
+
+// ─── Unified persistence ────────────────────────────────────────────
+function persistState() {
+  saveToMongo()
+  saveToDisk()
+}
+
+// ─── State ──────────────────────────────────────────────────────────
 const state = {
   tickets: structuredClone(TICKETS),
   notifications: []
 }
 
+/**
+ * Must be called once before the server starts listening.
+ * Connects to MongoDB (if configured) and loads persisted data.
+ */
+export async function initStore() {
+  const connected = await connectMongo()
+
+  // Priority: MongoDB → JSON file → mock data
+  const mongoData = connected ? await loadFromMongo() : null
+  const diskData = !mongoData ? loadFromDisk() : null
+
+  if (mongoData) {
+    state.tickets = mongoData.tickets
+    state.notifications = mongoData.notifications
+  } else if (diskData) {
+    state.tickets = diskData.tickets
+    state.notifications = diskData.notifications
+    // Seed MongoDB if it's empty but connected
+    if (connected) {
+      console.log('[store] 🔄 Syncing disk data to MongoDB...')
+      saveToMongo()
+    }
+  } else {
+    console.log('[store] 🆕 First run — seeding with mock data.')
+    persistState()
+  }
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────
 function nextTicketId() {
   const maxId = state.tickets.reduce((max, ticket) => {
     const numeric = Number.parseInt(ticket.id.split('-')[1], 10)
@@ -18,6 +144,7 @@ function addHistory(ticket, action, by) {
   ticket.history = [...(ticket.history || []), { action, by, date: new Date().toISOString() }]
 }
 
+// ─── Public store ───────────────────────────────────────────────────
 export const memoryStore = {
   getTickets(filters = {}) {
     const { status, responsible, searchTerm } = filters
@@ -62,6 +189,7 @@ export const memoryStore = {
     }
 
     state.tickets.unshift(ticket)
+    persistState()
 
     memoryStore.pushNotification({
       title: '🆕 Novo Chamado',
@@ -79,6 +207,7 @@ export const memoryStore = {
 
     Object.assign(ticket, updates)
     addHistory(ticket, 'Atualizado', by)
+    persistState()
     return ticket
   },
 
@@ -92,6 +221,7 @@ export const memoryStore = {
     ticket.status = status
     const label = STATUSES.find((s) => s.value === status)?.label || status
     addHistory(ticket, `Movido para ${label}`, actorName || 'Sistema')
+    persistState()
 
     if (status === 'resolvido') {
       memoryStore.pushNotification({
@@ -113,6 +243,7 @@ export const memoryStore = {
       item.id === itemId ? { ...item, completed } : item
     ))
 
+    persistState()
     return ticket
   },
 
@@ -124,6 +255,7 @@ export const memoryStore = {
     const item = { id: nextId, title, completed: false }
     ticket.checklist = [...ticket.checklist, item]
 
+    persistState()
     return ticket
   },
 
@@ -131,6 +263,7 @@ export const memoryStore = {
     const index = state.tickets.findIndex((ticket) => ticket.id === id)
     if (index === -1) return false
     state.tickets.splice(index, 1)
+    persistState()
     return true
   },
 
@@ -169,6 +302,7 @@ export const memoryStore = {
       timestamp: new Date().toISOString(),
       ...notification
     })
+    persistState()
   },
 
   consumeNotifications(userEmail) {
@@ -182,6 +316,7 @@ export const memoryStore = {
     })
 
     state.notifications = remaining
+    if (visible.length > 0) persistState()
     return visible
   },
 

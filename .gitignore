@@ -16,3 +16,6 @@ build
 .turbo
 out
 .vercel
+
+# Persisted backend data (generated at runtime)
+backend/src/data/store.json
