@@ -1,0 +1,17 @@
+node_modules
+dist
+build
+.env
+.env.local
+.env.*.local
+.DS_Store
+*.log
+*.swp
+*.swo
+*~
+.idea
+.vscode
+*.iml
+.parcel-cache
+.turbo
+out
