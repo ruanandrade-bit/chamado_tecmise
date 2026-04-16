@@ -97,7 +97,7 @@ export default function Login() {
 
         {/* Footer */}
         <div className="mt-8 text-center text-xs text-dark-500">
-          <p>S4S Chamados © 2024 • Versão 1.0</p>
+          <p>S4S Chamados © 2026 • Versão 1.0</p>
         </div>
       </div>
     </div>
