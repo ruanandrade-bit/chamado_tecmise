@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Plus, Check, Paperclip, ZoomIn, Image as ImageIcon } from 'lucide-react'
+import { X, Plus, Check, Paperclip, Send, MessageCircle, Image as ImageIcon } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
 
@@ -8,12 +8,18 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
   const { user } = useAuthStore()
   const [newChecklistItem, setNewChecklistItem] = useState('')
   const [selectedImage, setSelectedImage] = useState(null)
+  const [commentText, setCommentText] = useState('')
+  const [isSendingComment, setIsSendingComment] = useState(false)
   const canManageChecklist = user?.canDragDrop === true
   
   if (!ticket) return null
 
   const progress = getTicketProgress(ticket)
   const statusConfig = STATUSES.find(s => s.value === ticket.status)
+
+  // Normalize comments: support both legacy string `notes` and new `comments` array
+  const comments = Array.isArray(ticket.comments) ? ticket.comments : []
+
   const normalizedAttachments = (ticket.attachments || []).map((attachment, index) => {
     if (typeof attachment === 'string') {
       return {
@@ -41,6 +47,33 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
     if (newChecklistItem.trim()) {
       addChecklistItem(ticket.id, newChecklistItem)
       setNewChecklistItem('')
+    }
+  }
+
+  const handleSendComment = async () => {
+    if (!commentText.trim() || isSendingComment) return
+    setIsSendingComment(true)
+    try {
+      const newComment = {
+        id: Date.now(),
+        text: commentText.trim(),
+        by: user?.name || 'Anônimo',
+        date: new Date().toISOString()
+      }
+      const updatedComments = [...comments, newComment]
+      await updateTicket(ticket.id, { comments: updatedComments })
+      setCommentText('')
+    } catch (err) {
+      console.error('Erro ao enviar comentário:', err)
+    } finally {
+      setIsSendingComment(false)
+    }
+  }
+
+  const handleCommentKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSendComment()
     }
   }
 
@@ -244,16 +277,55 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
             </div>
           )}
 
-          {/* Notes */}
+          {/* Comments (was "Observações") */}
           <div className="card-base border-dark-600">
-            <h3 className="font-semibold text-dark-100 mb-3">Observações</h3>
-            <textarea
-              value={ticket.notes}
-              onChange={(e) => updateTicket(ticket.id, { notes: e.target.value })}
-              placeholder="Adicione observações sobre este chamado..."
-              rows="3"
-              className="input-base w-full resize-none"
-            />
+            <h3 className="font-semibold text-dark-100 mb-4 flex items-center gap-2">
+              <MessageCircle size={18} className="text-primary-light" />
+              Comentários
+            </h3>
+
+            {/* Comment list */}
+            {comments.length > 0 ? (
+              <div className="space-y-3 mb-4 max-h-60 overflow-y-auto pr-1">
+                {comments.map((comment, index) => (
+                  <div
+                    key={comment.id || index}
+                    className="bg-dark-750 border border-dark-600 rounded-lg p-3 transition-all hover:border-dark-500"
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-sm font-semibold text-primary-light">{comment.by}</span>
+                      <span className="text-xs text-dark-500">
+                        {new Date(comment.date).toLocaleString('pt-BR')}
+                      </span>
+                    </div>
+                    <p className="text-sm text-dark-300 leading-relaxed whitespace-pre-wrap">{comment.text}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-dark-500 mb-4">Nenhum comentário ainda.</p>
+            )}
+
+            {/* Comment input */}
+            <div className="flex gap-2 items-end">
+              <textarea
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                onKeyDown={handleCommentKeyDown}
+                placeholder="Escreva um comentário... (Enter para enviar, Shift+Enter para nova linha)"
+                rows="2"
+                className="input-base w-full resize-none flex-1 text-sm"
+              />
+              <button
+                onClick={handleSendComment}
+                disabled={!commentText.trim() || isSendingComment}
+                className="btn-primary px-4 py-2.5 flex items-center gap-2 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                title="Enviar comentário"
+              >
+                <Send size={16} />
+                <span className="hidden sm:inline text-sm">Enviar</span>
+              </button>
+            </div>
           </div>
 
           {/* History */}

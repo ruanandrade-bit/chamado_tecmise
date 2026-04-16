@@ -184,6 +184,7 @@ export const memoryStore = {
       createdAt: new Date().toISOString(),
       attachments: payload.attachments || [],
       checklist: [],
+      comments: [],
       notes: '',
       history: [{ action: 'Criado', by: currentUser.name, date: new Date().toISOString() }]
     }
@@ -205,8 +206,12 @@ export const memoryStore = {
     const ticket = memoryStore.getTicketById(id)
     if (!ticket) return null
 
+    // Don't pollute history when only comments change
+    const isOnlyComments = Object.keys(updates).length === 1 && 'comments' in updates
     Object.assign(ticket, updates)
-    addHistory(ticket, 'Atualizado', by)
+    if (!isOnlyComments) {
+      addHistory(ticket, 'Atualizado', by)
+    }
     persistState()
     return ticket
   },
