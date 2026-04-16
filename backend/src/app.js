@@ -19,6 +19,11 @@ app.use(cors({
       return callback(null, true)
     }
 
+    // Accept any Vercel preview/production deployment
+    if (origin && origin.endsWith('.vercel.app')) {
+      return callback(null, true)
+    }
+
     return callback(new Error('Origin não permitida no CORS.'))
   }
 }))
