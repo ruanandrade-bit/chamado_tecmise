@@ -36,7 +36,7 @@ export default function Login() {
       <div className="w-full max-w-md relative z-10 animate-slideInUp">
         {/* Logo and title */}
         <div className="text-center mb-10">
-          <img src="/favicon.png" alt="Logo S4S" className="w-20 h-20 object-contain mx-auto mb-4 drop-shadow-md" />
+          <img src="/logo.png" alt="Logo S4S" className="w-20 h-20 object-contain mx-auto mb-4 drop-shadow-md" />
           <h1 className="text-3xl font-bold mb-2 text-dark-100">S4S Chamados</h1>
           <p className="text-dark-400">Gestão moderna de atendimento educacional</p>
         </div>

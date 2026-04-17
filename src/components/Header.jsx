@@ -169,7 +169,7 @@ export default function Header({ onMenuClick }) {
             </button>
             
             <div className="flex items-center gap-3">
-              <img src="/favicon.png" alt="Logo S4S" className="w-8 h-8 object-contain drop-shadow-sm" />
+              <img src="/logo.png" alt="Logo S4S" className="w-8 h-8 object-contain drop-shadow-sm" />
               <div className="hidden sm:block">
                 <h1 className="text-lg font-bold bg-gradient-to-r from-primary-light to-primary bg-clip-text text-transparent">
                   S4S Chamados
