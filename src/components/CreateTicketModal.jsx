@@ -3,6 +3,22 @@ import { X, Upload, Image as ImageIcon } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
 
+const SCHOOL_DEVICES = {
+  'Colégio Frei': ['059', '063', '064'],
+  'Colégio Dom José': ['048', '053', '069'],
+  'Colégio Honorata': ['035', '055'],
+  'Colégio Rotary': ['045', '066'],
+  'Colégio Mercedes': ['056', '072'],
+  'Colégio Terezinha': ['023', '026', '027', '029', '042', '043', '044', '065'],
+  'Colégio Cemma': ['050', '067', '071', '076'],
+  'Colégio Grace': ['032', '036', '037', '038'],
+  'Colégio Graziela': ['012', '014'],
+  'Colégio Antônio': ['011', '013'],
+  'Colégio Médici': ['034', '070', '073'],
+}
+
+const SCHOOL_NAMES = Object.keys(SCHOOL_DEVICES)
+
 export default function CreateTicketModal({ onClose }) {
   const { addTicket } = useTicketsStore()
   const { user } = useAuthStore()
@@ -11,7 +27,6 @@ export default function CreateTicketModal({ onClose }) {
   
   const [formData, setFormData] = useState({
     school: '',
-    schoolCustom: '',
     classroom: '',
     period: 'Matutino',
     device: '',
@@ -24,7 +39,6 @@ export default function CreateTicketModal({ onClose }) {
   const [loading, setLoading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
 
-  const schools = ['Escola Municipal A', 'Escola Estadual B', 'Escola Municipal C', 'Escola Privada D']
   const periods = ['Matutino', 'Vespertino', 'Integral']
   const problemLocations = [
     'Sem dados no relatório',
@@ -34,10 +48,17 @@ export default function CreateTicketModal({ onClose }) {
     'Processar imagens',
     'Criação de acesso S4S'
   ]
+
+  const availableDevices = formData.school ? (SCHOOL_DEVICES[formData.school] || []) : []
   
   const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    if (name === 'school') {
+      // Reset device when school changes
+      setFormData(prev => ({ ...prev, school: value, device: '' }))
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }))
+    }
   }
 
   const handleImageUpload = (files) => {
@@ -81,7 +102,7 @@ export default function CreateTicketModal({ onClose }) {
     e.preventDefault()
 
     const requiredFields = [
-      { key: 'schoolCustom', label: 'Escola' },
+      { key: 'school', label: 'Escola' },
       { key: 'classroom', label: 'Turma' },
       { key: 'device', label: 'Device' },
       { key: 'description', label: 'Descrição' }
@@ -100,7 +121,7 @@ export default function CreateTicketModal({ onClose }) {
 
     try {
       await addTicket({
-        school: formData.schoolCustom.trim(),
+        school: formData.school.trim(),
         classroom: formData.classroom.trim(),
         device: String(formData.device).trim(),
         period: formData.period,
@@ -140,20 +161,23 @@ export default function CreateTicketModal({ onClose }) {
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Grid de campos */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* School - Input apenas */}
+            {/* School - Dropdown predefinido */}
             <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-dark-300 mb-2">
                 Escola *
               </label>
-              <input
-                type="text"
-                name="schoolCustom"
-                value={formData.schoolCustom}
+              <select
+                name="school"
+                value={formData.school}
                 onChange={handleChange}
-                placeholder="Digite o nome da escola"
                 className="input-base w-full"
                 required
-              />
+              >
+                <option value="" disabled>Selecione a escola</option>
+                {SCHOOL_NAMES.map(name => (
+                  <option key={name} value={name}>{name}</option>
+                ))}
+              </select>
             </div>
 
             {/* Classroom */}
@@ -172,20 +196,31 @@ export default function CreateTicketModal({ onClose }) {
               />
             </div>
 
-            {/* Device - Números */}
+            {/* Device - Dropdown filtrado pela escola */}
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">
                 Device *
               </label>
-              <input
-                type="number"
+              <select
                 name="device"
                 value={formData.device}
                 onChange={handleChange}
-                placeholder="Ex: 001, 042"
                 className="input-base w-full"
                 required
-              />
+                disabled={!formData.school}
+              >
+                <option value="" disabled>
+                  {formData.school ? 'Selecione o device' : 'Selecione uma escola primeiro'}
+                </option>
+                {availableDevices.map(dev => (
+                  <option key={dev} value={dev}>{dev}</option>
+                ))}
+              </select>
+              {formData.school && (
+                <p className="text-xs text-dark-500 mt-1">
+                  {availableDevices.length} device{availableDevices.length !== 1 ? 's' : ''} disponíve{availableDevices.length !== 1 ? 'is' : 'l'}
+                </p>
+              )}
             </div>
 
             {/* Period */}
