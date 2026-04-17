@@ -206,10 +206,12 @@ export const memoryStore = {
     const ticket = memoryStore.getTicketById(id)
     if (!ticket) return null
 
-    // Don't pollute history when only comments change
-    const isOnlyComments = Object.keys(updates).length === 1 && 'comments' in updates
+    // Don't pollute history when only comments or attachments change
+    const silentKeys = ['comments', 'attachments']
+    const updateKeys = Object.keys(updates)
+    const isSilentUpdate = updateKeys.length === 1 && silentKeys.includes(updateKeys[0])
     Object.assign(ticket, updates)
-    if (!isOnlyComments) {
+    if (!isSilentUpdate) {
       addHistory(ticket, 'Atualizado', by)
     }
     persistState()

@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { X, Plus, Check, Paperclip, Send, MessageCircle, Image as ImageIcon } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { X, Plus, Check, Paperclip, Send, MessageCircle, Upload, Image as ImageIcon } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
 
@@ -10,7 +10,14 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
   const [selectedImage, setSelectedImage] = useState(null)
   const [commentText, setCommentText] = useState('')
   const [isSendingComment, setIsSendingComment] = useState(false)
+  const [confirmDeleteIndex, setConfirmDeleteIndex] = useState(null)
+  const fileInputRef = useRef(null)
   const canManageChecklist = user?.canDragDrop === true
+
+  // Permission: owner of the ticket OR admin (Ruan)
+  const isAdmin = user?.canDragDrop === true
+  const isOwner = user?.name === ticket?.responsible
+  const canManageAttachments = isAdmin || isOwner
   
   if (!ticket) return null
 
@@ -77,8 +84,75 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
     }
   }
 
+  const handleAddPhotos = (files) => {
+    if (!canManageAttachments) return
+    const fileArray = Array.from(files || [])
+    const currentAttachments = ticket.attachments || []
+    let pending = fileArray.length
+
+    if (pending === 0) return
+
+    const newAttachments = []
+
+    fileArray.forEach(file => {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        newAttachments.push({
+          name: file.name,
+          preview: event.target.result,
+          type: file.type
+        })
+        pending--
+        if (pending === 0) {
+          updateTicket(ticket.id, {
+            attachments: [...currentAttachments, ...newAttachments]
+          })
+        }
+      }
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const handleRemoveAttachment = async (index) => {
+    if (!canManageAttachments) return
+    const currentAttachments = [...(ticket.attachments || [])]
+    currentAttachments.splice(index, 1)
+    await updateTicket(ticket.id, { attachments: currentAttachments })
+    setConfirmDeleteIndex(null)
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      {/* Confirm delete dialog */}
+      {confirmDeleteIndex !== null && (
+        <div
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[80] p-4"
+          onClick={() => setConfirmDeleteIndex(null)}
+        >
+          <div
+            className="bg-dark-800 border border-dark-600 rounded-2xl p-6 max-w-sm w-full animate-slideInUp"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-dark-100 mb-2">Excluir foto</h3>
+            <p className="text-sm text-dark-300 mb-6">Deseja realmente excluir essa foto? Essa ação não pode ser desfeita.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmDeleteIndex(null)}
+                className="btn-secondary flex-1 text-sm"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => handleRemoveAttachment(confirmDeleteIndex)}
+                className="flex-1 px-4 py-2.5 bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 rounded-lg text-sm font-medium transition-all"
+              >
+                Excluir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Image zoom modal */}
       {selectedImage && (
         <div
@@ -157,7 +231,7 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
 
           {/* Problem type and description */}
           <div className="card-base border-dark-600">
-            <h3 className="font-semibold text-dark-100 mb-3">Tipo de Problema</h3>
+            <h3 className="font-semibold text-dark-100 mb-3">Local do problema</h3>
             <p className="px-3 py-2 bg-dark-750 rounded-lg text-sm text-dark-300 mb-4">{ticket.problemType}</p>
             
             <h3 className="font-semibold text-dark-100 mb-3">Descrição</h3>
@@ -242,15 +316,39 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
           </div>
 
           {/* Attachments */}
-          {normalizedAttachments.length > 0 && (
-            <div className="card-base border-dark-600">
-              <h3 className="font-semibold text-dark-100 mb-4 flex items-center gap-2">
+          <div className="card-base border-dark-600">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-dark-100 flex items-center gap-2">
                 <Paperclip size={18} className="text-primary-light" />
                 Anexos ({normalizedAttachments.length})
               </h3>
-              
+              {canManageAttachments && (
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="btn-primary px-3 py-1.5 flex items-center gap-1.5 text-sm"
+                >
+                  <Upload size={14} />
+                  Adicionar foto
+                </button>
+              )}
+            </div>
+
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={(e) => {
+                handleAddPhotos(e.target.files)
+                e.target.value = ''
+              }}
+              className="hidden"
+            />
+
+            {normalizedAttachments.length > 0 ? (
               <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-3">
-                {normalizedAttachments.map((attachment) => (
+                {normalizedAttachments.map((attachment, index) => (
                   <div key={attachment.id} className="group relative">
                     <button
                       onClick={() => attachment.isImage && setSelectedImage(attachment.preview)}
@@ -270,12 +368,27 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
                         <ImageIcon size={24} className="text-primary-light/50 group-hover:text-primary-light" />
                       )}
                     </button>
+                    {/* Delete button */}
+                    {canManageAttachments && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setConfirmDeleteIndex(index)
+                        }}
+                        className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg"
+                        title="Remover foto"
+                      >
+                        <X size={12} className="text-white" />
+                      </button>
+                    )}
                     <p className="text-xs text-dark-400 mt-2 truncate text-center">{attachment.name}</p>
                   </div>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <p className="text-sm text-dark-500">Nenhum anexo.</p>
+            )}
+          </div>
 
           {/* Comments (was "Observações") */}
           <div className="card-base border-dark-600">
@@ -356,3 +469,4 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
     </div>
   )
 }
+

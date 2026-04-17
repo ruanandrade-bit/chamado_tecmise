@@ -106,7 +106,7 @@ export default function Kanban() {
                         ticket={ticket}
                         onClick={() => handleTicketClick(ticket)}
                         draggable={true}
-                        showArchiveAction={status.value === 'resolvido'}
+                        showArchiveAction={status.value === 'resolvido' && canDragDrop}
                         onArchive={handleArchiveTicket}
                       />
                     </div>

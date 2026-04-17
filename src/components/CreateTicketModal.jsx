@@ -26,7 +26,14 @@ export default function CreateTicketModal({ onClose }) {
 
   const schools = ['Escola Municipal A', 'Escola Estadual B', 'Escola Municipal C', 'Escola Privada D']
   const periods = ['Matutino', 'Vespertino', 'Integral']
-  const problemTypes = ['Erro de sistema', 'Dúvida de aluno', 'Problema de acesso', 'Integração API', 'Outro']
+  const problemLocations = [
+    'Sem dados no relatório',
+    'Gráfico juntos',
+    'Sem videos na AWS',
+    'Cadastro de escola/turmas',
+    'Processar imagens',
+    'Criação de acesso S4S'
+  ]
   
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -198,10 +205,10 @@ export default function CreateTicketModal({ onClose }) {
               </select>
             </div>
 
-            {/* Problem Type (Opcional) */}
+            {/* Local do problema */}
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">
-                Tipo de Problema
+                Local do problema
               </label>
               <select
                 name="problemType"
@@ -209,9 +216,9 @@ export default function CreateTicketModal({ onClose }) {
                 onChange={handleChange}
                 className="input-base w-full"
               >
-                <option value="">Nenhum</option>
-                {problemTypes.map(type => (
-                  <option key={type} value={type}>{type}</option>
+                <option value="" disabled>Escolha o local do problema</option>
+                {problemLocations.map(loc => (
+                  <option key={loc} value={loc}>{loc}</option>
                 ))}
               </select>
             </div>

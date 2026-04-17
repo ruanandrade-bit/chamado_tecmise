@@ -1,6 +1,11 @@
 import { LayoutDashboard, Kanban, Archive, X } from 'lucide-react'
+import { useTicketsStore } from '../stores/ticketsStore'
 
 export default function Sidebar({ currentPage, onPageChange, isMobileOpen, onMobileClose }) {
+  const { getStatistics } = useTicketsStore()
+  const stats = getStatistics()
+  const uniqueResponsibles = Object.keys(stats.byResponsible).length
+
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'kanban', label: 'Kanban', icon: Kanban },
@@ -59,9 +64,9 @@ export default function Sidebar({ currentPage, onPageChange, isMobileOpen, onMob
           <div className="px-3 py-2 text-xs text-dark-400">
             <p className="font-semibold text-dark-300 mb-3">INFORMAÇÕES</p>
             <div className="space-y-2 text-dark-500 text-xs">
-              <p>📱 <strong>Equipe:</strong> 5 profissionais</p>
-              <p>📋 <strong>Total:</strong> 7 chamados</p>
-              <p>✅ <strong>Resolvidos:</strong> 1</p>
+              <p>📱 <strong>Equipe:</strong> {uniqueResponsibles} profissiona{uniqueResponsibles === 1 ? 'l' : 'is'}</p>
+              <p>📋 <strong>Total:</strong> {stats.total} chamado{stats.total !== 1 ? 's' : ''}</p>
+              <p>✅ <strong>Resolvidos:</strong> {stats.completed}</p>
             </div>
           </div>
         </div>
