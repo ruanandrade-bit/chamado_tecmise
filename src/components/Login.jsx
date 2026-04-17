@@ -47,7 +47,7 @@ export default function Login() {
             <img src="/logo.png" alt="Logo S4S" className="login-logo" />
           </div>
           <h1 className="login-title">S4S Chamados</h1>
-          <p className="login-subtitle">Gestão moderna de atendimento educacional</p>
+          <p className="login-subtitle">Sistema interno de gestão de chamados</p>
         </div>
 
         {/* Login form */}
@@ -68,7 +68,7 @@ export default function Login() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="usuario@educacao.com.br"
+                placeholder="usuario@s4s.com"
                 className="login-input"
                 required
               />
