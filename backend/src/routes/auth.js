@@ -27,7 +27,8 @@ router.get('/users', (_req, res) => {
     email,
     name: user.name,
     role: user.role,
-    canDragDrop: user.canDragDrop
+    canDragDrop: user.canDragDrop,
+    viewOnly: user.viewOnly || false
   }))
 
   return res.json({ users })

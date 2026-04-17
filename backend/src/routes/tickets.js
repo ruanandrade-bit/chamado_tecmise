@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { authRequired, adminOnly } from '../middleware/auth.js'
+import { authRequired, adminOnly, viewOnlyBlock } from '../middleware/auth.js'
 import { memoryStore } from '../services/memoryStore.js'
 
 const router = Router()
@@ -40,7 +40,7 @@ router.get('/:id', (req, res) => {
   return res.json({ ticket })
 })
 
-router.post('/', (req, res) => {
+router.post('/', viewOnlyBlock, (req, res) => {
   const { school, classroom, device, description } = req.body || {}
 
   if (!String(school || '').trim() || !String(classroom || '').trim() || !String(device || '').trim() || !String(description || '').trim()) {
@@ -51,13 +51,13 @@ router.post('/', (req, res) => {
   return res.status(201).json({ ticket })
 })
 
-router.patch('/:id', (req, res) => {
+router.patch('/:id', viewOnlyBlock, (req, res) => {
   const ticket = memoryStore.updateTicket(req.params.id, req.body, req.user.name)
   if (!ticket) return res.status(404).json({ message: 'Chamado não encontrado.' })
   return res.json({ ticket })
 })
 
-router.post('/:id/move', (req, res) => {
+router.post('/:id/move', viewOnlyBlock, (req, res) => {
   const { status } = req.body || {}
   if (!status) return res.status(400).json({ message: 'status é obrigatório.' })
 

@@ -4,7 +4,8 @@ export const USERS = {
   'carol@s4s.com': { id: 2, name: 'Carol', role: 'Psicóloga', password: '123456', canDragDrop: false },
   'beatriz@s4s.com': { id: 3, name: 'Beatriz', role: 'Pedagoga', password: '123456', canDragDrop: false },
   'jessica@s4s.com': { id: 4, name: 'Jessica', role: 'Pedagoga', password: '123456', canDragDrop: false },
-  'gabi@s4s.com': { id: 5, name: 'Gabi', role: 'Pedagoga', password: '123456', canDragDrop: false }
+  'gabi@s4s.com': { id: 5, name: 'Gabi', role: 'Pedagoga', password: '123456', canDragDrop: false },
+  'tecmise@s4s.com': { id: 6, name: 'Tecmise', role: 'Visualização', password: '123456', canDragDrop: false, viewOnly: true }
 }
 
 export const STATUSES = [

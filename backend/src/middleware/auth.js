@@ -10,7 +10,8 @@ export function signToken(user) {
       email: user.email,
       name: user.name,
       role: user.role,
-      canDragDrop: user.canDragDrop
+      canDragDrop: user.canDragDrop,
+      viewOnly: user.viewOnly || false
     },
     JWT_SECRET,
     { expiresIn: '7d' }
@@ -47,6 +48,18 @@ export function adminOnly(req, res, next) {
   next()
 }
 
+export function viewOnlyBlock(req, res, next) {
+  const tokenClaim = req.user?.viewOnly
+  const freshUser = req.user?.email ? USERS[req.user.email] : null
+  const isViewOnly = tokenClaim || freshUser?.viewOnly
+
+  if (isViewOnly) {
+    return res.status(403).json({ message: 'Usuário de visualização não pode executar esta ação.' })
+  }
+
+  next()
+}
+
 export function sanitizeUser(email) {
   const user = USERS[email]
   if (!user) return null
@@ -55,6 +68,7 @@ export function sanitizeUser(email) {
     name: user.name,
     email,
     role: user.role,
-    canDragDrop: user.canDragDrop
+    canDragDrop: user.canDragDrop,
+    viewOnly: user.viewOnly || false
   }
 }

@@ -12,6 +12,8 @@ export default function Kanban() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
   const [selectedTicketId, setSelectedTicketId] = useState(null)
 
+  const isViewOnly = user?.viewOnly === true
+
   const ticketsByStatus = getTicketsByStatus()
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId) || null
   const canDragDrop = user?.canDragDrop
@@ -55,12 +57,14 @@ export default function Kanban() {
           <h1 className="text-3xl font-bold text-dark-100 mb-1">Kanban Board</h1>
         </div>
         
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus size={20} /> Novo Chamado
-        </button>
+        {!isViewOnly && (
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus size={20} /> Novo Chamado
+          </button>
+        )}
       </div>
 
       {/* Kanban board */}
