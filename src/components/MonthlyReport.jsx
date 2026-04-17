@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { FileText, Plus, Trash2, Send, CalendarDays, ClipboardList, Loader2, Ticket, Pencil, X, Check, AlertTriangle } from 'lucide-react'
+import { FileText, Plus, Trash2, Send, CalendarDays, ClipboardList, Loader2, Ticket, Pencil, X, Check, AlertTriangle, ShieldAlert } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { api } from '../services/api'
@@ -11,82 +11,118 @@ const MONTH_NAMES = [
 ]
 
 /* ─── Confirm‑Delete Modal ────────────────────────────────────────── */
-function ConfirmDeleteModal({ isOpen, onClose, onConfirm, isDeleting }) {
+function ConfirmDeleteModal({ isOpen, onClose, onConfirm, isDeleting, observationText }) {
   if (!isOpen) return null
+
+  // Close on Escape
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape' && !isDeleting) onClose()
+  }
 
   return (
     <div
       className="fixed inset-0 z-[9999] flex items-center justify-center"
       style={{ animation: 'fadeIn 0.2s ease-out' }}
+      onKeyDown={handleKeyDown}
+      tabIndex={-1}
     >
       {/* Backdrop */}
       <div
         className="absolute inset-0"
         style={{
-          background: 'rgba(0, 0, 0, 0.6)',
-          backdropFilter: 'blur(6px)',
-          WebkitBackdropFilter: 'blur(6px)',
+          background: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
         }}
-        onClick={onClose}
+        onClick={!isDeleting ? onClose : undefined}
       />
 
       {/* Modal card */}
       <div
-        className="relative w-full max-w-sm mx-4 rounded-2xl border p-6"
+        className="relative w-full max-w-md mx-4 rounded-2xl border overflow-hidden"
         style={{
-          background: 'linear-gradient(145deg, rgba(30, 35, 50, 0.95) 0%, rgba(20, 24, 36, 0.98) 100%)',
-          borderColor: 'rgba(239, 68, 68, 0.25)',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 40px rgba(239, 68, 68, 0.08)',
-          animation: 'slideInUp 0.3s ease-out',
+          background: 'linear-gradient(145deg, rgba(30, 35, 50, 0.97) 0%, rgba(18, 22, 34, 0.99) 100%)',
+          borderColor: 'rgba(239, 68, 68, 0.2)',
+          boxShadow: '0 25px 80px rgba(0,0,0,0.6), 0 0 60px rgba(239, 68, 68, 0.06), inset 0 1px 0 rgba(255,255,255,0.03)',
+          animation: 'slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
+        {/* Top red accent bar */}
+        <div
+          style={{
+            height: '3px',
+            background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.6), rgba(239,68,68,0.8), rgba(239,68,68,0.6), transparent)',
+          }}
+        />
+
         {/* Red glow */}
         <div
-          className="absolute -top-8 left-1/2 -translate-x-1/2 w-32 h-32 rounded-full"
+          className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full"
           style={{
-            background: 'radial-gradient(circle, rgba(239, 68, 68, 0.15) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(239, 68, 68, 0.1) 0%, transparent 65%)',
             pointerEvents: 'none',
           }}
         />
 
-        <div className="relative flex flex-col items-center text-center space-y-4">
-          {/* Icon */}
+        <div className="relative p-6 flex flex-col items-center text-center space-y-5">
+          {/* Animated icon */}
           <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center"
+            className="w-18 h-18 rounded-2xl flex items-center justify-center"
             style={{
-              background: 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(220,38,38,0.1) 100%)',
-              border: '1px solid rgba(239,68,68,0.3)',
+              width: '72px',
+              height: '72px',
+              background: 'linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(220,38,38,0.08) 100%)',
+              border: '1px solid rgba(239,68,68,0.2)',
+              boxShadow: '0 0 30px rgba(239,68,68,0.08)',
             }}
           >
-            <AlertTriangle size={28} style={{ color: '#f87171' }} />
+            <ShieldAlert size={32} style={{ color: '#f87171' }} />
           </div>
 
           {/* Text */}
-          <div>
-            <h3 className="text-lg font-bold text-dark-100" style={{ color: '#f1f5f9' }}>
-              Excluir Observação
+          <div className="space-y-2">
+            <h3 className="text-xl font-bold" style={{ color: '#f1f5f9' }}>
+              Excluir Observação?
             </h3>
-            <p className="text-sm mt-1" style={{ color: '#94a3b8' }}>
-              Tem certeza que deseja excluir esta observação? Essa ação não poderá ser desfeita.
+            <p className="text-sm leading-relaxed" style={{ color: '#94a3b8' }}>
+              Tem certeza que deseja excluir esta observação? Essa ação <strong style={{ color: '#f87171' }}>não poderá ser desfeita</strong>.
             </p>
           </div>
 
+          {/* Preview of observation being deleted */}
+          {observationText && (
+            <div
+              className="w-full rounded-xl p-3 text-left"
+              style={{
+                background: 'rgba(239, 68, 68, 0.04)',
+                border: '1px solid rgba(239, 68, 68, 0.1)',
+              }}
+            >
+              <p className="text-xs font-medium mb-1" style={{ color: '#64748b' }}>Observação a ser excluída:</p>
+              <p className="text-sm line-clamp-3" style={{ color: '#cbd5e1' }}>
+                {observationText.length > 120 ? observationText.slice(0, 120) + '…' : observationText}
+              </p>
+            </div>
+          )}
+
           {/* Actions */}
-          <div className="flex gap-3 w-full mt-2">
+          <div className="flex gap-3 w-full pt-1">
             <button
               onClick={onClose}
               disabled={isDeleting}
-              className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+              className="flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all"
               style={{
-                background: 'rgba(100, 116, 139, 0.12)',
+                background: 'rgba(100, 116, 139, 0.1)',
                 color: '#94a3b8',
-                border: '1px solid rgba(100, 116, 139, 0.2)',
+                border: '1px solid rgba(100, 116, 139, 0.15)',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(100, 116, 139, 0.2)'
+                e.currentTarget.style.background = 'rgba(100, 116, 139, 0.18)'
+                e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.3)'
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(100, 116, 139, 0.12)'
+                e.currentTarget.style.background = 'rgba(100, 116, 139, 0.1)'
+                e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.15)'
               }}
             >
               Cancelar
@@ -94,32 +130,36 @@ function ConfirmDeleteModal({ isOpen, onClose, onConfirm, isDeleting }) {
             <button
               onClick={onConfirm}
               disabled={isDeleting}
-              className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
               style={{
                 background: isDeleting
-                  ? 'rgba(239, 68, 68, 0.3)'
-                  : 'linear-gradient(135deg, rgba(239,68,68,0.8) 0%, rgba(220,38,38,0.9) 100%)',
+                  ? 'rgba(239, 68, 68, 0.2)'
+                  : 'linear-gradient(135deg, rgba(239,68,68,0.75) 0%, rgba(185,28,28,0.85) 100%)',
                 color: '#fff',
-                border: '1px solid rgba(239,68,68,0.4)',
-                boxShadow: '0 4px 15px rgba(239,68,68,0.2)',
+                border: '1px solid rgba(239,68,68,0.35)',
+                boxShadow: isDeleting ? 'none' : '0 4px 20px rgba(239,68,68,0.2)',
                 cursor: isDeleting ? 'not-allowed' : 'pointer',
                 opacity: isDeleting ? 0.7 : 1,
               }}
               onMouseEnter={(e) => {
-                if (!isDeleting) e.currentTarget.style.boxShadow = '0 6px 20px rgba(239,68,68,0.35)'
+                if (!isDeleting) {
+                  e.currentTarget.style.boxShadow = '0 6px 25px rgba(239,68,68,0.35)'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = '0 4px 15px rgba(239,68,68,0.2)'
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(239,68,68,0.2)'
+                e.currentTarget.style.transform = 'translateY(0)'
               }}
             >
               {isDeleting ? (
                 <>
-                  <Loader2 size={14} className="animate-spin" />
+                  <Loader2 size={15} className="animate-spin" />
                   Excluindo...
                 </>
               ) : (
                 <>
-                  <Trash2 size={14} />
+                  <Trash2 size={15} />
                   Sim, excluir
                 </>
               )}
@@ -163,6 +203,11 @@ export default function MonthlyReport() {
   const [editText, setEditText] = useState('')
   const [isSavingEdit, setIsSavingEdit] = useState(false)
   const editTextareaRef = useRef(null)
+
+  // Get the text of the observation to delete (for preview in modal)
+  const deleteTargetText = confirmDeleteId
+    ? observations.find((o) => o.id === confirmDeleteId)?.text || ''
+    : ''
 
   const loadReport = useCallback(async () => {
     try {
@@ -223,7 +268,6 @@ export default function MonthlyReport() {
   const startEditing = (obs) => {
     setEditingId(obs.id)
     setEditText(obs.text)
-    // Focus textarea after render
     setTimeout(() => editTextareaRef.current?.focus(), 50)
   }
 
@@ -268,6 +312,7 @@ export default function MonthlyReport() {
         onClose={() => setConfirmDeleteId(null)}
         onConfirm={handleDeleteObservation}
         isDeleting={!!deletingId}
+        observationText={deleteTargetText}
       />
 
       {/* Header */}
@@ -411,118 +456,180 @@ export default function MonthlyReport() {
         </div>
       ) : (
         <div className="space-y-3">
-          {observations.map((obs, index) => (
-            <div
-              key={obs.id}
-              className="card-base group hover:border-primary-light/30"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  {/* Observation number badge */}
-                  <div className="flex items-center gap-2 mb-2">
-                    <span
-                      className="inline-flex items-center justify-center w-6 h-6 rounded-lg text-xs font-bold"
+          {observations.map((obs, index) => {
+            const isEditing = editingId === obs.id
+
+            return (
+              <div
+                key={obs.id}
+                className="card-base group"
+                style={{
+                  animationDelay: `${index * 50}ms`,
+                  borderColor: isEditing ? 'rgba(251, 191, 36, 0.3)' : undefined,
+                  boxShadow: isEditing ? '0 0 20px rgba(251, 191, 36, 0.06), inset 0 1px 0 rgba(251,191,36,0.05)' : undefined,
+                  transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
+                }}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    {/* Observation number badge + meta */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className="inline-flex items-center justify-center w-6 h-6 rounded-lg text-xs font-bold flex-shrink-0"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(16,185,129,0.15) 100%)',
+                          color: '#86efac',
+                          border: '1px solid rgba(34,197,94,0.25)'
+                        }}
+                      >
+                        {index + 1}
+                      </span>
+                      <span className="text-xs text-dark-500">
+                        por <strong className="text-dark-400">{obs.author}</strong> • {formatDate(obs.createdAt)}
+                        {obs.editedAt && (
+                          <span
+                            className="ml-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md"
+                            style={{
+                              background: 'rgba(251, 191, 36, 0.08)',
+                              color: '#fbbf24',
+                              fontSize: '10px',
+                              border: '1px solid rgba(251, 191, 36, 0.15)',
+                            }}
+                          >
+                            <Pencil size={8} />
+                            editado
+                          </span>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Observation text or edit textarea */}
+                    {isEditing ? (
+                      <div className="pl-8 space-y-3">
+                        <textarea
+                          ref={editTextareaRef}
+                          value={editText}
+                          onChange={(e) => setEditText(e.target.value)}
+                          rows={4}
+                          className="input-base w-full resize-none text-sm"
+                          style={{
+                            borderColor: 'rgba(251, 191, 36, 0.25)',
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                              handleSaveEdit()
+                            }
+                            if (e.key === 'Escape') {
+                              cancelEditing()
+                            }
+                          }}
+                        />
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            onClick={handleSaveEdit}
+                            disabled={!editText.trim() || isSavingEdit}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
+                            style={{
+                              background: 'linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(16,185,129,0.15) 100%)',
+                              color: '#86efac',
+                              border: '1px solid rgba(34,197,94,0.3)',
+                              boxShadow: '0 2px 8px rgba(34,197,94,0.1)',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(34,197,94,0.2)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.boxShadow = '0 2px 8px rgba(34,197,94,0.1)'
+                            }}
+                          >
+                            {isSavingEdit ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <Check size={12} />
+                            )}
+                            Salvar alteração
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            disabled={isSavingEdit}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all"
+                            style={{
+                              background: 'rgba(100, 116, 139, 0.08)',
+                              color: '#94a3b8',
+                              border: '1px solid rgba(100, 116, 139, 0.15)',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'rgba(100, 116, 139, 0.15)'
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(100, 116, 139, 0.08)'
+                            }}
+                          >
+                            <X size={12} />
+                            Cancelar
+                          </button>
+                          <span className="text-xs text-dark-500 ml-auto hidden sm:block">
+                            Ctrl+Enter salvar · Esc cancelar
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-dark-200 text-sm leading-relaxed whitespace-pre-wrap pl-8">
+                        {obs.text}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Action buttons — admin only */}
+                  {isAdmin && !isEditing && (
+                    <div
+                      className="flex-shrink-0 flex items-center gap-0.5 rounded-lg p-0.5 opacity-0 group-hover:opacity-100 transition-all duration-200"
                       style={{
-                        background: 'linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(16,185,129,0.15) 100%)',
-                        color: '#86efac',
-                        border: '1px solid rgba(34,197,94,0.25)'
+                        background: 'rgba(100, 116, 139, 0.06)',
+                        border: '1px solid transparent',
                       }}
                     >
-                      {index + 1}
-                    </span>
-                    <span className="text-xs text-dark-500">
-                      por <strong className="text-dark-400">{obs.author}</strong> • {formatDate(obs.createdAt)}
-                      {obs.editedAt && (
-                        <span className="ml-1 italic" style={{ color: '#64748b' }}>(editado)</span>
-                      )}
-                    </span>
-                  </div>
-
-                  {/* Observation text or edit textarea */}
-                  {editingId === obs.id ? (
-                    <div className="pl-8 space-y-2">
-                      <textarea
-                        ref={editTextareaRef}
-                        value={editText}
-                        onChange={(e) => setEditText(e.target.value)}
-                        rows={3}
-                        className="input-base w-full resize-none text-sm"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                            handleSaveEdit()
-                          }
-                          if (e.key === 'Escape') {
-                            cancelEditing()
-                          }
+                      {/* Edit button */}
+                      <button
+                        onClick={() => startEditing(obs)}
+                        className="p-2 rounded-md transition-all duration-200"
+                        style={{ color: '#64748b' }}
+                        title="Editar observação"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#fbbf24'
+                          e.currentTarget.style.background = 'rgba(251, 191, 36, 0.1)'
                         }}
-                      />
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={handleSaveEdit}
-                          disabled={!editText.trim() || isSavingEdit}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
-                          style={{
-                            background: 'linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(16,185,129,0.15) 100%)',
-                            color: '#86efac',
-                            border: '1px solid rgba(34,197,94,0.3)',
-                          }}
-                        >
-                          {isSavingEdit ? (
-                            <Loader2 size={12} className="animate-spin" />
-                          ) : (
-                            <Check size={12} />
-                          )}
-                          Salvar
-                        </button>
-                        <button
-                          onClick={cancelEditing}
-                          disabled={isSavingEdit}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                          style={{
-                            background: 'rgba(100, 116, 139, 0.1)',
-                            color: '#94a3b8',
-                            border: '1px solid rgba(100, 116, 139, 0.2)',
-                          }}
-                        >
-                          <X size={12} />
-                          Cancelar
-                        </button>
-                        <span className="text-xs text-dark-500 ml-auto">Ctrl+Enter salvar · Esc cancelar</span>
-                      </div>
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = '#64748b'
+                          e.currentTarget.style.background = 'transparent'
+                        }}
+                      >
+                        <Pencil size={14} />
+                      </button>
+
+                      {/* Delete button */}
+                      <button
+                        onClick={() => setConfirmDeleteId(obs.id)}
+                        className="p-2 rounded-md transition-all duration-200"
+                        style={{ color: '#64748b' }}
+                        title="Remover observação"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.color = '#f87171'
+                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.color = '#64748b'
+                          e.currentTarget.style.background = 'transparent'
+                        }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
-                  ) : (
-                    <p className="text-dark-200 text-sm leading-relaxed whitespace-pre-wrap pl-8">
-                      {obs.text}
-                    </p>
                   )}
                 </div>
-
-                {/* Action buttons — admin only */}
-                {isAdmin && editingId !== obs.id && (
-                  <div className="flex-shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                    {/* Edit button */}
-                    <button
-                      onClick={() => startEditing(obs)}
-                      className="p-2 rounded-lg text-dark-500 hover:text-amber-400 hover:bg-amber-500/10 transition-all"
-                      title="Editar observação"
-                    >
-                      <Pencil size={14} />
-                    </button>
-
-                    {/* Delete button */}
-                    <button
-                      onClick={() => setConfirmDeleteId(obs.id)}
-                      className="p-2 rounded-lg text-dark-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                      title="Remover observação"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                )}
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
