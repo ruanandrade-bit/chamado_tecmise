@@ -35,7 +35,12 @@ export function authRequired(req, res, next) {
 }
 
 export function adminOnly(req, res, next) {
-  if (!req.user?.canDragDrop) {
+  // Check token claim first; fall back to current USERS data (handles stale tokens)
+  const tokenClaim = req.user?.canDragDrop
+  const freshUser = req.user?.email ? USERS[req.user.email] : null
+  const isAdmin = tokenClaim || freshUser?.canDragDrop
+
+  if (!isAdmin) {
     return res.status(403).json({ message: 'Apenas admin pode executar esta ação.' })
   }
 

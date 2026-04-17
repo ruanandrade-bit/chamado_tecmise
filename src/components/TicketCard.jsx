@@ -1,5 +1,4 @@
 import { Paperclip, Archive, Trash2 } from 'lucide-react'
-import { useTicketsStore } from '../stores/ticketsStore'
 
 const PRIORITY_CONFIG = {
   alta: { label: 'Alta', bg: 'bg-red-500/20', text: 'text-red-300', border: 'border-red-500/30' },
@@ -16,8 +15,6 @@ export default function TicketCard({
   showDeleteAction = false,
   onDelete
 }) {
-  const { getTicketProgress } = useTicketsStore()
-  const progress = getTicketProgress(ticket)
   const priorityConfig = PRIORITY_CONFIG[ticket.priority] || PRIORITY_CONFIG.medium
 
   return (
@@ -63,26 +60,6 @@ export default function TicketCard({
         {ticket.description}
       </p>
 
-      {/* Checklist progress */}
-      {ticket.checklist.length > 0 && (
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs text-dark-400 font-medium">
-              Progresso do checklist
-            </p>
-            <span className="text-xs font-bold text-primary-light">{progress}%</span>
-          </div>
-          <div className="w-full bg-dark-600 rounded-full h-2 overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-primary-light to-primary transition-all duration-300 rounded-full"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <p className="text-xs text-dark-500 mt-1">
-            {ticket.checklist.filter(c => c.completed).length}/{ticket.checklist.length} concluído{ticket.checklist.filter(c => c.completed).length !== 1 ? 's' : ''}
-          </p>
-        </div>
-      )}
 
       {/* Footer with attachments and date */}
       <div className="flex items-center justify-between pt-2 border-t border-dark-600">

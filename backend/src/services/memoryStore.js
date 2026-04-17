@@ -2,7 +2,7 @@ import { MongoClient } from 'mongodb'
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { STATUSES, TICKETS } from '../data/mockData.js'
+import { USERS, STATUSES, TICKETS } from '../data/mockData.js'
 
 // ─── File persistence (fallback for local dev) ──────────────────────
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -144,6 +144,18 @@ function addHistory(ticket, action, by) {
   ticket.history = [...(ticket.history || []), { action, by, date: new Date().toISOString() }]
 }
 
+/**
+ * Find a user's email by their display name.
+ * Used as fallback when ticket.createdByEmail is missing (legacy tickets).
+ */
+function findEmailByName(name) {
+  if (!name) return null
+  for (const [email, user] of Object.entries(USERS)) {
+    if (user.name === name) return email
+  }
+  return null
+}
+
 // ─── Public store ───────────────────────────────────────────────────
 export const memoryStore = {
   getTickets(filters = {}) {
@@ -232,8 +244,9 @@ export const memoryStore = {
     persistState()
 
     if (status === 'resolvido') {
-      // Send notification only to the ticket creator, not to the admin who resolved it
-      const creatorEmail = ticket.createdByEmail || null
+      // Send notification to the ticket creator, not to the admin who resolved it.
+      // Fallback: if createdByEmail is missing (legacy tickets), look up by responsible name.
+      const creatorEmail = ticket.createdByEmail || findEmailByName(ticket.responsible) || null
       if (creatorEmail && creatorEmail !== actorEmail) {
         memoryStore.pushNotification({
           title: '✅ Chamado Resolvido',

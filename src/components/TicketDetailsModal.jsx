@@ -1,11 +1,11 @@
 import { useState, useRef } from 'react'
-import { X, Check, Paperclip, Send, MessageCircle, Upload, ClipboardList, Image as ImageIcon } from 'lucide-react'
+import { X, Paperclip, Send, MessageCircle, Upload, ClipboardList, Image as ImageIcon } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
 import ChecklistSelectorModal from './ChecklistSelectorModal'
 
 export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
-  const { updateTicket, updateChecklistItem, addChecklistItem, getTicketProgress, STATUSES } = useTicketsStore()
+  const { updateTicket, STATUSES } = useTicketsStore()
   const { user } = useAuthStore()
   const [isChecklistSelectorOpen, setIsChecklistSelectorOpen] = useState(false)
   const [selectedImage, setSelectedImage] = useState(null)
@@ -22,7 +22,7 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
   
   if (!ticket) return null
 
-  const progress = getTicketProgress(ticket)
+
   const statusConfig = STATUSES.find(s => s.value === ticket.status)
 
   // Normalize comments: support both legacy string `notes` and new `comments` array
@@ -51,15 +51,16 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
   })
 
   const handleApplyChecklist = async (newItems) => {
-    if (!canManageChecklist) return
-    try {
-      for (const title of newItems) {
-        await addChecklistItem(ticket.id, title)
-      }
-    } catch (err) {
-      console.error('Erro ao adicionar itens do checklist:', err)
-      alert('Erro ao adicionar itens do checklist. Tente novamente.')
-    }
+    if (!canManageChecklist || newItems.length === 0) return
+    const currentChecklist = ticket.checklist || []
+    const maxId = currentChecklist.reduce((max, item) => Math.max(max, item.id || 0), 0)
+    const newChecklistItems = newItems.map((title, index) => ({
+      id: maxId + index + 1,
+      title,
+      completed: false
+    }))
+    const updatedChecklist = [...currentChecklist, ...newChecklistItems]
+    await updateTicket(ticket.id, { checklist: updatedChecklist })
   }
 
   const handleSendComment = async () => {
@@ -262,53 +263,19 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
               </div>
             </div>
 
-            {/* Progress bar - only show when checklist has items */}
-            {ticket.checklist.length > 0 && (
-              <>
-                <p className="text-xs text-dark-400 mb-2">
-                  {ticket.checklist.filter(c => c.completed).length}/{ticket.checklist.length} concluído{ticket.checklist.filter(c => c.completed).length !== 1 ? 's' : ''} — {progress}%
-                </p>
-                <div className="w-full bg-dark-600 rounded-full h-2 mb-4 overflow-hidden">
+            {/* Checklist items - simple text list */}
+            {ticket.checklist.length > 0 ? (
+              <div className="space-y-2">
+                {ticket.checklist.map(item => (
                   <div
-                    className="h-full bg-gradient-to-r from-primary-light to-primary transition-all duration-300 rounded-full"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-              </>
-            )}
-
-            {/* Checklist items */}
-            <div className="space-y-2 mb-4">
-              {ticket.checklist.map(item => (
-                <button
-                  key={item.id}
-                  onClick={() => canManageChecklist && updateChecklistItem(ticket.id, item.id, !item.completed)}
-                  disabled={!canManageChecklist}
-                  className={`w-full flex items-center gap-3 p-3 rounded-lg transition-all duration-200 ${
-                    item.completed
-                      ? 'bg-primary-light/20 border border-primary-light/30'
-                      : 'bg-dark-700 border border-dark-600 hover:border-primary-light/50'
-                  } ${canManageChecklist ? 'cursor-pointer' : 'cursor-not-allowed opacity-80'}`}
-                >
-                  <div className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
-                    item.completed
-                      ? 'border-primary-light bg-primary-light'
-                      : 'border-dark-500 hover:border-primary-light'
-                  }`}>
-                    {item.completed && <Check size={14} className="text-dark-950" />}
+                    key={item.id}
+                    className="px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg"
+                  >
+                    <span className="text-sm text-dark-200">{item.title}</span>
                   </div>
-                  <span className={`flex-1 text-left text-sm ${
-                    item.completed
-                      ? 'text-primary-light line-through'
-                      : 'text-dark-300'
-                  }`}>
-                    {item.title}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            {ticket.checklist.length === 0 && (
+                ))}
+              </div>
+            ) : (
               <p className="text-sm text-dark-500">
                 {canManageChecklist
                   ? 'Clique em "Checklist" para adicionar itens.'
