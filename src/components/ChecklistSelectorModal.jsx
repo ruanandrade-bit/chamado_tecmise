@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { X, Check, ClipboardList } from 'lucide-react'
+import { X, Check, ClipboardList, Loader2 } from 'lucide-react'
 
 const CHECKLIST_TEMPLATE = [
   {
@@ -94,7 +94,9 @@ export default function ChecklistSelectorModal({ ticket, onClose, onApply }) {
     setSelected(newState)
   }
 
-  const handleApply = () => {
+  const [isApplying, setIsApplying] = useState(false)
+
+  const handleApply = async () => {
     // Only add items that are newly selected (not already in the ticket)
     const newItems = []
     CHECKLIST_TEMPLATE.forEach(section => {
@@ -104,8 +106,16 @@ export default function ChecklistSelectorModal({ ticket, onClose, onApply }) {
         }
       })
     })
-    onApply(newItems)
-    onClose()
+    if (newItems.length === 0) return
+    setIsApplying(true)
+    try {
+      await onApply(newItems)
+    } catch (err) {
+      console.error('Erro ao adicionar checklist:', err)
+    } finally {
+      setIsApplying(false)
+      onClose()
+    }
   }
 
   const newSelectedCount = Object.entries(selected)
@@ -234,11 +244,11 @@ export default function ChecklistSelectorModal({ ticket, onClose, onApply }) {
             </button>
             <button
               onClick={handleApply}
-              disabled={newSelectedCount === 0}
+              disabled={newSelectedCount === 0 || isApplying}
               className="btn-primary px-5 py-2 text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Check size={16} />
-              Adicionar ({newSelectedCount})
+              {isApplying ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+              {isApplying ? 'Adicionando...' : `Adicionar (${newSelectedCount})`}
             </button>
           </div>
         </div>

@@ -179,6 +179,7 @@ export const memoryStore = {
       problemType: payload.problemType || '',
       description: payload.description,
       responsible: currentUser.name,
+      createdByEmail: currentUser.email || null,
       priority: payload.priority || 'media',
       status: 'sem-status',
       createdAt: new Date().toISOString(),
@@ -231,12 +232,16 @@ export const memoryStore = {
     persistState()
 
     if (status === 'resolvido') {
-      memoryStore.pushNotification({
-        title: '✅ Chamado Resolvido',
-        message: `${ticket.id} foi movido para resolvido`,
-        type: 'success',
-        targetUserEmail: actorEmail || null
-      })
+      // Send notification only to the ticket creator, not to the admin who resolved it
+      const creatorEmail = ticket.createdByEmail || null
+      if (creatorEmail && creatorEmail !== actorEmail) {
+        memoryStore.pushNotification({
+          title: '✅ Chamado Resolvido',
+          message: `${ticket.id} foi movido para resolvido`,
+          type: 'success',
+          targetUserEmail: creatorEmail
+        })
+      }
     }
 
     return ticket

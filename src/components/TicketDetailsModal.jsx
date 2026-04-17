@@ -52,8 +52,13 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
 
   const handleApplyChecklist = async (newItems) => {
     if (!canManageChecklist) return
-    for (const title of newItems) {
-      await addChecklistItem(ticket.id, title)
+    try {
+      for (const title of newItems) {
+        await addChecklistItem(ticket.id, title)
+      }
+    } catch (err) {
+      console.error('Erro ao adicionar itens do checklist:', err)
+      alert('Erro ao adicionar itens do checklist. Tente novamente.')
     }
   }
 
@@ -243,9 +248,6 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="font-semibold text-dark-100">Checklist de Atendimento</h3>
-                <p className="text-xs text-dark-400 mt-1">
-                  {ticket.checklist.filter(c => c.completed).length}/{ticket.checklist.length} concluído{ticket.checklist.filter(c => c.completed).length !== 1 ? 's' : ''}
-                </p>
               </div>
               <div className="flex items-center gap-3">
                 {canManageChecklist && (
@@ -257,17 +259,23 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
                     Checklist
                   </button>
                 )}
-                <span className="text-lg font-bold text-primary-light">{progress}%</span>
               </div>
             </div>
 
-            {/* Progress bar */}
-            <div className="w-full bg-dark-600 rounded-full h-2 mb-4 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-primary-light to-primary transition-all duration-300 rounded-full"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+            {/* Progress bar - only show when checklist has items */}
+            {ticket.checklist.length > 0 && (
+              <>
+                <p className="text-xs text-dark-400 mb-2">
+                  {ticket.checklist.filter(c => c.completed).length}/{ticket.checklist.length} concluído{ticket.checklist.filter(c => c.completed).length !== 1 ? 's' : ''} — {progress}%
+                </p>
+                <div className="w-full bg-dark-600 rounded-full h-2 mb-4 overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-primary-light to-primary transition-all duration-300 rounded-full"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </>
+            )}
 
             {/* Checklist items */}
             <div className="space-y-2 mb-4">
