@@ -46,4 +46,22 @@ router.delete('/monthly/:month/:year/:observationId', authRequired, adminOnly, (
   res.json(report)
 })
 
+// PUT /api/reports/monthly/:month/:year/:observationId — admin only
+router.put('/monthly/:month/:year/:observationId', authRequired, adminOnly, (req, res) => {
+  const month = Number(req.params.month)
+  const year = Number(req.params.year)
+  const observationId = Number(req.params.observationId)
+  const { text } = req.body
+
+  if (!month || !year || !observationId || !text?.trim()) {
+    return res.status(400).json({ message: 'Parâmetros inválidos.' })
+  }
+
+  const report = memoryStore.editMonthlyObservation(month, year, observationId, text.trim())
+  if (!report) {
+    return res.status(404).json({ message: 'Observação não encontrada.' })
+  }
+  res.json(report)
+})
+
 export default router

@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { FileText, Plus, Trash2, Send, CalendarDays, ClipboardList, Loader2, Ticket } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { FileText, Plus, Trash2, Send, CalendarDays, ClipboardList, Loader2, Ticket, Pencil, X, Check, AlertTriangle } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { api } from '../services/api'
@@ -10,6 +10,128 @@ const MONTH_NAMES = [
   'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ]
 
+/* ─── Confirm‑Delete Modal ────────────────────────────────────────── */
+function ConfirmDeleteModal({ isOpen, onClose, onConfirm, isDeleting }) {
+  if (!isOpen) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      style={{ animation: 'fadeIn 0.2s ease-out' }}
+    >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: 'rgba(0, 0, 0, 0.6)',
+          backdropFilter: 'blur(6px)',
+          WebkitBackdropFilter: 'blur(6px)',
+        }}
+        onClick={onClose}
+      />
+
+      {/* Modal card */}
+      <div
+        className="relative w-full max-w-sm mx-4 rounded-2xl border p-6"
+        style={{
+          background: 'linear-gradient(145deg, rgba(30, 35, 50, 0.95) 0%, rgba(20, 24, 36, 0.98) 100%)',
+          borderColor: 'rgba(239, 68, 68, 0.25)',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 40px rgba(239, 68, 68, 0.08)',
+          animation: 'slideInUp 0.3s ease-out',
+        }}
+      >
+        {/* Red glow */}
+        <div
+          className="absolute -top-8 left-1/2 -translate-x-1/2 w-32 h-32 rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(239, 68, 68, 0.15) 0%, transparent 70%)',
+            pointerEvents: 'none',
+          }}
+        />
+
+        <div className="relative flex flex-col items-center text-center space-y-4">
+          {/* Icon */}
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center"
+            style={{
+              background: 'linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(220,38,38,0.1) 100%)',
+              border: '1px solid rgba(239,68,68,0.3)',
+            }}
+          >
+            <AlertTriangle size={28} style={{ color: '#f87171' }} />
+          </div>
+
+          {/* Text */}
+          <div>
+            <h3 className="text-lg font-bold text-dark-100" style={{ color: '#f1f5f9' }}>
+              Excluir Observação
+            </h3>
+            <p className="text-sm mt-1" style={{ color: '#94a3b8' }}>
+              Tem certeza que deseja excluir esta observação? Essa ação não poderá ser desfeita.
+            </p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 w-full mt-2">
+            <button
+              onClick={onClose}
+              disabled={isDeleting}
+              className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
+              style={{
+                background: 'rgba(100, 116, 139, 0.12)',
+                color: '#94a3b8',
+                border: '1px solid rgba(100, 116, 139, 0.2)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(100, 116, 139, 0.2)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(100, 116, 139, 0.12)'
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={isDeleting}
+              className="flex-1 px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+              style={{
+                background: isDeleting
+                  ? 'rgba(239, 68, 68, 0.3)'
+                  : 'linear-gradient(135deg, rgba(239,68,68,0.8) 0%, rgba(220,38,38,0.9) 100%)',
+                color: '#fff',
+                border: '1px solid rgba(239,68,68,0.4)',
+                boxShadow: '0 4px 15px rgba(239,68,68,0.2)',
+                cursor: isDeleting ? 'not-allowed' : 'pointer',
+                opacity: isDeleting ? 0.7 : 1,
+              }}
+              onMouseEnter={(e) => {
+                if (!isDeleting) e.currentTarget.style.boxShadow = '0 6px 20px rgba(239,68,68,0.35)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 15px rgba(239,68,68,0.2)'
+              }}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                <>
+                  <Trash2 size={14} />
+                  Sim, excluir
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Main Component ──────────────────────────────────────────────── */
 export default function MonthlyReport() {
   const { user } = useAuthStore()
   const isAdmin = user?.canDragDrop === true
@@ -32,6 +154,15 @@ export default function MonthlyReport() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSending, setIsSending] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+
+  // Confirm delete modal
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
+
+  // Edit state
+  const [editingId, setEditingId] = useState(null)
+  const [editText, setEditText] = useState('')
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const editTextareaRef = useRef(null)
 
   const loadReport = useCallback(async () => {
     try {
@@ -72,16 +203,50 @@ export default function MonthlyReport() {
     }
   }
 
-  const handleDeleteObservation = async (observationId) => {
-    if (deletingId) return
+  // Triggered by confirm modal
+  const handleDeleteObservation = async () => {
+    const observationId = confirmDeleteId
+    if (!observationId || deletingId) return
     setDeletingId(observationId)
     try {
       const data = await api.delete(`/reports/monthly/${currentMonth}/${currentYear}/${observationId}`)
       setObservations(data.observations || [])
+      setConfirmDeleteId(null)
     } catch (err) {
       alert(err.message || 'Erro ao remover observação.')
     } finally {
       setDeletingId(null)
+    }
+  }
+
+  // Start editing
+  const startEditing = (obs) => {
+    setEditingId(obs.id)
+    setEditText(obs.text)
+    // Focus textarea after render
+    setTimeout(() => editTextareaRef.current?.focus(), 50)
+  }
+
+  const cancelEditing = () => {
+    setEditingId(null)
+    setEditText('')
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editText.trim() || isSavingEdit) return
+    setIsSavingEdit(true)
+    try {
+      const data = await api.put(
+        `/reports/monthly/${currentMonth}/${currentYear}/${editingId}`,
+        { text: editText }
+      )
+      setObservations(data.observations || [])
+      setEditingId(null)
+      setEditText('')
+    } catch (err) {
+      alert(err.message || 'Erro ao editar observação.')
+    } finally {
+      setIsSavingEdit(false)
     }
   }
 
@@ -97,6 +262,14 @@ export default function MonthlyReport() {
 
   return (
     <div className="space-y-6 animate-slideInUp">
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={confirmDeleteId !== null}
+        onClose={() => setConfirmDeleteId(null)}
+        onConfirm={handleDeleteObservation}
+        isDeleting={!!deletingId}
+      />
+
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary-light/20 flex items-center justify-center">
@@ -260,29 +433,92 @@ export default function MonthlyReport() {
                     </span>
                     <span className="text-xs text-dark-500">
                       por <strong className="text-dark-400">{obs.author}</strong> • {formatDate(obs.createdAt)}
+                      {obs.editedAt && (
+                        <span className="ml-1 italic" style={{ color: '#64748b' }}>(editado)</span>
+                      )}
                     </span>
                   </div>
 
-                  {/* Observation text */}
-                  <p className="text-dark-200 text-sm leading-relaxed whitespace-pre-wrap pl-8">
-                    {obs.text}
-                  </p>
+                  {/* Observation text or edit textarea */}
+                  {editingId === obs.id ? (
+                    <div className="pl-8 space-y-2">
+                      <textarea
+                        ref={editTextareaRef}
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        rows={3}
+                        className="input-base w-full resize-none text-sm"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                            handleSaveEdit()
+                          }
+                          if (e.key === 'Escape') {
+                            cancelEditing()
+                          }
+                        }}
+                      />
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={handleSaveEdit}
+                          disabled={!editText.trim() || isSavingEdit}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all disabled:opacity-50"
+                          style={{
+                            background: 'linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(16,185,129,0.15) 100%)',
+                            color: '#86efac',
+                            border: '1px solid rgba(34,197,94,0.3)',
+                          }}
+                        >
+                          {isSavingEdit ? (
+                            <Loader2 size={12} className="animate-spin" />
+                          ) : (
+                            <Check size={12} />
+                          )}
+                          Salvar
+                        </button>
+                        <button
+                          onClick={cancelEditing}
+                          disabled={isSavingEdit}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                          style={{
+                            background: 'rgba(100, 116, 139, 0.1)',
+                            color: '#94a3b8',
+                            border: '1px solid rgba(100, 116, 139, 0.2)',
+                          }}
+                        >
+                          <X size={12} />
+                          Cancelar
+                        </button>
+                        <span className="text-xs text-dark-500 ml-auto">Ctrl+Enter salvar · Esc cancelar</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-dark-200 text-sm leading-relaxed whitespace-pre-wrap pl-8">
+                      {obs.text}
+                    </p>
+                  )}
                 </div>
 
-                {/* Delete button — admin only */}
-                {isAdmin && (
-                  <button
-                    onClick={() => handleDeleteObservation(obs.id)}
-                    disabled={deletingId === obs.id}
-                    className="flex-shrink-0 p-2 rounded-lg text-dark-500 hover:text-red-400 hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
-                    title="Remover observação"
-                  >
-                    {deletingId === obs.id ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
+                {/* Action buttons — admin only */}
+                {isAdmin && editingId !== obs.id && (
+                  <div className="flex-shrink-0 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                    {/* Edit button */}
+                    <button
+                      onClick={() => startEditing(obs)}
+                      className="p-2 rounded-lg text-dark-500 hover:text-amber-400 hover:bg-amber-500/10 transition-all"
+                      title="Editar observação"
+                    >
+                      <Pencil size={14} />
+                    </button>
+
+                    {/* Delete button */}
+                    <button
+                      onClick={() => setConfirmDeleteId(obs.id)}
+                      className="p-2 rounded-lg text-dark-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                      title="Remover observação"
+                    >
                       <Trash2 size={14} />
-                    )}
-                  </button>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>

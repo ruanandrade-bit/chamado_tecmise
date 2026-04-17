@@ -420,5 +420,19 @@ export const memoryStore = {
     report.observations.splice(idx, 1)
     persistState()
     return report
+  },
+
+  editMonthlyObservation(month, year, observationId, newText) {
+    const key = `${month}-${year}`
+    const report = state.monthlyReports[key]
+    if (!report) return null
+
+    const obs = report.observations.find((o) => o.id === observationId)
+    if (!obs) return null
+
+    obs.text = newText
+    obs.editedAt = new Date().toISOString()
+    persistState()
+    return report
   }
 }
