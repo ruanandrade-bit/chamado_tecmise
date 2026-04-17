@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { X, Paperclip, Send, MessageCircle, Upload, ClipboardList, Image as ImageIcon } from 'lucide-react'
+import { X, Paperclip, Send, MessageCircle, Upload, ClipboardList, Image as ImageIcon, Undo2 } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
 import ChecklistSelectorModal from './ChecklistSelectorModal'
@@ -12,6 +12,7 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
   const [commentText, setCommentText] = useState('')
   const [isSendingComment, setIsSendingComment] = useState(false)
   const [confirmDeleteIndex, setConfirmDeleteIndex] = useState(null)
+  const [confirmUndoChecklist, setConfirmUndoChecklist] = useState(false)
   const fileInputRef = useRef(null)
   const canManageChecklist = user?.canDragDrop === true
 
@@ -250,7 +251,31 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
               <div>
                 <h3 className="font-semibold text-dark-100">Checklist de Atendimento</h3>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                {canManageChecklist && ticket.checklist.length > 0 && (
+                  <button
+                    onClick={async () => {
+                      if (confirmUndoChecklist) {
+                        const updated = [...ticket.checklist]
+                        updated.pop()
+                        await updateTicket(ticket.id, { checklist: updated })
+                        setConfirmUndoChecklist(false)
+                      } else {
+                        setConfirmUndoChecklist(true)
+                        setTimeout(() => setConfirmUndoChecklist(false), 3000)
+                      }
+                    }}
+                    className={`px-3 py-1.5 flex items-center gap-1.5 text-sm font-medium rounded-lg border transition-all ${
+                      confirmUndoChecklist
+                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-300 hover:bg-amber-500/30'
+                        : 'bg-dark-700 border-dark-600 text-dark-300 hover:bg-dark-600 hover:text-dark-200'
+                    }`}
+                    title={confirmUndoChecklist ? 'Clique novamente para confirmar' : 'Remover último item do checklist'}
+                  >
+                    <Undo2 size={14} />
+                    {confirmUndoChecklist ? 'Confirmar?' : 'Reverter'}
+                  </button>
+                )}
                 {canManageChecklist && (
                   <button
                     onClick={() => setIsChecklistSelectorOpen(true)}
@@ -266,12 +291,19 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
             {/* Checklist items - simple text list */}
             {ticket.checklist.length > 0 ? (
               <div className="space-y-2">
-                {ticket.checklist.map(item => (
+                {ticket.checklist.map((item, index) => (
                   <div
                     key={item.id}
-                    className="px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg"
+                    className={`px-4 py-3 bg-dark-700 border border-dark-600 rounded-lg flex items-center justify-between transition-all ${
+                      confirmUndoChecklist && index === ticket.checklist.length - 1
+                        ? 'border-amber-500/40 bg-amber-500/5'
+                        : ''
+                    }`}
                   >
                     <span className="text-sm text-dark-200">{item.title}</span>
+                    {confirmUndoChecklist && index === ticket.checklist.length - 1 && (
+                      <span className="text-xs text-amber-400 font-medium ml-2 flex-shrink-0">← será removido</span>
+                    )}
                   </div>
                 ))}
               </div>

@@ -25,8 +25,8 @@ export default function Header({ onMenuClick }) {
             </button>
             
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary-light to-primary rounded-lg flex items-center justify-center font-bold text-dark-950">
-                S4
+              <div className="w-8 h-8 bg-gradient-to-br from-primary-light to-primary rounded-lg flex items-center justify-center font-bold text-xs text-dark-950">
+                S4S
               </div>
               <div className="hidden sm:block">
                 <h1 className="text-lg font-bold bg-gradient-to-r from-primary-light to-primary bg-clip-text text-transparent">

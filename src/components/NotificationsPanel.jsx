@@ -1,4 +1,4 @@
-import { Bell, X, CheckCircle, AlertCircle } from 'lucide-react'
+import { Bell, X, CheckCircle, AlertCircle, Clock } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '../stores/authStore'
 
@@ -6,6 +6,20 @@ const HISTORY_PREFIX = 's4s_notification_history:'
 
 function getHistoryKey(email) {
   return `${HISTORY_PREFIX}${email || 'guest'}`
+}
+
+function timeAgo(timestamp) {
+  const now = new Date()
+  const then = new Date(timestamp)
+  const diffMs = now - then
+  const diffMin = Math.floor(diffMs / 60000)
+  const diffHour = Math.floor(diffMin / 60)
+  const diffDay = Math.floor(diffHour / 24)
+
+  if (diffMin < 1) return 'Agora mesmo'
+  if (diffMin < 60) return `${diffMin}min atrás`
+  if (diffHour < 24) return `${diffHour}h atrás`
+  return `${diffDay}d atrás`
 }
 
 export default function NotificationsPanel() {
@@ -27,69 +41,277 @@ export default function NotificationsPanel() {
 
   return (
     <>
+      {/* Bell button with badge */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 hover:bg-dark-700 rounded-lg transition-colors"
+        style={{ position: 'relative' }}
       >
         <Bell size={20} className="text-dark-300" />
         {notificationHistory.length > 0 && (
-          <span className="absolute top-1 right-1 w-2 h-2 bg-primary-light rounded-full"></span>
+          <span
+            style={{
+              position: 'absolute',
+              top: '6px',
+              right: '6px',
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, #34d399, #10b981)',
+              boxShadow: '0 0 8px rgba(16, 185, 129, 0.6)',
+            }}
+          />
         )}
       </button>
 
+      {/* Modal overlay */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-dark-800 rounded-2xl max-w-md w-full border border-dark-700 animate-slideInUp">
-            <div className="flex items-center justify-between p-6 border-b border-dark-700">
-              <h2 className="text-xl font-bold text-dark-100">Notificações</h2>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{
+            background: 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(4px)',
+          }}
+          onClick={(e) => e.target === e.currentTarget && setIsOpen(false)}
+        >
+          <div
+            className="animate-slideInUp"
+            style={{
+              maxWidth: '440px',
+              width: '100%',
+              background: 'linear-gradient(165deg, #1e293b 0%, #0f172a 100%)',
+              border: '1px solid rgba(148, 163, 184, 0.1)',
+              borderRadius: '20px',
+              overflow: 'hidden',
+              boxShadow: '0 24px 48px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(148, 163, 184, 0.05)',
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '20px 24px',
+                borderBottom: '1px solid rgba(148, 163, 184, 0.08)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    background: 'rgba(16, 185, 129, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Bell size={18} style={{ color: '#34d399' }} />
+                </div>
+                <div>
+                  <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#f1f5f9', margin: 0 }}>
+                    Notificações
+                  </h2>
+                  <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>
+                    {notificationHistory.length === 0
+                      ? 'Nenhuma notificação'
+                      : `${notificationHistory.length} ${notificationHistory.length === 1 ? 'notificação' : 'notificações'}`}
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '10px',
+                  background: 'rgba(148, 163, 184, 0.08)',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#94a3b8',
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(148, 163, 184, 0.15)'
+                  e.currentTarget.style.color = '#f1f5f9'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(148, 163, 184, 0.08)'
+                  e.currentTarget.style.color = '#94a3b8'
+                }}
               >
-                <X size={20} className="text-dark-300" />
+                <X size={16} />
               </button>
             </div>
 
-            <div className="p-6 max-h-96 overflow-y-auto">
+            {/* Content */}
+            <div style={{ padding: '12px 16px', maxHeight: '400px', overflowY: 'auto' }}>
               {notificationHistory.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <Bell size={40} className="text-dark-500 mb-3 opacity-50" />
-                  <p className="text-dark-400 text-sm">Sem notificações no momento</p>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '48px 24px',
+                    textAlign: 'center',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '16px',
+                      background: 'rgba(148, 163, 184, 0.06)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: '16px',
+                    }}
+                  >
+                    <Bell size={28} style={{ color: '#334155', opacity: 0.6 }} />
+                  </div>
+                  <p style={{ fontSize: '14px', color: '#475569', fontWeight: 500 }}>
+                    Sem notificações
+                  </p>
+                  <p style={{ fontSize: '12px', color: '#334155', marginTop: '4px' }}>
+                    As notificações aparecerão aqui
+                  </p>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {notificationHistory.slice().reverse().map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`flex items-start gap-3 p-3 rounded-lg border ${
-                        notification.type === 'success'
-                          ? 'bg-green-500/10 border-green-500/30'
-                          : 'bg-red-500/10 border-red-500/30'
-                      }`}
-                    >
-                      {notification.type === 'success' ? (
-                        <CheckCircle size={18} className="text-green-400 flex-shrink-0 mt-0.5" />
-                      ) : (
-                        <AlertCircle size={18} className="text-red-400 flex-shrink-0 mt-0.5" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm text-dark-100">{notification.title}</h3>
-                        <p className="text-xs text-dark-400 mt-1">{notification.message}</p>
-                        <p className="text-xs text-dark-500 mt-2">
-                          {new Date(notification.timestamp).toLocaleTimeString('pt-BR')}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {notificationHistory
+                    .slice()
+                    .reverse()
+                    .map((notification) => {
+                      const isSuccess = notification.type === 'success'
+                      return (
+                        <div
+                          key={notification.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '12px',
+                            padding: '14px 16px',
+                            borderRadius: '14px',
+                            background: isSuccess
+                              ? 'rgba(16, 185, 129, 0.06)'
+                              : 'rgba(239, 68, 68, 0.06)',
+                            border: `1px solid ${isSuccess ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)'}`,
+                            transition: 'all 0.2s',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = isSuccess
+                              ? 'rgba(16, 185, 129, 0.1)'
+                              : 'rgba(239, 68, 68, 0.1)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = isSuccess
+                              ? 'rgba(16, 185, 129, 0.06)'
+                              : 'rgba(239, 68, 68, 0.06)'
+                          }}
+                        >
+                          {/* Icon */}
+                          <div
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '8px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                              background: isSuccess
+                                ? 'rgba(16, 185, 129, 0.15)'
+                                : 'rgba(239, 68, 68, 0.15)',
+                            }}
+                          >
+                            {isSuccess ? (
+                              <CheckCircle size={16} style={{ color: '#34d399' }} />
+                            ) : (
+                              <AlertCircle size={16} style={{ color: '#f87171' }} />
+                            )}
+                          </div>
+
+                          {/* Text */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <h3
+                              style={{
+                                fontSize: '13px',
+                                fontWeight: 600,
+                                color: '#e2e8f0',
+                                margin: 0,
+                                lineHeight: 1.3,
+                              }}
+                            >
+                              {notification.title}
+                            </h3>
+                            <p
+                              style={{
+                                fontSize: '12px',
+                                color: '#94a3b8',
+                                margin: '3px 0 0 0',
+                                lineHeight: 1.4,
+                              }}
+                            >
+                              {notification.message}
+                            </p>
+                            <div
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                marginTop: '6px',
+                              }}
+                            >
+                              <Clock size={10} style={{ color: '#475569' }} />
+                              <span style={{ fontSize: '11px', color: '#475569' }}>
+                                {timeAgo(notification.timestamp)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
                 </div>
               )}
             </div>
 
+            {/* Footer */}
             {notificationHistory.length > 0 && (
-              <div className="border-t border-dark-700 p-4">
+              <div
+                style={{
+                  borderTop: '1px solid rgba(148, 163, 184, 0.08)',
+                  padding: '12px 16px',
+                }}
+              >
                 <button
                   onClick={clearHistory}
-                  className="w-full px-4 py-2 bg-dark-700 hover:bg-dark-600 rounded-lg text-sm font-medium text-dark-300 transition-colors"
+                  style={{
+                    width: '100%',
+                    padding: '10px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(148, 163, 184, 0.08)',
+                    background: 'rgba(148, 163, 184, 0.04)',
+                    color: '#64748b',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(148, 163, 184, 0.1)'
+                    e.currentTarget.style.color = '#94a3b8'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(148, 163, 184, 0.04)'
+                    e.currentTarget.style.color = '#64748b'
+                  }}
                 >
                   Limpar histórico
                 </button>

@@ -250,7 +250,7 @@ export const memoryStore = {
       if (creatorEmail && creatorEmail !== actorEmail) {
         memoryStore.pushNotification({
           title: '✅ Chamado Resolvido',
-          message: `${ticket.id} foi movido para resolvido`,
+          message: `O chamado ${ticket.id} foi resolvido!`,
           type: 'success',
           targetUserEmail: creatorEmail
         })

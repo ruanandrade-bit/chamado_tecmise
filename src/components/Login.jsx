@@ -36,8 +36,8 @@ export default function Login() {
       <div className="w-full max-w-md relative z-10 animate-slideInUp">
         {/* Logo and title */}
         <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-gradient-to-br from-primary-light to-primary rounded-2xl flex items-center justify-center font-bold text-3xl text-dark-950 mx-auto mb-4">
-            S4
+          <div className="w-16 h-16 bg-gradient-to-br from-primary-light to-primary rounded-2xl flex items-center justify-center font-bold text-2xl text-dark-950 mx-auto mb-4">
+            S4S
           </div>
           <h1 className="text-3xl font-bold mb-2 text-dark-100">S4S Chamados</h1>
           <p className="text-dark-400">Gestão moderna de atendimento educacional</p>
