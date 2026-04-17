@@ -1,11 +1,16 @@
 import { Bell, X, CheckCircle, AlertCircle, Clock } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuthStore } from '../stores/authStore'
 
 const HISTORY_PREFIX = 's4s_notification_history:'
+const LAST_READ_PREFIX = 's4s_notification_read:'
 
 function getHistoryKey(email) {
   return `${HISTORY_PREFIX}${email || 'guest'}`
+}
+
+function getLastReadKey(email) {
+  return `${LAST_READ_PREFIX}${email || 'guest'}`
 }
 
 function timeAgo(timestamp) {
@@ -25,30 +30,59 @@ function timeAgo(timestamp) {
 export default function NotificationsPanel() {
   const [isOpen, setIsOpen] = useState(false)
   const [notificationHistory, setNotificationHistory] = useState([])
+  const [hasUnread, setHasUnread] = useState(false)
   const { user } = useAuthStore()
+
+  // Check for unread notifications
+  const checkUnread = useCallback(() => {
+    if (!user?.email) return
+    const history = JSON.parse(localStorage.getItem(getHistoryKey(user.email)) || '[]')
+    const lastRead = localStorage.getItem(getLastReadKey(user.email)) || '0'
+    const unread = history.some((n) => new Date(n.timestamp).getTime() > Number(lastRead))
+    setHasUnread(unread)
+  }, [user?.email])
 
   useEffect(() => {
     if (!user?.email) return
     const history = JSON.parse(localStorage.getItem(getHistoryKey(user.email)) || '[]')
     setNotificationHistory(history)
-  }, [isOpen, user?.email])
+    checkUnread()
+  }, [isOpen, user?.email, checkUnread])
+
+  // Poll for new notifications to update the badge
+  useEffect(() => {
+    if (!user?.email) return
+    const interval = setInterval(checkUnread, 2000)
+    return () => clearInterval(interval)
+  }, [user?.email, checkUnread])
+
+  // Mark as read when opening the panel
+  const handleToggle = () => {
+    const opening = !isOpen
+    setIsOpen(opening)
+    if (opening && user?.email) {
+      localStorage.setItem(getLastReadKey(user.email), String(Date.now()))
+      setHasUnread(false)
+    }
+  }
 
   const clearHistory = () => {
     if (!user?.email) return
     setNotificationHistory([])
     localStorage.removeItem(getHistoryKey(user.email))
+    setHasUnread(false)
   }
 
   return (
     <>
       {/* Bell button with badge */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         className="relative p-2 hover:bg-dark-700 rounded-lg transition-colors"
         style={{ position: 'relative' }}
       >
         <Bell size={20} className="text-dark-300" />
-        {notificationHistory.length > 0 && (
+        {hasUnread && (
           <span
             style={{
               position: 'absolute',

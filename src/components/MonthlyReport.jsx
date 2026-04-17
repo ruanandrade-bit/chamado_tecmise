@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
-import { FileText, Plus, Trash2, Send, CalendarDays, ClipboardList, Loader2 } from 'lucide-react'
+import { FileText, Plus, Trash2, Send, CalendarDays, ClipboardList, Loader2, TicketCheck } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
+import { useTicketsStore } from '../stores/ticketsStore'
 import { api } from '../services/api'
 
 const MONTH_NAMES = [
@@ -12,11 +13,19 @@ const MONTH_NAMES = [
 export default function MonthlyReport() {
   const { user } = useAuthStore()
   const isAdmin = user?.canDragDrop === true
+  const { tickets } = useTicketsStore()
 
   const now = new Date()
   const currentMonth = now.getMonth() + 1
   const currentYear = now.getFullYear()
   const monthName = MONTH_NAMES[currentMonth - 1]
+
+  // Count tickets opened in the current month
+  const ticketsThisMonth = tickets.filter((t) => {
+    if (!t.createdAt) return false
+    const d = new Date(t.createdAt)
+    return d.getMonth() + 1 === currentMonth && d.getFullYear() === currentYear
+  }).length
 
   const [observations, setObservations] = useState([])
   const [newObservation, setNewObservation] = useState('')
@@ -135,6 +144,33 @@ export default function MonthlyReport() {
               {currentYear} • {observations.length} observação{observations.length !== 1 ? 'ões' : ''} registrada{observations.length !== 1 ? 's' : ''}
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Tickets opened this month */}
+      <div
+        className="flex items-center gap-4 rounded-2xl border p-5"
+        style={{
+          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(99, 102, 241, 0.05) 100%)',
+          borderColor: 'rgba(59, 130, 246, 0.2)',
+        }}
+      >
+        <div
+          className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
+          style={{
+            background: 'linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(99,102,241,0.15) 100%)',
+            border: '1px solid rgba(59,130,246,0.3)'
+          }}
+        >
+          <TicketCheck size={22} style={{ color: '#60a5fa' }} />
+        </div>
+        <div>
+          <p className="text-lg font-bold text-dark-100">
+            Neste mês, <span style={{ color: '#60a5fa' }}>{ticketsThisMonth}</span> chamado{ticketsThisMonth !== 1 ? 's foram abertos' : ' foi aberto'}.
+          </p>
+          <p className="text-xs text-dark-500 mt-0.5">
+            Atualizado automaticamente a cada novo chamado
+          </p>
         </div>
       </div>
 
