@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { FileText, Plus, Trash2, Send, CalendarDays, ClipboardList, Loader2, TicketCheck } from 'lucide-react'
+import { FileText, Plus, Trash2, Send, CalendarDays, ClipboardList, Loader2, Ticket } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { api } from '../services/api'
@@ -162,7 +162,7 @@ export default function MonthlyReport() {
             border: '1px solid rgba(59,130,246,0.3)'
           }}
         >
-          <TicketCheck size={22} style={{ color: '#60a5fa' }} />
+          <Ticket size={22} style={{ color: '#60a5fa' }} />
         </div>
         <div>
           <p className="text-lg font-bold text-dark-100">
