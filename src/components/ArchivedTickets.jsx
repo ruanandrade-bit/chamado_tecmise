@@ -203,7 +203,7 @@ export default function ArchivedTickets() {
   }
 
   return (
-    <div className="space-y-6 animate-slideInUp">
+    <div className="arc-container">
       {/* Confirm Delete Modal */}
       <ConfirmDeleteModal
         isOpen={ticketToDelete !== null}
@@ -213,50 +213,46 @@ export default function ArchivedTickets() {
         ticket={ticketToDelete}
       />
 
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-primary-light/20 flex items-center justify-center">
-          <Archive size={20} className="text-primary-light" />
+      {/* Header */}
+      <div className="arc-page-header">
+        <div className="arc-header-icon">
+          <Archive size={22} style={{ color: '#86efac' }} />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-dark-100">Chamados Resolvidos</h1>
-          <p className="text-dark-400">Chamados arquivados após resolução</p>
+          <h1 className="arc-page-title">Chamados Resolvidos</h1>
+          <p className="arc-page-subtitle">Chamados arquivados após resolução</p>
         </div>
       </div>
 
       {/* Auto-delete warning banner */}
-      <div
-        className="flex items-center gap-3 rounded-xl border px-4 py-3"
-        style={{
-          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(245, 158, 11, 0.02) 100%)',
-          borderColor: 'rgba(245, 158, 11, 0.15)',
-        }}
-      >
-        <div
-          className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
-          style={{ background: 'rgba(245, 158, 11, 0.12)' }}
-        >
-          <Timer size={16} style={{ color: '#f59e0b' }} />
+      <div className="arc-warning-banner">
+        <div className="arc-warning-icon-wrap">
+          <Timer size={18} style={{ color: '#f59e0b' }} />
         </div>
-        <p className="text-sm" style={{ color: '#fbbf24' }}>
+        <p className="arc-warning-text">
           Os chamados resolvidos são excluídos automaticamente após <strong>2 semanas</strong> da data de resolução.
         </p>
       </div>
 
       {archivedTickets.length === 0 ? (
-        <div className="card-base text-center py-16">
-          <p className="text-dark-400">Nenhum chamado arquivado ainda.</p>
+        <div className="arc-empty">
+          <div className="arc-empty-icon">
+            <Archive size={28} style={{ color: '#4b5563' }} />
+          </div>
+          <p className="arc-empty-text">Nenhum chamado arquivado ainda.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {archivedTickets.map((ticket) => (
-            <TicketCard
-              key={ticket.id}
-              ticket={ticket}
-              onClick={() => setSelectedTicketId(ticket.id)}
-              draggable={false}
-              showDeleteAction={canDeleteTicket}
-              onDelete={handleDeleteRequest}
-            />
+        <div className="arc-grid">
+          {archivedTickets.map((ticket, index) => (
+            <div key={ticket.id} className="arc-card-wrap" style={{ animationDelay: `${index * 0.06}s` }}>
+              <TicketCard
+                ticket={ticket}
+                onClick={() => setSelectedTicketId(ticket.id)}
+                draggable={false}
+                showDeleteAction={canDeleteTicket}
+                onDelete={handleDeleteRequest}
+              />
+            </div>
           ))}
         </div>
       )}
@@ -267,6 +263,143 @@ export default function ArchivedTickets() {
           onClose={() => setSelectedTicketId(null)}
         />
       )}
+
+      <style>{`
+        .arc-container {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+          animation: arcFadeIn 0.5s ease-out;
+        }
+
+        @keyframes arcFadeIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Page Header ── */
+        .arc-page-header {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .arc-header-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(22,163,74,0.08));
+          border: 1px solid rgba(34,197,94,0.2);
+          box-shadow: 0 0 20px rgba(34,197,94,0.06);
+        }
+
+        .arc-page-title {
+          font-size: 1.875rem;
+          font-weight: 700;
+          color: #f3f4f6;
+          letter-spacing: -0.01em;
+        }
+
+        .arc-page-subtitle {
+          font-size: 0.9375rem;
+          color: #9ca3af;
+          margin-top: 2px;
+        }
+
+        /* ── Warning Banner ── */
+        .arc-warning-banner {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 16px 20px;
+          background: rgba(15, 15, 30, 0.5);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(245, 158, 11, 0.15);
+          border-radius: 16px;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        .arc-warning-icon-wrap {
+          width: 38px;
+          height: 38px;
+          flex-shrink: 0;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(245, 158, 11, 0.1);
+          border: 1px solid rgba(245, 158, 11, 0.15);
+        }
+
+        .arc-warning-text {
+          font-size: 0.875rem;
+          color: #fbbf24;
+          line-height: 1.5;
+        }
+
+        .arc-warning-text strong {
+          color: #fde68a;
+        }
+
+        /* ── Empty State ── */
+        .arc-empty {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 64px 20px;
+          background: rgba(15, 15, 30, 0.4);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 20px;
+          text-align: center;
+        }
+
+        .arc-empty-icon {
+          width: 64px;
+          height: 64px;
+          border-radius: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          margin-bottom: 16px;
+        }
+
+        .arc-empty-text {
+          color: #6b7280;
+          font-size: 0.9375rem;
+        }
+
+        /* ── Grid ── */
+        .arc-grid {
+          display: grid;
+          grid-template-columns: repeat(1, 1fr);
+          gap: 16px;
+        }
+
+        @media (min-width: 768px) {
+          .arc-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        @media (min-width: 1280px) {
+          .arc-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        .arc-card-wrap {
+          animation: arcCardIn 0.4s ease-out both;
+        }
+
+        @keyframes arcCardIn {
+          from { opacity: 0; transform: translateY(12px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+      `}</style>
     </div>
   )
 }

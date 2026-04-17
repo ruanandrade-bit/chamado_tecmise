@@ -305,7 +305,7 @@ export default function MonthlyReport() {
   }
 
   return (
-    <div className="space-y-6 animate-slideInUp">
+    <div className="mr-container">
       {/* Confirm Delete Modal */}
       <ConfirmDeleteModal
         isOpen={confirmDeleteId !== null}
@@ -316,49 +316,31 @@ export default function MonthlyReport() {
       />
 
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-primary-light/20 flex items-center justify-center">
-          <FileText size={20} className="text-primary-light" />
+      <div className="mr-page-header">
+        <div className="mr-header-icon">
+          <FileText size={22} style={{ color: '#86efac' }} />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-dark-100">Relatório Mensal</h1>
-          <p className="text-dark-400">Observações e acompanhamento mensal</p>
+          <h1 className="mr-page-title">Relatório Mensal</h1>
+          <p className="mr-page-subtitle">Observações e acompanhamento mensal</p>
         </div>
       </div>
 
       {/* Month Banner */}
-      <div
-        className="relative overflow-hidden rounded-2xl border p-6"
-        style={{
-          background: 'linear-gradient(135deg, rgba(34, 197, 94, 0.08) 0%, rgba(16, 185, 129, 0.04) 50%, rgba(6, 182, 212, 0.06) 100%)',
-          borderColor: 'rgba(34, 197, 94, 0.2)',
-        }}
-      >
-        {/* Decorative background circles */}
-        <div
-          className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, rgba(34,197,94,0.5) 0%, transparent 70%)' }}
-        />
-        <div
-          className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full opacity-10"
-          style={{ background: 'radial-gradient(circle, rgba(6,182,212,0.5) 0%, transparent 70%)' }}
-        />
+      <div className="mr-month-banner">
+        {/* Decorative glows */}
+        <div className="mr-banner-glow mr-banner-glow-1" />
+        <div className="mr-banner-glow mr-banner-glow-2" />
 
-        <div className="relative flex items-center gap-4">
-          <div
-            className="flex-shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center"
-            style={{
-              background: 'linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(16,185,129,0.15) 100%)',
-              border: '1px solid rgba(34,197,94,0.3)'
-            }}
-          >
+        <div className="mr-banner-content">
+          <div className="mr-banner-icon">
             <CalendarDays size={26} style={{ color: '#22c55e' }} />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-dark-100">
+            <h2 className="mr-banner-title">
               Relatório de Devices do Mês de {monthName}
             </h2>
-            <p className="text-sm text-dark-400 mt-0.5">
+            <p className="mr-banner-sub">
               {currentYear} • {observations.length} observação{observations.length !== 1 ? 'ões' : ''} registrada{observations.length !== 1 ? 's' : ''}
             </p>
           </div>
@@ -366,27 +348,15 @@ export default function MonthlyReport() {
       </div>
 
       {/* Tickets opened this month */}
-      <div
-        className="flex items-center gap-4 rounded-2xl border p-5"
-        style={{
-          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(99, 102, 241, 0.05) 100%)',
-          borderColor: 'rgba(59, 130, 246, 0.2)',
-        }}
-      >
-        <div
-          className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
-          style={{
-            background: 'linear-gradient(135deg, rgba(59,130,246,0.2) 0%, rgba(99,102,241,0.15) 100%)',
-            border: '1px solid rgba(59,130,246,0.3)'
-          }}
-        >
+      <div className="mr-tickets-card">
+        <div className="mr-tickets-icon">
           <Ticket size={22} style={{ color: '#60a5fa' }} />
         </div>
         <div>
-          <p className="text-lg font-bold text-dark-100">
-            Neste mês, <span style={{ color: '#60a5fa' }}>{ticketsThisMonth}</span> chamado{ticketsThisMonth !== 1 ? 's foram abertos' : ' foi aberto'}.
+          <p className="mr-tickets-text">
+            Neste mês, <span className="mr-tickets-count">{ticketsThisMonth}</span> chamado{ticketsThisMonth !== 1 ? 's foram abertos' : ' foi aberto'}.
           </p>
-          <p className="text-xs text-dark-500 mt-0.5">
+          <p className="mr-tickets-sub">
             Atualizado automaticamente a cada novo chamado
           </p>
         </div>
@@ -394,35 +364,35 @@ export default function MonthlyReport() {
 
       {/* Admin: Add observation */}
       {isAdmin && (
-        <div className="card-base space-y-3">
-          <div className="flex items-center gap-2 text-dark-300">
-            <Plus size={16} className="text-primary-light" />
-            <span className="text-sm font-medium">Nova Observação</span>
+        <div className="mr-add-section">
+          <div className="mr-add-header">
+            <div className="mr-add-header-icon">
+              <Plus size={16} style={{ color: '#86efac' }} />
+            </div>
+            <span className="mr-add-header-text">Nova Observação</span>
           </div>
-          <div className="flex gap-3">
-            <textarea
-              value={newObservation}
-              onChange={(e) => setNewObservation(e.target.value)}
-              placeholder="Descreva a observação do mês..."
-              rows={3}
-              className="input-base flex-1 resize-none"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-                  handleAddObservation()
-                }
-              }}
-            />
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-xs text-dark-500">Ctrl + Enter para enviar</span>
+          <textarea
+            value={newObservation}
+            onChange={(e) => setNewObservation(e.target.value)}
+            placeholder="Descreva a observação do mês..."
+            rows={3}
+            className="mr-textarea"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                handleAddObservation()
+              }
+            }}
+          />
+          <div className="mr-add-footer">
+            <span className="mr-add-hint">Ctrl + Enter para enviar</span>
             <button
               onClick={handleAddObservation}
               disabled={!newObservation.trim() || isSending}
-              className="btn-primary flex items-center gap-2 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="mr-add-btn"
             >
               {isSending ? (
                 <>
-                  <Loader2 size={14} className="animate-spin" />
+                  <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
                   Salvando...
                 </>
               ) : (
@@ -431,6 +401,7 @@ export default function MonthlyReport() {
                   Adicionar
                 </>
               )}
+              <span className="mr-add-btn-glow" />
             </button>
           </div>
         </div>
@@ -438,64 +409,46 @@ export default function MonthlyReport() {
 
       {/* Observations list */}
       {isLoading ? (
-        <div className="card-base flex items-center justify-center py-16">
-          <Loader2 size={24} className="text-primary-light animate-spin" />
-          <span className="ml-3 text-dark-400">Carregando relatório...</span>
+        <div className="mr-loading">
+          <Loader2 size={24} style={{ color: '#86efac', animation: 'spin 1s linear infinite' }} />
+          <span>Carregando relatório...</span>
         </div>
       ) : observations.length === 0 ? (
-        <div className="card-base text-center py-16 space-y-3">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-dark-700/50 flex items-center justify-center">
-            <ClipboardList size={28} className="text-dark-500" />
+        <div className="mr-empty">
+          <div className="mr-empty-icon">
+            <ClipboardList size={28} style={{ color: '#4b5563' }} />
           </div>
-          <p className="text-dark-400 font-medium">Nenhuma observação registrada</p>
-          <p className="text-dark-500 text-sm">
+          <p className="mr-empty-title">Nenhuma observação registrada</p>
+          <p className="mr-empty-sub">
             {isAdmin
               ? 'Adicione a primeira observação do mês acima.'
               : 'As observações do mês aparecerão aqui quando forem registradas.'}
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="mr-obs-list">
           {observations.map((obs, index) => {
             const isEditing = editingId === obs.id
 
             return (
               <div
                 key={obs.id}
-                className="card-base group"
+                className="mr-obs-card"
                 style={{
-                  animationDelay: `${index * 50}ms`,
-                  borderColor: isEditing ? 'rgba(251, 191, 36, 0.3)' : undefined,
-                  boxShadow: isEditing ? '0 0 20px rgba(251, 191, 36, 0.06), inset 0 1px 0 rgba(251,191,36,0.05)' : undefined,
-                  transition: 'border-color 0.3s ease, box-shadow 0.3s ease',
+                  animationDelay: `${index * 0.05}s`,
+                  borderColor: isEditing ? 'rgba(251, 191, 36, 0.25)' : undefined,
+                  boxShadow: isEditing ? '0 0 24px rgba(251, 191, 36, 0.06)' : undefined,
                 }}
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
+                <div className="mr-obs-inner">
+                  <div className="mr-obs-content">
                     {/* Observation number badge + meta */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <span
-                        className="inline-flex items-center justify-center w-6 h-6 rounded-lg text-xs font-bold flex-shrink-0"
-                        style={{
-                          background: 'linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(16,185,129,0.15) 100%)',
-                          color: '#86efac',
-                          border: '1px solid rgba(34,197,94,0.25)'
-                        }}
-                      >
-                        {index + 1}
-                      </span>
-                      <span className="text-xs text-dark-500">
-                        por <strong className="text-dark-400">{obs.author}</strong> • {formatDate(obs.createdAt)}
+                    <div className="mr-obs-meta">
+                      <span className="mr-obs-badge">{index + 1}</span>
+                      <span className="mr-obs-meta-text">
+                        por <strong style={{ color: '#d1d5db' }}>{obs.author}</strong> • {formatDate(obs.createdAt)}
                         {obs.editedAt && (
-                          <span
-                            className="ml-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md"
-                            style={{
-                              background: 'rgba(251, 191, 36, 0.08)',
-                              color: '#fbbf24',
-                              fontSize: '10px',
-                              border: '1px solid rgba(251, 191, 36, 0.15)',
-                            }}
-                          >
+                          <span className="mr-obs-edited">
                             <Pencil size={8} />
                             editado
                           </span>
@@ -505,16 +458,13 @@ export default function MonthlyReport() {
 
                     {/* Observation text or edit textarea */}
                     {isEditing ? (
-                      <div className="pl-8 space-y-3">
+                      <div className="mr-obs-edit-area">
                         <textarea
                           ref={editTextareaRef}
                           value={editText}
                           onChange={(e) => setEditText(e.target.value)}
                           rows={4}
-                          className="input-base w-full resize-none text-sm"
-                          style={{
-                            borderColor: 'rgba(251, 191, 36, 0.25)',
-                          }}
+                          className="mr-textarea mr-textarea-edit"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
                               handleSaveEdit()
@@ -524,26 +474,14 @@ export default function MonthlyReport() {
                             }
                           }}
                         />
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="mr-edit-actions">
                           <button
                             onClick={handleSaveEdit}
                             disabled={!editText.trim() || isSavingEdit}
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all disabled:opacity-50"
-                            style={{
-                              background: 'linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(16,185,129,0.15) 100%)',
-                              color: '#86efac',
-                              border: '1px solid rgba(34,197,94,0.3)',
-                              boxShadow: '0 2px 8px rgba(34,197,94,0.1)',
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.boxShadow = '0 4px 12px rgba(34,197,94,0.2)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.boxShadow = '0 2px 8px rgba(34,197,94,0.1)'
-                            }}
+                            className="mr-edit-save"
                           >
                             {isSavingEdit ? (
-                              <Loader2 size={12} className="animate-spin" />
+                              <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
                             ) : (
                               <Check size={12} />
                             )}
@@ -552,48 +490,28 @@ export default function MonthlyReport() {
                           <button
                             onClick={cancelEditing}
                             disabled={isSavingEdit}
-                            className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-medium transition-all"
-                            style={{
-                              background: 'rgba(100, 116, 139, 0.08)',
-                              color: '#94a3b8',
-                              border: '1px solid rgba(100, 116, 139, 0.15)',
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = 'rgba(100, 116, 139, 0.15)'
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'rgba(100, 116, 139, 0.08)'
-                            }}
+                            className="mr-edit-cancel"
                           >
                             <X size={12} />
                             Cancelar
                           </button>
-                          <span className="text-xs text-dark-500 ml-auto hidden sm:block">
+                          <span className="mr-edit-hint">
                             Ctrl+Enter salvar · Esc cancelar
                           </span>
                         </div>
                       </div>
                     ) : (
-                      <p className="text-dark-200 text-sm leading-relaxed whitespace-pre-wrap pl-8">
-                        {obs.text}
-                      </p>
+                      <p className="mr-obs-text">{obs.text}</p>
                     )}
                   </div>
 
                   {/* Action buttons — admin only */}
                   {isAdmin && !isEditing && (
-                    <div
-                      className="flex-shrink-0 flex items-center gap-0.5 rounded-lg p-0.5 opacity-0 group-hover:opacity-100 transition-all duration-200"
-                      style={{
-                        background: 'rgba(100, 116, 139, 0.06)',
-                        border: '1px solid transparent',
-                      }}
-                    >
+                    <div className="mr-obs-actions">
                       {/* Edit button */}
                       <button
                         onClick={() => startEditing(obs)}
-                        className="p-2 rounded-md transition-all duration-200"
-                        style={{ color: '#64748b' }}
+                        className="mr-obs-action-btn"
                         title="Editar observação"
                         onMouseEnter={(e) => {
                           e.currentTarget.style.color = '#fbbf24'
@@ -610,8 +528,7 @@ export default function MonthlyReport() {
                       {/* Delete button */}
                       <button
                         onClick={() => setConfirmDeleteId(obs.id)}
-                        className="p-2 rounded-md transition-all duration-200"
-                        style={{ color: '#64748b' }}
+                        className="mr-obs-action-btn"
                         title="Remover observação"
                         onMouseEnter={(e) => {
                           e.currentTarget.style.color = '#f87171'
@@ -635,24 +552,567 @@ export default function MonthlyReport() {
 
       {/* Non-admin info */}
       {!isAdmin && (
-        <div
-          className="flex items-center gap-3 rounded-xl border px-4 py-3"
-          style={{
-            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, rgba(99, 102, 241, 0.02) 100%)',
-            borderColor: 'rgba(99, 102, 241, 0.15)',
-          }}
-        >
-          <div
-            className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: 'rgba(99, 102, 241, 0.12)' }}
-          >
+        <div className="mr-info-banner">
+          <div className="mr-info-icon">
             <FileText size={16} style={{ color: '#818cf8' }} />
           </div>
-          <p className="text-sm" style={{ color: '#a5b4fc' }}>
+          <p className="mr-info-text">
             Apenas administradores podem adicionar observações ao relatório mensal.
           </p>
         </div>
       )}
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .mr-container {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+          animation: mrFadeIn 0.5s ease-out;
+        }
+
+        @keyframes mrFadeIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Page Header ── */
+        .mr-page-header {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+        }
+
+        .mr-header-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(22,163,74,0.08));
+          border: 1px solid rgba(34,197,94,0.2);
+          box-shadow: 0 0 20px rgba(34,197,94,0.06);
+        }
+
+        .mr-page-title {
+          font-size: 1.875rem;
+          font-weight: 700;
+          color: #f3f4f6;
+          letter-spacing: -0.01em;
+        }
+
+        .mr-page-subtitle {
+          font-size: 0.9375rem;
+          color: #9ca3af;
+          margin-top: 2px;
+        }
+
+        /* ── Month Banner ── */
+        .mr-month-banner {
+          position: relative;
+          overflow: hidden;
+          padding: 24px 28px;
+          background: rgba(15, 15, 30, 0.5);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(34, 197, 94, 0.15);
+          border-radius: 20px;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .mr-banner-glow {
+          position: absolute;
+          border-radius: 50%;
+          pointer-events: none;
+          opacity: 0.12;
+        }
+
+        .mr-banner-glow-1 {
+          width: 160px;
+          height: 160px;
+          top: -60px;
+          right: -40px;
+          background: radial-gradient(circle, rgba(34,197,94,0.6) 0%, transparent 70%);
+        }
+
+        .mr-banner-glow-2 {
+          width: 120px;
+          height: 120px;
+          bottom: -50px;
+          left: -30px;
+          background: radial-gradient(circle, rgba(6,182,212,0.6) 0%, transparent 70%);
+        }
+
+        .mr-banner-content {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 18px;
+        }
+
+        .mr-banner-icon {
+          flex-shrink: 0;
+          width: 56px;
+          height: 56px;
+          border-radius: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, rgba(34,197,94,0.15), rgba(16,185,129,0.1));
+          border: 1px solid rgba(34,197,94,0.25);
+          box-shadow: 0 0 16px rgba(34,197,94,0.08);
+        }
+
+        .mr-banner-title {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #f3f4f6;
+        }
+
+        .mr-banner-sub {
+          font-size: 0.8125rem;
+          color: #9ca3af;
+          margin-top: 4px;
+        }
+
+        /* ── Tickets This Month ── */
+        .mr-tickets-card {
+          display: flex;
+          align-items: center;
+          gap: 18px;
+          padding: 22px 24px;
+          background: rgba(15, 15, 30, 0.5);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(59, 130, 246, 0.15);
+          border-radius: 18px;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        .mr-tickets-icon {
+          flex-shrink: 0;
+          width: 48px;
+          height: 48px;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(99,102,241,0.1));
+          border: 1px solid rgba(59,130,246,0.25);
+        }
+
+        .mr-tickets-text {
+          font-size: 1.0625rem;
+          font-weight: 700;
+          color: #e5e7eb;
+        }
+
+        .mr-tickets-count {
+          color: #60a5fa;
+          font-size: 1.125rem;
+        }
+
+        .mr-tickets-sub {
+          font-size: 0.75rem;
+          color: #6b7280;
+          margin-top: 4px;
+        }
+
+        /* ── Add Observation Section ── */
+        .mr-add-section {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          padding: 24px;
+          background: rgba(15, 15, 30, 0.4);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 18px;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.03);
+        }
+
+        .mr-add-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .mr-add-header-icon {
+          width: 28px;
+          height: 28px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(34, 197, 94, 0.1);
+          border: 1px solid rgba(34, 197, 94, 0.15);
+        }
+
+        .mr-add-header-text {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: #d1d5db;
+        }
+
+        .mr-textarea {
+          width: 100%;
+          padding: 14px 16px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          color: #e5e7eb;
+          font-size: 0.9rem;
+          font-family: inherit;
+          outline: none;
+          resize: none;
+          transition: all 0.25s ease;
+        }
+
+        .mr-textarea::placeholder {
+          color: #4b5563;
+        }
+
+        .mr-textarea:focus {
+          border-color: rgba(34, 197, 94, 0.35);
+          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08);
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .mr-textarea-edit {
+          border-color: rgba(251, 191, 36, 0.2);
+        }
+
+        .mr-textarea-edit:focus {
+          border-color: rgba(251, 191, 36, 0.35);
+          box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.08);
+        }
+
+        .mr-add-footer {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .mr-add-hint {
+          font-size: 0.75rem;
+          color: #4b5563;
+        }
+
+        .mr-add-btn {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 18px;
+          background: linear-gradient(135deg, #22c55e, #16a34a);
+          border: none;
+          border-radius: 12px;
+          color: #fff;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          cursor: pointer;
+          overflow: hidden;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+        }
+
+        .mr-add-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(34, 197, 94, 0.35);
+        }
+
+        .mr-add-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .mr-add-btn-glow {
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+          animation: mrBtnGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes mrBtnGlow {
+          0% { left: -100%; }
+          50% { left: 100%; }
+          100% { left: 100%; }
+        }
+
+        /* ── Loading ── */
+        .mr-loading {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 12px;
+          padding: 64px 20px;
+          background: rgba(15, 15, 30, 0.4);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 20px;
+          color: #6b7280;
+          font-size: 0.9375rem;
+        }
+
+        /* ── Empty ── */
+        .mr-empty {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          padding: 64px 20px;
+          background: rgba(15, 15, 30, 0.4);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 20px;
+          text-align: center;
+        }
+
+        .mr-empty-icon {
+          width: 64px;
+          height: 64px;
+          border-radius: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          margin-bottom: 16px;
+        }
+
+        .mr-empty-title {
+          color: #9ca3af;
+          font-weight: 600;
+          font-size: 0.9375rem;
+          margin-bottom: 6px;
+        }
+
+        .mr-empty-sub {
+          color: #6b7280;
+          font-size: 0.8125rem;
+        }
+
+        /* ── Observations List ── */
+        .mr-obs-list {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .mr-obs-card {
+          padding: 20px 24px;
+          background: rgba(15, 15, 30, 0.45);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 16px;
+          transition: all 0.3s ease;
+          animation: mrObsIn 0.4s ease-out both;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .mr-obs-card:hover {
+          border-color: rgba(255, 255, 255, 0.1);
+          box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+
+        @keyframes mrObsIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .mr-obs-inner {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 16px;
+        }
+
+        .mr-obs-content {
+          flex: 1;
+          min-width: 0;
+        }
+
+        .mr-obs-meta {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 10px;
+        }
+
+        .mr-obs-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 26px;
+          height: 26px;
+          border-radius: 8px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          flex-shrink: 0;
+          background: linear-gradient(135deg, rgba(34,197,94,0.15), rgba(16,185,129,0.1));
+          color: #86efac;
+          border: 1px solid rgba(34,197,94,0.2);
+        }
+
+        .mr-obs-meta-text {
+          font-size: 0.75rem;
+          color: #6b7280;
+        }
+
+        .mr-obs-edited {
+          display: inline-flex;
+          align-items: center;
+          gap: 3px;
+          margin-left: 6px;
+          padding: 2px 6px;
+          border-radius: 6px;
+          font-size: 10px;
+          background: rgba(251, 191, 36, 0.08);
+          color: #fbbf24;
+          border: 1px solid rgba(251, 191, 36, 0.12);
+        }
+
+        .mr-obs-text {
+          font-size: 0.875rem;
+          line-height: 1.6;
+          color: #e5e7eb;
+          white-space: pre-wrap;
+          padding-left: 36px;
+        }
+
+        .mr-obs-edit-area {
+          padding-left: 36px;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .mr-edit-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .mr-edit-save {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 14px;
+          border-radius: 10px;
+          font-size: 0.75rem;
+          font-weight: 600;
+          border: 1px solid rgba(34,197,94,0.25);
+          background: linear-gradient(135deg, rgba(34,197,94,0.15), rgba(16,185,129,0.1));
+          color: #86efac;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(34,197,94,0.08);
+        }
+
+        .mr-edit-save:hover:not(:disabled) {
+          box-shadow: 0 4px 14px rgba(34,197,94,0.2);
+        }
+
+        .mr-edit-save:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .mr-edit-cancel {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 14px;
+          border-radius: 10px;
+          font-size: 0.75rem;
+          font-weight: 500;
+          border: 1px solid rgba(100, 116, 139, 0.12);
+          background: rgba(100, 116, 139, 0.06);
+          color: #94a3b8;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .mr-edit-cancel:hover:not(:disabled) {
+          background: rgba(100, 116, 139, 0.12);
+        }
+
+        .mr-edit-hint {
+          font-size: 0.6875rem;
+          color: #4b5563;
+          margin-left: auto;
+        }
+
+        @media (max-width: 640px) {
+          .mr-edit-hint { display: none; }
+        }
+
+        /* ── Action buttons ── */
+        .mr-obs-actions {
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          gap: 2px;
+          padding: 2px;
+          border-radius: 10px;
+          background: rgba(100, 116, 139, 0.04);
+          border: 1px solid transparent;
+          opacity: 0;
+          transition: opacity 0.2s ease;
+        }
+
+        .mr-obs-card:hover .mr-obs-actions {
+          opacity: 1;
+        }
+
+        .mr-obs-action-btn {
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 8px;
+          border: none;
+          background: transparent;
+          color: #64748b;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        /* ── Info Banner ── */
+        .mr-info-banner {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 16px 20px;
+          background: rgba(15, 15, 30, 0.5);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(99, 102, 241, 0.12);
+          border-radius: 16px;
+        }
+
+        .mr-info-icon {
+          width: 36px;
+          height: 36px;
+          flex-shrink: 0;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: rgba(99, 102, 241, 0.1);
+          border: 1px solid rgba(99, 102, 241, 0.15);
+        }
+
+        .mr-info-text {
+          font-size: 0.875rem;
+          color: #a5b4fc;
+        }
+      `}</style>
     </div>
   )
 }
