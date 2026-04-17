@@ -1,4 +1,4 @@
-# S4S Chamados 🎯
+# S4S Chamados 
 
 Uma plataforma moderna de gestão de chamados educacionais com interface SaaS premium.
 
