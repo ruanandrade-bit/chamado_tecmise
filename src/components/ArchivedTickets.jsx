@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Archive, Trash2, AlertTriangle, X } from 'lucide-react'
+import { Archive, Trash2, AlertTriangle, X, Timer } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
 import TicketCard from './TicketCard'
@@ -46,6 +46,25 @@ export default function ArchivedTickets() {
           <h1 className="text-3xl font-bold text-dark-100">Chamados Resolvidos</h1>
           <p className="text-dark-400">Chamados arquivados após resolução</p>
         </div>
+      </div>
+
+      {/* Auto-delete warning banner */}
+      <div
+        className="flex items-center gap-3 rounded-xl border px-4 py-3"
+        style={{
+          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(245, 158, 11, 0.02) 100%)',
+          borderColor: 'rgba(245, 158, 11, 0.15)',
+        }}
+      >
+        <div
+          className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
+          style={{ background: 'rgba(245, 158, 11, 0.12)' }}
+        >
+          <Timer size={16} style={{ color: '#f59e0b' }} />
+        </div>
+        <p className="text-sm" style={{ color: '#fbbf24' }}>
+          Os chamados resolvidos são excluídos automaticamente após <strong>2 semanas</strong> da data de resolução.
+        </p>
       </div>
 
       {archivedTickets.length === 0 ? (

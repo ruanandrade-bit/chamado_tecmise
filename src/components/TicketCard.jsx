@@ -102,12 +102,31 @@ export default function TicketCard({
           )}
         </div>
         
-        <p className="text-xs text-dark-500">
-          {new Date(ticket.createdAt).toLocaleDateString('pt-BR', { 
-            month: 'short', 
-            day: 'numeric'
-          })}
-        </p>
+        {ticket.archived && ticket.resolvedAt ? (
+          <div className="text-right">
+            <p className="text-xs text-dark-500">
+              Resolvido em {new Date(ticket.resolvedAt).toLocaleDateString('pt-BR', { 
+                month: 'short', 
+                day: 'numeric'
+              })}
+            </p>
+            {(() => {
+              const daysLeft = Math.max(0, 14 - Math.floor((Date.now() - new Date(ticket.resolvedAt).getTime()) / (1000 * 60 * 60 * 24)))
+              return (
+                <p className={`text-xs mt-0.5 font-medium ${daysLeft <= 3 ? 'text-red-400' : daysLeft <= 7 ? 'text-amber-400' : 'text-dark-500'}`}>
+                  {daysLeft === 0 ? 'Será excluído em breve' : `${daysLeft}d restantes`}
+                </p>
+              )
+            })()}
+          </div>
+        ) : (
+          <p className="text-xs text-dark-500">
+            {new Date(ticket.createdAt).toLocaleDateString('pt-BR', { 
+              month: 'short', 
+              day: 'numeric'
+            })}
+          </p>
+        )}
       </div>
     </div>
   )
