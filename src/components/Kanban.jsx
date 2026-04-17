@@ -171,6 +171,16 @@ function ConfirmArchiveModal({ isOpen, onClose, onConfirm, isArchiving, ticket }
   )
 }
 
+/* ─── Column status dot colors ─────────────────────────────────────── */
+const STATUS_DOT_STYLES = {
+  'sem-status': { bg: '#6b7280', glow: 'rgba(107,114,128,0.3)' },
+  recebido: { bg: '#22c55e', glow: 'rgba(34,197,94,0.3)' },
+  'em-analise': { bg: '#f59e0b', glow: 'rgba(245,158,11,0.3)' },
+  'aguardando-escola': { bg: '#f59e0b', glow: 'rgba(245,158,11,0.3)' },
+  'em-andamento': { bg: '#3b82f6', glow: 'rgba(59,130,246,0.3)' },
+  resolvido: { bg: '#22c55e', glow: 'rgba(34,197,94,0.3)' },
+}
+
 /* ─── Main Component ──────────────────────────────────────────────── */
 export default function Kanban() {
   const { tickets, getTicketsByStatus, moveTicket, archiveTicket, STATUSES } = useTicketsStore()
@@ -179,6 +189,7 @@ export default function Kanban() {
   const [selectedTicketId, setSelectedTicketId] = useState(null)
   const [ticketToArchive, setTicketToArchive] = useState(null)
   const [isArchiving, setIsArchiving] = useState(false)
+  const [dragOverCol, setDragOverCol] = useState(null)
 
   const isViewOnly = user?.viewOnly === true
 
@@ -186,12 +197,18 @@ export default function Kanban() {
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId) || null
   const canDragDrop = user?.canDragDrop
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e, statusValue) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
+    setDragOverCol(statusValue)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverCol(null)
   }
 
   const handleDrop = (e, statusValue) => {
+    setDragOverCol(null)
     if (!canDragDrop) {
       e.preventDefault()
       return
@@ -227,7 +244,7 @@ export default function Kanban() {
   }
 
   return (
-    <div className="space-y-6 animate-slideInUp">
+    <div className="kb-container">
       {/* Confirm Archive Modal */}
       <ConfirmArchiveModal
         isOpen={ticketToArchive !== null}
@@ -238,74 +255,91 @@ export default function Kanban() {
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="kb-header">
         <div>
-          <h1 className="text-3xl font-bold text-dark-100 mb-1">Kanban Board</h1>
+          <h1 className="kb-title">Kanban Board</h1>
         </div>
         
         {!isViewOnly && (
           <button
             onClick={() => setIsCreateModalOpen(true)}
-            className="btn-primary flex items-center gap-2"
+            className="kb-new-btn"
           >
-            <Plus size={20} /> Novo Chamado
+            <Plus size={20} />
+            <span>Novo Chamado</span>
+            <span className="kb-new-btn-glow" />
           </button>
         )}
       </div>
 
       {/* Kanban board */}
-      <div className="overflow-x-auto pb-4 -mx-4 px-4 h-[calc(100vh-200px)]">
-        <div className="flex gap-6 min-w-min h-full">
-          {STATUSES.map(status => (
-            <div
-              key={status.value}
-              onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, status.value)}
-              className={`flex-shrink-0 w-72 bg-dark-800 border border-dark-700 rounded-2xl p-4 flex flex-col transition-colors duration-300 ${
-                canDragDrop ? 'hover:border-primary-light/30' : ''
-              }`}
-            >
-              {/* Column header */}
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="font-bold text-dark-100 flex items-center gap-2">
-                    <span className={`w-3 h-3 rounded-full ${status.color}`}></span>
-                    {status.label}
-                  </h2>
-                  <span className="px-2 py-1 bg-dark-700 rounded text-xs font-semibold text-primary-light">
-                    {ticketsByStatus[status.value].length}
-                  </span>
-                </div>
-                <div className="h-1 bg-gradient-to-r from-dark-600 to-transparent rounded-full"></div>
-              </div>
+      <div className="kb-board-scroll">
+        <div className="kb-board">
+          {STATUSES.map((status, colIndex) => {
+            const dotStyle = STATUS_DOT_STYLES[status.value] || STATUS_DOT_STYLES['sem-status']
+            const isDragOver = dragOverCol === status.value
+            const count = ticketsByStatus[status.value].length
 
-              {/* Cards container */}
-              <div className="flex-1 space-y-3 overflow-y-auto">
-                {ticketsByStatus[status.value].length === 0 ? (
-                  <div className="h-full flex items-center justify-center text-center p-4">
-                    <p className="text-dark-500 text-sm">Nenhum chamado neste status</p>
-                  </div>
-                ) : (
-                  ticketsByStatus[status.value].map(ticket => (
-                    <div
-                      key={ticket.id}
-                      onClick={() => handleTicketClick(ticket)}
-                      draggable={canDragDrop}
-                    >
-                      <TicketCard
-                        ticket={ticket}
-                        onClick={() => handleTicketClick(ticket)}
-                        draggable={true}
-                        showArchiveAction={status.value === 'resolvido' && canDragDrop}
-                        onArchive={handleArchiveRequest}
+            return (
+              <div
+                key={status.value}
+                onDragOver={(e) => handleDragOver(e, status.value)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, status.value)}
+                className={`kb-column ${isDragOver ? 'kb-column-dragover' : ''}`}
+                style={{ animationDelay: `${colIndex * 0.08}s` }}
+              >
+                {/* Column header */}
+                <div className="kb-col-header">
+                  <div className="kb-col-title-row">
+                    <h2 className="kb-col-title">
+                      <span
+                        className="kb-col-dot"
+                        style={{
+                          background: dotStyle.bg,
+                          boxShadow: `0 0 8px ${dotStyle.glow}`,
+                        }}
                       />
-                    </div>
-                  ))
-                )}
-              </div>
+                      {status.label}
+                    </h2>
+                    <span className="kb-col-count">{count}</span>
+                  </div>
+                  <div
+                    className="kb-col-line"
+                    style={{
+                      background: `linear-gradient(90deg, ${dotStyle.bg}40, transparent)`,
+                    }}
+                  />
+                </div>
 
-            </div>
-          ))}
+                {/* Cards container */}
+                <div className="kb-cards-container">
+                  {count === 0 ? (
+                    <div className="kb-empty">
+                      <p>Nenhum chamado neste status</p>
+                    </div>
+                  ) : (
+                    ticketsByStatus[status.value].map(ticket => (
+                      <div
+                        key={ticket.id}
+                        onClick={() => handleTicketClick(ticket)}
+                        draggable={canDragDrop}
+                      >
+                        <TicketCard
+                          ticket={ticket}
+                          onClick={() => handleTicketClick(ticket)}
+                          draggable={true}
+                          showArchiveAction={status.value === 'resolvido' && canDragDrop}
+                          onArchive={handleArchiveRequest}
+                        />
+                      </div>
+                    ))
+                  )}
+                </div>
+
+              </div>
+            )
+          })}
         </div>
       </div>
 
@@ -320,6 +354,224 @@ export default function Kanban() {
           onClose={() => setSelectedTicketId(null)}
         />
       )}
+
+      <style>{`
+        .kb-container {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+          animation: kbFadeIn 0.5s ease-out;
+        }
+
+        @keyframes kbFadeIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── Header ── */
+        .kb-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 16px;
+        }
+
+        .kb-title {
+          font-size: 1.875rem;
+          font-weight: 700;
+          color: #f3f4f6;
+          letter-spacing: -0.01em;
+        }
+
+        /* ── New Ticket Button ── */
+        .kb-new-btn {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 20px;
+          background: linear-gradient(135deg, #22c55e, #16a34a);
+          border: none;
+          border-radius: 14px;
+          color: #fff;
+          font-size: 0.9375rem;
+          font-weight: 600;
+          cursor: pointer;
+          overflow: hidden;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+        }
+
+        .kb-new-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+        }
+
+        .kb-new-btn-glow {
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+          animation: kbBtnGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes kbBtnGlow {
+          0% { left: -100%; }
+          50% { left: 100%; }
+          100% { left: 100%; }
+        }
+
+        /* ── Board ── */
+        .kb-board-scroll {
+          overflow-x: auto;
+          padding-bottom: 16px;
+          margin: 0 -16px;
+          padding-left: 16px;
+          padding-right: 16px;
+          height: calc(100vh - 200px);
+        }
+
+        .kb-board {
+          display: flex;
+          gap: 20px;
+          min-width: min-content;
+          height: 100%;
+        }
+
+        /* ── Column ── */
+        .kb-column {
+          flex-shrink: 0;
+          width: 288px;
+          background: rgba(15, 15, 30, 0.45);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 20px;
+          padding: 20px 16px;
+          display: flex;
+          flex-direction: column;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          box-shadow:
+            0 4px 20px rgba(0,0,0,0.15),
+            inset 0 1px 0 rgba(255, 255, 255, 0.03);
+          animation: kbColIn 0.5s ease-out both;
+        }
+
+        .kb-column:hover {
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .kb-column-dragover {
+          border-color: rgba(134, 239, 172, 0.35) !important;
+          box-shadow:
+            0 4px 20px rgba(0,0,0,0.15),
+            0 0 30px rgba(34, 197, 94, 0.08),
+            inset 0 1px 0 rgba(134, 239, 172, 0.05);
+          background: rgba(15, 15, 30, 0.55);
+        }
+
+        @keyframes kbColIn {
+          from { opacity: 0; transform: translateY(16px) scale(0.98); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* ── Column Header ── */
+        .kb-col-header {
+          margin-bottom: 16px;
+        }
+
+        .kb-col-title-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 10px;
+        }
+
+        .kb-col-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-weight: 700;
+          font-size: 0.9375rem;
+          color: #e5e7eb;
+        }
+
+        .kb-col-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          flex-shrink: 0;
+          animation: kbDotPulse 3s ease-in-out infinite;
+        }
+
+        @keyframes kbDotPulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.6; }
+        }
+
+        .kb-col-count {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 28px;
+          height: 28px;
+          padding: 0 8px;
+          background: rgba(134, 239, 172, 0.1);
+          border: 1px solid rgba(134, 239, 172, 0.15);
+          border-radius: 10px;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #86efac;
+        }
+
+        .kb-col-line {
+          height: 2px;
+          border-radius: 99px;
+        }
+
+        /* ── Cards Container ── */
+        .kb-cards-container {
+          flex: 1;
+          overflow-y: auto;
+          padding-right: 4px;
+        }
+
+        .kb-cards-container::-webkit-scrollbar {
+          width: 4px;
+        }
+
+        .kb-cards-container::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .kb-cards-container::-webkit-scrollbar-thumb {
+          background: rgba(255,255,255,0.08);
+          border-radius: 99px;
+        }
+
+        .kb-cards-container::-webkit-scrollbar-thumb:hover {
+          background: rgba(255,255,255,0.15);
+        }
+
+        /* ── Empty State ── */
+        .kb-empty {
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          padding: 16px;
+        }
+
+        .kb-empty p {
+          font-size: 0.875rem;
+          color: #4b5563;
+          font-style: italic;
+        }
+      `}</style>
     </div>
   )
 }
