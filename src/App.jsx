@@ -7,6 +7,7 @@ import Sidebar from './components/Sidebar'
 import Dashboard from './components/Dashboard'
 import Kanban from './components/Kanban'
 import ArchivedTickets from './components/ArchivedTickets'
+import MonthlyReport from './components/MonthlyReport'
 import NotificationCenter from './components/NotificationCenter'
 
 export default function App() {
@@ -75,6 +76,7 @@ export default function App() {
             {currentPage === 'dashboard' && <Dashboard />}
             {currentPage === 'kanban' && <Kanban />}
             {currentPage === 'archived' && <ArchivedTickets />}
+            {currentPage === 'monthly-report' && <MonthlyReport />}
           </div>
         </main>
       </div>

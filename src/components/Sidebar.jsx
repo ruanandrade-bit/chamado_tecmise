@@ -1,4 +1,4 @@
-import { LayoutDashboard, Kanban, Archive, X } from 'lucide-react'
+import { LayoutDashboard, Kanban, Archive, FileText, X } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 
 export default function Sidebar({ currentPage, onPageChange, isMobileOpen, onMobileClose }) {
@@ -10,6 +10,7 @@ export default function Sidebar({ currentPage, onPageChange, isMobileOpen, onMob
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'kanban', label: 'Kanban', icon: Kanban },
     { id: 'archived', label: 'Chamados Resolvidos', icon: Archive },
+    { id: 'monthly-report', label: 'Relatório Mensal', icon: FileText },
   ]
 
   return (
