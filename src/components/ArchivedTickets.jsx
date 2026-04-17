@@ -1,10 +1,176 @@
 import { useState } from 'react'
-import { Archive, Trash2, AlertTriangle, X, Timer } from 'lucide-react'
+import { Archive, Trash2, Timer, Loader2, ShieldAlert } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
 import TicketCard from './TicketCard'
 import TicketDetailsModal from './TicketDetailsModal'
 
+/* ─── Confirm‑Delete Modal (premium glassmorphism) ─────────────────── */
+function ConfirmDeleteModal({ isOpen, onClose, onConfirm, isDeleting, ticket }) {
+  if (!isOpen || !ticket) return null
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape' && !isDeleting) onClose()
+  }
+
+  const previewText = ticket.title || ticket.description || ''
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      style={{ animation: 'fadeIn 0.2s ease-out' }}
+      onKeyDown={handleKeyDown}
+      tabIndex={-1}
+    >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
+        onClick={!isDeleting ? onClose : undefined}
+      />
+
+      {/* Modal card */}
+      <div
+        className="relative w-full max-w-md mx-4 rounded-2xl border overflow-hidden"
+        style={{
+          background: 'linear-gradient(145deg, rgba(30, 35, 50, 0.97) 0%, rgba(18, 22, 34, 0.99) 100%)',
+          borderColor: 'rgba(239, 68, 68, 0.2)',
+          boxShadow: '0 25px 80px rgba(0,0,0,0.6), 0 0 60px rgba(239, 68, 68, 0.06), inset 0 1px 0 rgba(255,255,255,0.03)',
+          animation: 'slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+      >
+        {/* Top red accent bar */}
+        <div
+          style={{
+            height: '3px',
+            background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.6), rgba(239,68,68,0.8), rgba(239,68,68,0.6), transparent)',
+          }}
+        />
+
+        {/* Red glow */}
+        <div
+          className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(239, 68, 68, 0.1) 0%, transparent 65%)',
+            pointerEvents: 'none',
+          }}
+        />
+
+        <div className="relative p-6 flex flex-col items-center text-center space-y-5">
+          {/* Animated icon */}
+          <div
+            className="w-18 h-18 rounded-2xl flex items-center justify-center"
+            style={{
+              width: '72px',
+              height: '72px',
+              background: 'linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(220,38,38,0.08) 100%)',
+              border: '1px solid rgba(239,68,68,0.2)',
+              boxShadow: '0 0 30px rgba(239,68,68,0.08)',
+            }}
+          >
+            <ShieldAlert size={32} style={{ color: '#f87171' }} />
+          </div>
+
+          {/* Text */}
+          <div className="space-y-2">
+            <h3 className="text-xl font-bold" style={{ color: '#f1f5f9' }}>
+              Excluir Chamado?
+            </h3>
+            <p className="text-sm leading-relaxed" style={{ color: '#94a3b8' }}>
+              Tem certeza que deseja excluir este chamado? Essa ação <strong style={{ color: '#f87171' }}>não poderá ser desfeita</strong>.
+            </p>
+          </div>
+
+          {/* Preview of ticket being deleted */}
+          <div
+            className="w-full rounded-xl p-3 text-left"
+            style={{
+              background: 'rgba(239, 68, 68, 0.04)',
+              border: '1px solid rgba(239, 68, 68, 0.1)',
+            }}
+          >
+            <p className="text-xs font-medium mb-1" style={{ color: '#64748b' }}>Chamado a ser excluído:</p>
+            <p className="text-sm font-semibold mb-0.5" style={{ color: '#f87171' }}>
+              #{ticket.id}
+            </p>
+            {previewText && (
+              <p className="text-sm line-clamp-3" style={{ color: '#cbd5e1' }}>
+                {previewText.length > 120 ? previewText.slice(0, 120) + '…' : previewText}
+              </p>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 w-full pt-1">
+            <button
+              onClick={onClose}
+              disabled={isDeleting}
+              className="flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all"
+              style={{
+                background: 'rgba(100, 116, 139, 0.1)',
+                color: '#94a3b8',
+                border: '1px solid rgba(100, 116, 139, 0.15)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(100, 116, 139, 0.18)'
+                e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(100, 116, 139, 0.1)'
+                e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.15)'
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={isDeleting}
+              className="flex-1 px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+              style={{
+                background: isDeleting
+                  ? 'rgba(239, 68, 68, 0.2)'
+                  : 'linear-gradient(135deg, rgba(239,68,68,0.75) 0%, rgba(185,28,28,0.85) 100%)',
+                color: '#fff',
+                border: '1px solid rgba(239,68,68,0.35)',
+                boxShadow: isDeleting ? 'none' : '0 4px 20px rgba(239,68,68,0.2)',
+                cursor: isDeleting ? 'not-allowed' : 'pointer',
+                opacity: isDeleting ? 0.7 : 1,
+              }}
+              onMouseEnter={(e) => {
+                if (!isDeleting) {
+                  e.currentTarget.style.boxShadow = '0 6px 25px rgba(239,68,68,0.35)'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(239,68,68,0.2)'
+                e.currentTarget.style.transform = 'translateY(0)'
+              }}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                <>
+                  <Trash2 size={15} />
+                  Sim, excluir
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Main Component ──────────────────────────────────────────────── */
 export default function ArchivedTickets() {
   const { getArchivedTickets, deleteTicket } = useTicketsStore()
   const { user } = useAuthStore()
@@ -38,6 +204,15 @@ export default function ArchivedTickets() {
 
   return (
     <div className="space-y-6 animate-slideInUp">
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={ticketToDelete !== null}
+        onClose={() => setTicketToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        isDeleting={isDeleting}
+        ticket={ticketToDelete}
+      />
+
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-primary-light/20 flex items-center justify-center">
           <Archive size={20} className="text-primary-light" />
@@ -91,62 +266,6 @@ export default function ArchivedTickets() {
           ticket={selectedTicket}
           onClose={() => setSelectedTicketId(null)}
         />
-      )}
-
-      {/* Delete confirmation modal */}
-      {ticketToDelete && (
-        <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[80] p-4"
-          onClick={() => !isDeleting && setTicketToDelete(null)}
-        >
-          <div
-            className="bg-dark-800 border border-dark-600 rounded-2xl max-w-sm w-full animate-slideInUp overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header with warning icon */}
-            <div className="flex flex-col items-center pt-8 pb-4 px-6">
-              <div className="w-16 h-16 rounded-full bg-red-500/15 border-2 border-red-500/30 flex items-center justify-center mb-4">
-                <AlertTriangle size={28} className="text-red-400" />
-              </div>
-              <h3 className="text-xl font-bold text-dark-100 text-center">Excluir chamado</h3>
-              <p className="text-sm text-dark-400 text-center mt-2">
-                Tem certeza que deseja excluir o chamado{' '}
-                <span className="font-semibold text-primary-light">{ticketToDelete.id}</span>?
-              </p>
-              <p className="text-xs text-dark-500 text-center mt-2">
-                Essa ação não pode ser desfeita.
-              </p>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3 p-6 pt-2">
-              <button
-                onClick={() => setTicketToDelete(null)}
-                disabled={isDeleting}
-                className="btn-secondary flex-1 py-2.5 text-sm disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-2.5 bg-red-500/20 hover:bg-red-500/30 active:bg-red-500/40 text-red-300 border border-red-500/30 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isDeleting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-red-300/30 border-t-red-300 rounded-full animate-spin" />
-                    Excluindo...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 size={14} />
-                    Excluir
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   )
