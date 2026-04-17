@@ -64,9 +64,8 @@ export default function Sidebar({ currentPage, onPageChange, isMobileOpen, onMob
           <div className="px-3 py-2 text-xs text-dark-400">
             <p className="font-semibold text-dark-300 mb-3">INFORMAÇÕES</p>
             <div className="space-y-2 text-dark-500 text-xs">
-              <p>📱 <strong>Equipe:</strong> {uniqueResponsibles} profissiona{uniqueResponsibles === 1 ? 'l' : 'is'}</p>
               <p>📋 <strong>Total:</strong> {stats.total} chamado{stats.total !== 1 ? 's' : ''}</p>
-              <p>✅ <strong>Resolvidos:</strong> {stats.completed}</p>
+              <p>✅ <strong>Concluídos:</strong> {stats.completed}</p>
             </div>
           </div>
         </div>

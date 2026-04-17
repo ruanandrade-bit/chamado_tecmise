@@ -1,12 +1,13 @@
 import { useState, useRef } from 'react'
-import { X, Plus, Check, Paperclip, Send, MessageCircle, Upload, Image as ImageIcon } from 'lucide-react'
+import { X, Check, Paperclip, Send, MessageCircle, Upload, ClipboardList, Image as ImageIcon } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
+import ChecklistSelectorModal from './ChecklistSelectorModal'
 
 export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
   const { updateTicket, updateChecklistItem, addChecklistItem, getTicketProgress, STATUSES } = useTicketsStore()
   const { user } = useAuthStore()
-  const [newChecklistItem, setNewChecklistItem] = useState('')
+  const [isChecklistSelectorOpen, setIsChecklistSelectorOpen] = useState(false)
   const [selectedImage, setSelectedImage] = useState(null)
   const [commentText, setCommentText] = useState('')
   const [isSendingComment, setIsSendingComment] = useState(false)
@@ -49,11 +50,10 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
     }
   })
 
-  const handleAddChecklistItem = () => {
+  const handleApplyChecklist = async (newItems) => {
     if (!canManageChecklist) return
-    if (newChecklistItem.trim()) {
-      addChecklistItem(ticket.id, newChecklistItem)
-      setNewChecklistItem('')
+    for (const title of newItems) {
+      await addChecklistItem(ticket.id, title)
     }
   }
 
@@ -247,7 +247,18 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
                   {ticket.checklist.filter(c => c.completed).length}/{ticket.checklist.length} concluído{ticket.checklist.filter(c => c.completed).length !== 1 ? 's' : ''}
                 </p>
               </div>
-              <span className="text-lg font-bold text-primary-light">{progress}%</span>
+              <div className="flex items-center gap-3">
+                {canManageChecklist && (
+                  <button
+                    onClick={() => setIsChecklistSelectorOpen(true)}
+                    className="btn-primary px-3 py-1.5 flex items-center gap-1.5 text-sm"
+                  >
+                    <ClipboardList size={14} />
+                    Checklist
+                  </button>
+                )}
+                <span className="text-lg font-bold text-primary-light">{progress}%</span>
+              </div>
             </div>
 
             {/* Progress bar */}
@@ -289,28 +300,12 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
               ))}
             </div>
 
-            {/* Add new item */}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={newChecklistItem}
-                onChange={(e) => setNewChecklistItem(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleAddChecklistItem()}
-                placeholder="Nova tarefa..."
-                className="input-base flex-1 text-sm"
-                disabled={!canManageChecklist}
-              />
-              <button
-                onClick={handleAddChecklistItem}
-                className="btn-primary px-3"
-                disabled={!canManageChecklist}
-              >
-                <Plus size={18} />
-              </button>
-            </div>
-            {!canManageChecklist && (
-              <p className="text-xs text-dark-500 mt-2">
-                Apenas o admin (Ruan) pode marcar e adicionar tarefas do checklist.
+            {ticket.checklist.length === 0 && (
+              <p className="text-sm text-dark-500">
+                {canManageChecklist
+                  ? 'Clique em "Checklist" para adicionar itens.'
+                  : 'Nenhum item no checklist.'
+                }
               </p>
             )}
           </div>
@@ -466,6 +461,15 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
           )}
         </div>
       </div>
+
+      {/* Checklist Selector Modal */}
+      {isChecklistSelectorOpen && (
+        <ChecklistSelectorModal
+          ticket={ticket}
+          onClose={() => setIsChecklistSelectorOpen(false)}
+          onApply={handleApplyChecklist}
+        />
+      )}
     </div>
   )
 }

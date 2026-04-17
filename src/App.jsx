@@ -11,7 +11,7 @@ import NotificationCenter from './components/NotificationCenter'
 
 export default function App() {
   const { isAuthenticated, isAuthLoading, initAuth } = useAuthStore()
-  const { bootstrap } = useTicketsStore()
+  const { bootstrap, loadTickets } = useTicketsStore()
   const [currentPage, setCurrentPage] = useState('kanban')
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
 
@@ -24,6 +24,15 @@ export default function App() {
       bootstrap()
     }
   }, [isAuthenticated, bootstrap])
+
+  // Polling: sync tickets every 5 seconds across tabs/users
+  useEffect(() => {
+    if (!isAuthenticated) return
+    const interval = setInterval(() => {
+      loadTickets()
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [isAuthenticated, loadTickets])
 
   useEffect(() => {
     // Close sidebar when page changes
