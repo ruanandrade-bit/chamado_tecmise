@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { X, Upload, Image as ImageIcon } from 'lucide-react'
+import { X, Upload, Image as ImageIcon, Plus, Loader2 } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
 
@@ -144,33 +144,36 @@ export default function CreateTicketModal({ onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-dark-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-dark-700 animate-slideInUp">
+    <div className="ctm-overlay" onClick={onClose}>
+      <div className="ctm-modal" onClick={(e) => e.stopPropagation()}>
+        {/* Top accent line */}
+        <div className="ctm-accent-line" />
+
         {/* Header */}
-        <div className="sticky top-0 bg-dark-800 border-b border-dark-700 px-6 py-4 flex items-center justify-between z-10">
-          <h2 className="text-xl font-bold text-dark-100">Criar Novo Chamado</h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-dark-700 rounded-lg transition-colors"
-          >
-            <X size={20} className="text-dark-300" />
+        <div className="ctm-header">
+          <div className="ctm-header-left">
+            <div className="ctm-header-icon">
+              <Plus size={20} style={{ color: '#86efac' }} />
+            </div>
+            <h2 className="ctm-header-title">Criar Novo Chamado</h2>
+          </div>
+          <button onClick={onClose} className="ctm-close-btn">
+            <X size={18} />
           </button>
         </div>
 
         {/* Content */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="ctm-form">
           {/* Grid de campos */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="ctm-grid">
             {/* School - Dropdown predefinido */}
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                Escola *
-              </label>
+            <div className="ctm-field ctm-field-full">
+              <label className="ctm-label">Escola <span className="ctm-required">*</span></label>
               <select
                 name="school"
                 value={formData.school}
                 onChange={handleChange}
-                className="input-base w-full"
+                className="ctm-select"
                 required
               >
                 <option value="" disabled>Selecione a escola</option>
@@ -181,31 +184,27 @@ export default function CreateTicketModal({ onClose }) {
             </div>
 
             {/* Classroom */}
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                Turma *
-              </label>
+            <div className="ctm-field">
+              <label className="ctm-label">Turma <span className="ctm-required">*</span></label>
               <input
                 type="text"
                 name="classroom"
                 value={formData.classroom}
                 onChange={handleChange}
                 placeholder="Ex: 5º B, 3º D"
-                className="input-base w-full"
+                className="ctm-input"
                 required
               />
             </div>
 
             {/* Device - Dropdown filtrado pela escola */}
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                Device *
-              </label>
+            <div className="ctm-field">
+              <label className="ctm-label">Device <span className="ctm-required">*</span></label>
               <select
                 name="device"
                 value={formData.device}
                 onChange={handleChange}
-                className="input-base w-full"
+                className="ctm-select"
                 required
                 disabled={!formData.school}
               >
@@ -217,22 +216,20 @@ export default function CreateTicketModal({ onClose }) {
                 ))}
               </select>
               {formData.school && (
-                <p className="text-xs text-dark-500 mt-1">
+                <p className="ctm-hint">
                   {availableDevices.length} device{availableDevices.length !== 1 ? 's' : ''} disponíve{availableDevices.length !== 1 ? 'is' : 'l'}
                 </p>
               )}
             </div>
 
             {/* Period */}
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                Período
-              </label>
+            <div className="ctm-field">
+              <label className="ctm-label">Período</label>
               <select
                 name="period"
                 value={formData.period}
                 onChange={handleChange}
-                className="input-base w-full"
+                className="ctm-select"
               >
                 {periods.map(period => (
                   <option key={period} value={period}>{period}</option>
@@ -241,15 +238,13 @@ export default function CreateTicketModal({ onClose }) {
             </div>
 
             {/* Local do problema */}
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                Local do problema
-              </label>
+            <div className="ctm-field">
+              <label className="ctm-label">Local do problema</label>
               <select
                 name="problemType"
                 value={formData.problemType}
                 onChange={handleChange}
-                className="input-base w-full"
+                className="ctm-select"
               >
                 <option value="" disabled>Escolha o local do problema</option>
                 {problemLocations.map(loc => (
@@ -259,29 +254,25 @@ export default function CreateTicketModal({ onClose }) {
             </div>
 
             {/* Responsible - Auto-filled, disabled */}
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                Responsável
-              </label>
+            <div className="ctm-field">
+              <label className="ctm-label">Responsável</label>
               <input
                 type="text"
                 value={user?.name || ''}
                 disabled
-                className="input-base w-full bg-dark-750 opacity-60 cursor-not-allowed"
+                className="ctm-input ctm-input-disabled"
               />
-              <p className="text-xs text-dark-500 mt-1">📌 Atribuído automaticamente</p>
+              <p className="ctm-hint">📌 Atribuído automaticamente</p>
             </div>
 
             {/* Priority */}
-            <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                Prioridade
-              </label>
+            <div className="ctm-field">
+              <label className="ctm-label">Prioridade</label>
               <select
                 name="priority"
                 value={formData.priority}
                 onChange={handleChange}
-                className="input-base w-full"
+                className="ctm-select"
               >
                 <option value="baixa">Baixa</option>
                 <option value="media">Média</option>
@@ -291,26 +282,22 @@ export default function CreateTicketModal({ onClose }) {
           </div>
 
           {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-dark-300 mb-2">
-              Descrição *
-            </label>
+          <div className="ctm-field">
+            <label className="ctm-label">Descrição <span className="ctm-required">*</span></label>
             <textarea
               name="description"
               value={formData.description}
               onChange={handleChange}
               placeholder="Descreva o problema em detalhes..."
               rows="4"
-              className="input-base w-full resize-none"
+              className="ctm-textarea"
               required
             />
           </div>
 
           {/* Image upload with drag and drop */}
-          <div>
-            <label className="block text-sm font-medium text-dark-300 mb-3">
-              Anexar Imagens (até 5)
-            </label>
+          <div className="ctm-field">
+            <label className="ctm-label">Anexar Imagens (até 5)</label>
             
             {/* Upload area with drag and drop */}
             <div
@@ -319,22 +306,18 @@ export default function CreateTicketModal({ onClose }) {
               onDragLeave={handleDrag}
               onDragOver={handleDrag}
               onDrop={handleDrop}
-              className={`
-                w-full border-2 border-dashed rounded-lg p-6 transition-all text-center mb-3 group cursor-pointer
-                ${dragActive 
-                  ? 'border-primary-light bg-primary-light/10' 
-                  : 'border-primary-light/30 hover:border-primary-light/50'
-                }
-              `}
+              className={`ctm-dropzone ${dragActive ? 'ctm-dropzone-active' : ''}`}
               onClick={() => fileInputRef.current?.click()}
             >
-              <div className="flex flex-col items-center gap-2">
-                <Upload size={24} className={dragActive ? 'text-primary-light' : 'text-primary-light/60 group-hover:text-primary-light'} />
+              <div className="ctm-dropzone-content">
+                <div className="ctm-dropzone-icon-wrap">
+                  <Upload size={22} className={dragActive ? 'ctm-dropzone-icon-active' : 'ctm-dropzone-icon'} />
+                </div>
                 <div>
-                  <p className={`text-sm font-medium ${dragActive ? 'text-primary-light' : 'text-primary-light/60 group-hover:text-primary-light'}`}>
+                  <p className={`ctm-dropzone-text ${dragActive ? 'ctm-dropzone-text-active' : ''}`}>
                     {dragActive ? 'Solte para fazer upload' : 'Clique para fazer upload'}
                   </p>
-                  <p className="text-xs text-dark-400">ou arraste imagens aqui</p>
+                  <p className="ctm-dropzone-sub">ou arraste imagens aqui</p>
                 </div>
               </div>
             </div>
@@ -345,28 +328,29 @@ export default function CreateTicketModal({ onClose }) {
               accept="image/*"
               onChange={(e) => handleImageUpload(e.target.files)}
               className="hidden"
+              style={{ display: 'none' }}
             />
 
             {/* Image previews */}
             {images.length > 0 && (
-              <div className="space-y-3">
-                <p className="text-sm text-dark-400">{images.length} imagem{images.length !== 1 ? 's' : ''} anexada{images.length !== 1 ? 's' : ''}</p>
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+              <div className="ctm-previews">
+                <p className="ctm-previews-count">{images.length} imagem{images.length !== 1 ? 's' : ''} anexada{images.length !== 1 ? 's' : ''}</p>
+                <div className="ctm-previews-grid">
                   {images.map(img => (
-                    <div key={img.id} className="relative group">
+                    <div key={img.id} className="ctm-preview-item">
                       <img
                         src={img.preview}
                         alt={img.name}
-                        className="w-full h-24 object-cover rounded-lg border border-dark-600"
+                        className="ctm-preview-img"
                       />
                       <button
                         type="button"
                         onClick={() => removeImage(img.id)}
-                        className="absolute top-1 right-1 bg-red-500/80 hover:bg-red-600 p-1 rounded opacity-0 group-hover:opacity-100 transition-all"
+                        className="ctm-preview-remove"
                       >
                         <X size={14} />
                       </button>
-                      <p className="text-xs text-dark-400 mt-1 truncate text-center">{img.name}</p>
+                      <p className="ctm-preview-name">{img.name}</p>
                     </div>
                   ))}
                 </div>
@@ -375,24 +359,450 @@ export default function CreateTicketModal({ onClose }) {
           </div>
 
           {/* Buttons */}
-          <div className="flex gap-3 pt-4 border-t border-dark-700">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary flex-1"
-            >
+          <div className="ctm-actions">
+            <button type="button" onClick={onClose} className="ctm-btn-cancel">
               Cancelar
             </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary flex-1"
-            >
-              {loading ? 'Criando...' : 'Criar Chamado'}
+            <button type="submit" disabled={loading} className="ctm-btn-submit">
+              {loading ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
+                  Criando...
+                </>
+              ) : (
+                'Criar Chamado'
+              )}
+              <span className="ctm-btn-glow" />
             </button>
           </div>
         </form>
       </div>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .ctm-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 50;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 16px;
+          background: rgba(0, 0, 0, 0.6);
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+          animation: ctmFadeIn 0.2s ease-out;
+        }
+
+        @keyframes ctmFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        .ctm-modal {
+          position: relative;
+          width: 100%;
+          max-width: 680px;
+          max-height: 90vh;
+          overflow-y: auto;
+          background: rgba(12, 14, 28, 0.92);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 24px;
+          box-shadow:
+            0 0 0 1px rgba(255, 255, 255, 0.03),
+            0 25px 80px rgba(0, 0, 0, 0.5),
+            inset 0 1px 0 rgba(255, 255, 255, 0.04);
+          animation: ctmSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes ctmSlideIn {
+          from { opacity: 0; transform: translateY(24px) scale(0.97); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .ctm-modal::-webkit-scrollbar { width: 5px; }
+        .ctm-modal::-webkit-scrollbar-track { background: transparent; }
+        .ctm-modal::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
+
+        /* ── Accent Line ── */
+        .ctm-accent-line {
+          height: 3px;
+          background: linear-gradient(90deg, transparent, rgba(34,197,94,0.5), rgba(134,239,172,0.7), rgba(34,197,94,0.5), transparent);
+          border-radius: 24px 24px 0 0;
+        }
+
+        /* ── Header ── */
+        .ctm-header {
+          position: sticky;
+          top: 0;
+          z-index: 10;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 20px 28px;
+          background: rgba(12, 14, 28, 0.95);
+          backdrop-filter: blur(12px);
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .ctm-header-left {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+        }
+
+        .ctm-header-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(22,163,74,0.08));
+          border: 1px solid rgba(34,197,94,0.2);
+        }
+
+        .ctm-header-title {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: #f3f4f6;
+          letter-spacing: -0.01em;
+        }
+
+        .ctm-close-btn {
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 10px;
+          border: none;
+          background: rgba(255, 255, 255, 0.04);
+          color: #6b7280;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .ctm-close-btn:hover {
+          background: rgba(239, 68, 68, 0.12);
+          color: #f87171;
+        }
+
+        /* ── Form ── */
+        .ctm-form {
+          padding: 24px 28px 28px;
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .ctm-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+        }
+
+        @media (max-width: 640px) {
+          .ctm-grid { grid-template-columns: 1fr; }
+        }
+
+        .ctm-field-full {
+          grid-column: 1 / -1;
+        }
+
+        .ctm-field {
+          display: flex;
+          flex-direction: column;
+        }
+
+        /* ── Labels ── */
+        .ctm-label {
+          font-size: 0.8125rem;
+          font-weight: 600;
+          color: #d1d5db;
+          margin-bottom: 8px;
+          letter-spacing: 0.01em;
+        }
+
+        .ctm-required {
+          color: #f87171;
+          margin-left: 1px;
+        }
+
+        .ctm-hint {
+          font-size: 0.6875rem;
+          color: #6b7280;
+          margin-top: 6px;
+        }
+
+        /* ── Inputs & Selects ── */
+        .ctm-input,
+        .ctm-select,
+        .ctm-textarea {
+          width: 100%;
+          padding: 12px 16px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          color: #e5e7eb;
+          font-size: 0.9rem;
+          outline: none;
+          transition: all 0.25s ease;
+          font-family: inherit;
+        }
+
+        .ctm-input::placeholder,
+        .ctm-textarea::placeholder {
+          color: #4b5563;
+        }
+
+        .ctm-input:focus,
+        .ctm-select:focus,
+        .ctm-textarea:focus {
+          border-color: rgba(34, 197, 94, 0.4);
+          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08), 0 0 16px rgba(34, 197, 94, 0.04);
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .ctm-select {
+          appearance: none;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 12px center;
+          padding-right: 36px;
+          cursor: pointer;
+        }
+
+        .ctm-select option {
+          background: #1a1a2e;
+          color: #e5e7eb;
+        }
+
+        .ctm-input-disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .ctm-textarea {
+          resize: none;
+          min-height: 100px;
+        }
+
+        /* ── Dropzone ── */
+        .ctm-dropzone {
+          width: 100%;
+          border: 2px dashed rgba(34, 197, 94, 0.2);
+          border-radius: 16px;
+          padding: 28px 16px;
+          text-align: center;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          margin-bottom: 12px;
+        }
+
+        .ctm-dropzone:hover {
+          border-color: rgba(34, 197, 94, 0.4);
+          background: rgba(34, 197, 94, 0.03);
+        }
+
+        .ctm-dropzone-active {
+          border-color: rgba(134, 239, 172, 0.5) !important;
+          background: rgba(34, 197, 94, 0.08) !important;
+          box-shadow: 0 0 24px rgba(34, 197, 94, 0.08);
+        }
+
+        .ctm-dropzone-content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .ctm-dropzone-icon-wrap {
+          width: 44px;
+          height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 12px;
+          background: rgba(34, 197, 94, 0.08);
+          border: 1px solid rgba(34, 197, 94, 0.12);
+          transition: all 0.3s ease;
+        }
+
+        .ctm-dropzone:hover .ctm-dropzone-icon-wrap {
+          background: rgba(34, 197, 94, 0.14);
+          transform: translateY(-2px);
+        }
+
+        .ctm-dropzone-icon { color: rgba(134, 239, 172, 0.5); transition: color 0.2s; }
+        .ctm-dropzone-icon-active { color: #86efac; }
+        .ctm-dropzone:hover .ctm-dropzone-icon { color: #86efac; }
+
+        .ctm-dropzone-text {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: rgba(134, 239, 172, 0.6);
+          transition: color 0.2s;
+        }
+        .ctm-dropzone:hover .ctm-dropzone-text { color: #86efac; }
+        .ctm-dropzone-text-active { color: #86efac !important; }
+
+        .ctm-dropzone-sub {
+          font-size: 0.75rem;
+          color: #4b5563;
+          margin-top: 2px;
+        }
+
+        /* ── Image Previews ── */
+        .ctm-previews { margin-top: 4px; }
+
+        .ctm-previews-count {
+          font-size: 0.8125rem;
+          color: #6b7280;
+          margin-bottom: 10px;
+        }
+
+        .ctm-previews-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 12px;
+        }
+
+        @media (max-width: 640px) {
+          .ctm-previews-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+
+        .ctm-preview-item {
+          position: relative;
+        }
+
+        .ctm-preview-img {
+          width: 100%;
+          height: 80px;
+          object-fit: cover;
+          border-radius: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          transition: border-color 0.2s;
+        }
+
+        .ctm-preview-item:hover .ctm-preview-img {
+          border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .ctm-preview-remove {
+          position: absolute;
+          top: 4px;
+          right: 4px;
+          width: 22px;
+          height: 22px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 6px;
+          border: none;
+          background: rgba(239, 68, 68, 0.8);
+          color: #fff;
+          cursor: pointer;
+          opacity: 0;
+          transition: all 0.2s ease;
+        }
+
+        .ctm-preview-item:hover .ctm-preview-remove {
+          opacity: 1;
+        }
+
+        .ctm-preview-remove:hover {
+          background: rgba(220, 38, 38, 1);
+          transform: scale(1.1);
+        }
+
+        .ctm-preview-name {
+          font-size: 0.6875rem;
+          color: #6b7280;
+          margin-top: 4px;
+          text-align: center;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        /* ── Action Buttons ── */
+        .ctm-actions {
+          display: flex;
+          gap: 12px;
+          padding-top: 20px;
+          border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .ctm-btn-cancel {
+          flex: 1;
+          padding: 13px 20px;
+          border-radius: 14px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.04);
+          color: #9ca3af;
+          font-size: 0.9375rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.25s ease;
+        }
+
+        .ctm-btn-cancel:hover {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(255, 255, 255, 0.15);
+          color: #e5e7eb;
+        }
+
+        .ctm-btn-submit {
+          position: relative;
+          flex: 1;
+          padding: 13px 20px;
+          border-radius: 14px;
+          border: none;
+          background: linear-gradient(135deg, #22c55e, #16a34a);
+          color: #fff;
+          font-size: 0.9375rem;
+          font-weight: 700;
+          cursor: pointer;
+          overflow: hidden;
+          transition: all 0.3s ease;
+          box-shadow: 0 4px 15px rgba(34, 197, 94, 0.25);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+
+        .ctm-btn-submit:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(34, 197, 94, 0.35);
+        }
+
+        .ctm-btn-submit:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+
+        .ctm-btn-glow {
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+          animation: ctmBtnGlow 3s ease-in-out infinite;
+        }
+
+        @keyframes ctmBtnGlow {
+          0% { left: -100%; }
+          50% { left: 100%; }
+          100% { left: 100%; }
+        }
+      `}</style>
     </div>
   )
 }
