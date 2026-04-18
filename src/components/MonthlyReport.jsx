@@ -375,7 +375,7 @@ export default function MonthlyReport() {
             value={newObservation}
             onChange={(e) => setNewObservation(e.target.value)}
             placeholder="Descreva a observação do mês..."
-            rows={3}
+            rows={5}
             className="mr-textarea"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
