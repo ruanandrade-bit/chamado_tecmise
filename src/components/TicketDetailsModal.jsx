@@ -422,8 +422,15 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
               <p className="text-sm text-dark-500 mb-4">Nenhum comentário ainda.</p>
             )}
 
-            {/* Comment input — hidden for view-only users */}
-            {!isViewOnly && (
+            {/* Comment input — hidden for view-only users, locked when resolved/archived */}
+            {ticket.status === 'resolvido' || ticket.archived ? (
+              <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-dark-750 border border-dark-600">
+                <MessageCircle size={16} className="text-dark-500 flex-shrink-0" />
+                <p className="text-sm text-dark-500">
+                  Comentários encerrados — chamado {ticket.archived ? 'arquivado' : 'resolvido'}.
+                </p>
+              </div>
+            ) : !isViewOnly ? (
               <div className="flex gap-2 items-end">
                 <textarea
                   value={commentText}
@@ -443,7 +450,7 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
                   <span className="hidden sm:inline text-sm">Enviar</span>
                 </button>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* History */}

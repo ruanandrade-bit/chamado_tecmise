@@ -52,6 +52,14 @@ router.post('/', viewOnlyBlock, (req, res) => {
 })
 
 router.patch('/:id', viewOnlyBlock, (req, res) => {
+  // Block comment additions on resolved or archived tickets
+  if (req.body.comments) {
+    const existing = memoryStore.getTicketById(req.params.id)
+    if (existing && (existing.status === 'resolvido' || existing.archived)) {
+      return res.status(403).json({ message: 'Comentários encerrados — chamado resolvido ou arquivado.' })
+    }
+  }
+
   const ticket = memoryStore.updateTicket(req.params.id, req.body, req.user.name)
   if (!ticket) return res.status(404).json({ message: 'Chamado não encontrado.' })
   return res.json({ ticket })
