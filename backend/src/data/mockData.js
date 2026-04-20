@@ -1,11 +1,11 @@
 export const USERS = {
-  'ruan@s4s.com': { id: 0, name: 'Ruan', role: 'Admin', password: '123456', canDragDrop: true },
-  'ana@s4s.com': { id: 1, name: 'Ana', role: 'Psicóloga', password: '123456', canDragDrop: false },
-  'carol@s4s.com': { id: 2, name: 'Carol', role: 'Psicóloga', password: '123456', canDragDrop: false },
-  'beatriz@s4s.com': { id: 3, name: 'Beatriz', role: 'Pedagoga', password: '123456', canDragDrop: false },
-  'jessica@s4s.com': { id: 4, name: 'Jessica', role: 'Pedagoga', password: '123456', canDragDrop: false },
-  'gabi@s4s.com': { id: 5, name: 'Gabi', role: 'Pedagoga', password: '123456', canDragDrop: false },
-  'tecmise@s4s.com': { id: 6, name: 'Tecmise', role: 'Visualização', password: '123456', canDragDrop: false, viewOnly: true }
+  'ruan@s4s.com': { id: 0, name: 'Ruan', role: 'Admin', password: 'Gh8$Yp3@Dn2!Lv', canDragDrop: true },
+  'ana@s4s.com': { id: 1, name: 'Ana', role: 'Psicóloga', password: 'Tq6#Wp1&Zr9!Ks', canDragDrop: false },
+  'carol@s4s.com': { id: 2, name: 'Carol', role: 'Psicóloga', password: 'Lm2@Xc8!Vr5$Qa', canDragDrop: false },
+  'beatriz@s4s.com': { id: 3, name: 'Beatriz', role: 'Pedagoga', password: 'Zr4$Bn8*Qw1&Ty', canDragDrop: false },
+  'jessica@s4s.com': { id: 4, name: 'Jessica', role: 'Pedagoga', password: 'P9v!Ds3@Gh7#Uk', canDragDrop: false },
+  'gabi@s4s.com': { id: 5, name: 'Gabi', role: 'Pedagoga', password: 'A7f!Kq9@Lm2#Xp', canDragDrop: false },
+  'tecmise@s4s.com': { id: 6, name: 'Tecmise', role: 'Visualização', password: 'Uk5!Br7#Xc9@Pm', canDragDrop: false, viewOnly: true }
 }
 
 export const STATUSES = [
