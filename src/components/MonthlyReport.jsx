@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { FileText, Plus, Trash2, Send, CalendarDays, ClipboardList, Loader2, Ticket, Pencil, X, Check, AlertTriangle, ShieldAlert } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
-import { useTicketsStore } from '../stores/ticketsStore'
 import { api } from '../services/api'
 
 const MONTH_NAMES = [
@@ -175,19 +174,13 @@ function ConfirmDeleteModal({ isOpen, onClose, onConfirm, isDeleting, observatio
 export default function MonthlyReport() {
   const { user } = useAuthStore()
   const isAdmin = user?.canDragDrop === true
-  const { tickets } = useTicketsStore()
 
   const now = new Date()
   const currentMonth = now.getMonth() + 1
   const currentYear = now.getFullYear()
   const monthName = MONTH_NAMES[currentMonth - 1]
 
-  // Count tickets opened in the current month
-  const ticketsThisMonth = tickets.filter((t) => {
-    if (!t.createdAt) return false
-    const d = new Date(t.createdAt)
-    return d.getMonth() + 1 === currentMonth && d.getFullYear() === currentYear
-  }).length
+  const [ticketsThisMonth, setTicketsThisMonth] = useState(0)
 
   const [observations, setObservations] = useState([])
   const [newObservation, setNewObservation] = useState('')
@@ -213,6 +206,7 @@ export default function MonthlyReport() {
     try {
       const data = await api.get(`/reports/monthly?month=${currentMonth}&year=${currentYear}`)
       setObservations(data.observations || [])
+      setTicketsThisMonth(data.ticketCount || 0)
     } catch (err) {
       console.error('Erro ao carregar relatório:', err)
     } finally {

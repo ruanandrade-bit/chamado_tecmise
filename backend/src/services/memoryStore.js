@@ -235,6 +235,15 @@ export const memoryStore = {
     }
 
     state.tickets.unshift(ticket)
+
+    // Increment the persistent monthly ticket counter
+    const now = new Date()
+    const monthKey = `${now.getMonth() + 1}-${now.getFullYear()}`
+    if (!state.monthlyReports[monthKey]) {
+      state.monthlyReports[monthKey] = { month: now.getMonth() + 1, year: now.getFullYear(), observations: [], ticketCount: 0 }
+    }
+    state.monthlyReports[monthKey].ticketCount = (state.monthlyReports[monthKey].ticketCount || 0) + 1
+
     persistState()
 
     memoryStore.pushNotification({
@@ -388,7 +397,7 @@ export const memoryStore = {
   // ─── Monthly Reports ────────────────────────────────────────────
   getMonthlyReport(month, year) {
     const key = `${month}-${year}`
-    return state.monthlyReports[key] || { month, year, observations: [] }
+    return state.monthlyReports[key] || { month, year, observations: [], ticketCount: 0 }
   },
 
   addMonthlyObservation(month, year, text, user) {

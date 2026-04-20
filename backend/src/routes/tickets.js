@@ -52,16 +52,37 @@ router.post('/', viewOnlyBlock, (req, res) => {
 })
 
 router.patch('/:id', viewOnlyBlock, (req, res) => {
+  const existing = memoryStore.getTicketById(req.params.id)
+  if (!existing) return res.status(404).json({ message: 'Chamado não encontrado.' })
+
   // Block comment additions on resolved or archived tickets
   if (req.body.comments) {
-    const existing = memoryStore.getTicketById(req.params.id)
-    if (existing && (existing.status === 'resolvido' || existing.archived)) {
+    if (existing.status === 'resolvido' || existing.archived) {
       return res.status(403).json({ message: 'Comentários encerrados — chamado resolvido ou arquivado.' })
     }
   }
 
+  // Track if new comments were added
+  const oldCommentCount = (existing.comments || []).length
+  const newComments = req.body.comments || null
+
   const ticket = memoryStore.updateTicket(req.params.id, req.body, req.user.name)
   if (!ticket) return res.status(404).json({ message: 'Chamado não encontrado.' })
+
+  // Send notification to ticket creator when a new comment is added
+  if (newComments && newComments.length > oldCommentCount) {
+    const creatorEmail = ticket.createdByEmail || null
+    // Don't notify if the commenter is the ticket creator
+    if (creatorEmail && creatorEmail !== req.user.email) {
+      memoryStore.pushNotification({
+        title: '💬 Novo Comentário',
+        message: `O seu chamado ${ticket.id} recebeu um comentário de ${req.user.name}.`,
+        type: 'info',
+        targetUserEmail: creatorEmail
+      })
+    }
+  }
+
   return res.json({ ticket })
 })
 

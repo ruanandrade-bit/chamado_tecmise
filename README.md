@@ -15,7 +15,7 @@ Uma plataforma moderna de gestão de chamados educacionais com interface SaaS pr
 
 ## 🛠 Stack Tecnológico
 
-- **Frontend**: React 18
+- **Frontend**: React 20
 - **Estilização**: Tailwind CSS
 - **State Management**: Zustand
 - **Drag & Drop**: @dnd-kit

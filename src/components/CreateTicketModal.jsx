@@ -28,8 +28,8 @@ export default function CreateTicketModal({ onClose }) {
   const [formData, setFormData] = useState({
     school: '',
     classroom: '',
-    period: 'Matutino',
-    device: '',
+    selectedPeriods: ['Matutino'],
+    selectedDevices: [],
     problemType: '',
     description: '',
     priority: 'media'
@@ -54,11 +54,29 @@ export default function CreateTicketModal({ onClose }) {
   const handleChange = (e) => {
     const { name, value } = e.target
     if (name === 'school') {
-      // Reset device when school changes
-      setFormData(prev => ({ ...prev, school: value, device: '' }))
+      // Reset devices when school changes
+      setFormData(prev => ({ ...prev, school: value, selectedDevices: [] }))
     } else {
       setFormData(prev => ({ ...prev, [name]: value }))
     }
+  }
+
+  const toggleDevice = (dev) => {
+    setFormData(prev => {
+      const selected = prev.selectedDevices.includes(dev)
+        ? prev.selectedDevices.filter(d => d !== dev)
+        : [...prev.selectedDevices, dev]
+      return { ...prev, selectedDevices: selected }
+    })
+  }
+
+  const togglePeriod = (period) => {
+    setFormData(prev => {
+      const selected = prev.selectedPeriods.includes(period)
+        ? prev.selectedPeriods.filter(p => p !== period)
+        : [...prev.selectedPeriods, period]
+      return { ...prev, selectedPeriods: selected }
+    })
   }
 
   const handleImageUpload = (files) => {
@@ -101,16 +119,11 @@ export default function CreateTicketModal({ onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault()
 
-    const requiredFields = [
-      { key: 'school', label: 'Escola' },
-      { key: 'classroom', label: 'Turma' },
-      { key: 'device', label: 'Device' },
-      { key: 'description', label: 'Descrição' }
-    ]
-
-    const missingFields = requiredFields
-      .filter(({ key }) => !String(formData[key] || '').trim())
-      .map(({ label }) => label)
+    const missingFields = []
+    if (!formData.school.trim()) missingFields.push('Escola')
+    if (!formData.classroom.trim()) missingFields.push('Turma')
+    if (formData.selectedDevices.length === 0) missingFields.push('Device')
+    if (!formData.description.trim()) missingFields.push('Descrição')
 
     if (missingFields.length > 0) {
       alert(`Por favor, preencha os campos obrigatórios: ${missingFields.join(', ')}`)
@@ -123,8 +136,8 @@ export default function CreateTicketModal({ onClose }) {
       await addTicket({
         school: formData.school.trim(),
         classroom: formData.classroom.trim(),
-        device: String(formData.device).trim(),
-        period: formData.period,
+        device: formData.selectedDevices.join(', '),
+        period: formData.selectedPeriods.join(' • '),
         problemType: formData.problemType,
         description: formData.description.trim(),
         priority: formData.priority,
@@ -197,44 +210,55 @@ export default function CreateTicketModal({ onClose }) {
               />
             </div>
 
-            {/* Device - Dropdown filtrado pela escola */}
+            {/* Device - Checkboxes filtrados pela escola */}
             <div className="ctm-field">
               <label className="ctm-label">Device <span className="ctm-required">*</span></label>
-              <select
-                name="device"
-                value={formData.device}
-                onChange={handleChange}
-                className="ctm-select"
-                required
-                disabled={!formData.school}
-              >
-                <option value="" disabled>
-                  {formData.school ? 'Selecione o device' : 'Selecione uma escola primeiro'}
-                </option>
-                {availableDevices.map(dev => (
-                  <option key={dev} value={dev}>{dev}</option>
-                ))}
-              </select>
-              {formData.school && (
-                <p className="ctm-hint">
-                  {availableDevices.length} device{availableDevices.length !== 1 ? 's' : ''} disponíve{availableDevices.length !== 1 ? 'is' : 'l'}
-                </p>
+              {!formData.school ? (
+                <p className="ctm-hint" style={{ marginTop: 0 }}>Selecione uma escola primeiro</p>
+              ) : (
+                <>
+                  <div className="ctm-checkbox-grid">
+                    {availableDevices.map(dev => (
+                      <label key={dev} className={`ctm-checkbox-item ${formData.selectedDevices.includes(dev) ? 'ctm-checkbox-checked' : ''}`}>
+                        <span className={`ctm-checkbox-box ${formData.selectedDevices.includes(dev) ? 'ctm-checkbox-box-checked' : ''}`}>
+                          {formData.selectedDevices.includes(dev) && '✓'}
+                        </span>
+                        <span className="ctm-checkbox-label">{dev}</span>
+                        <input
+                          type="checkbox"
+                          checked={formData.selectedDevices.includes(dev)}
+                          onChange={() => toggleDevice(dev)}
+                          style={{ display: 'none' }}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  <p className="ctm-hint">
+                    {formData.selectedDevices.length} de {availableDevices.length} selecionado{formData.selectedDevices.length !== 1 ? 's' : ''}
+                  </p>
+                </>
               )}
             </div>
 
-            {/* Period */}
+            {/* Period - Checkboxes */}
             <div className="ctm-field">
               <label className="ctm-label">Período</label>
-              <select
-                name="period"
-                value={formData.period}
-                onChange={handleChange}
-                className="ctm-select"
-              >
+              <div className="ctm-checkbox-grid">
                 {periods.map(period => (
-                  <option key={period} value={period}>{period}</option>
+                  <label key={period} className={`ctm-checkbox-item ${formData.selectedPeriods.includes(period) ? 'ctm-checkbox-checked' : ''}`}>
+                    <span className={`ctm-checkbox-box ${formData.selectedPeriods.includes(period) ? 'ctm-checkbox-box-checked' : ''}`}>
+                      {formData.selectedPeriods.includes(period) && '✓'}
+                    </span>
+                    <span className="ctm-checkbox-label">{period}</span>
+                    <input
+                      type="checkbox"
+                      checked={formData.selectedPeriods.includes(period)}
+                      onChange={() => togglePeriod(period)}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
                 ))}
-              </select>
+              </div>
             </div>
 
             {/* Local do problema */}
@@ -801,6 +825,74 @@ export default function CreateTicketModal({ onClose }) {
           0% { left: -100%; }
           50% { left: 100%; }
           100% { left: 100%; }
+        }
+
+        /* ── Checkbox Grid ── */
+        .ctm-checkbox-grid {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .ctm-checkbox-item {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 14px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 10px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          user-select: none;
+        }
+
+        .ctm-checkbox-item:hover {
+          background: rgba(255, 255, 255, 0.07);
+          border-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .ctm-checkbox-checked {
+          background: rgba(34, 197, 94, 0.1) !important;
+          border-color: rgba(34, 197, 94, 0.3) !important;
+        }
+
+        .ctm-checkbox-checked:hover {
+          background: rgba(34, 197, 94, 0.15) !important;
+          border-color: rgba(34, 197, 94, 0.4) !important;
+        }
+
+        .ctm-checkbox-box {
+          width: 20px;
+          height: 20px;
+          flex-shrink: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 6px;
+          border: 1.5px solid rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.03);
+          font-size: 12px;
+          font-weight: 700;
+          color: transparent;
+          transition: all 0.2s ease;
+        }
+
+        .ctm-checkbox-box-checked {
+          background: linear-gradient(135deg, #22c55e, #16a34a);
+          border-color: #22c55e;
+          color: #fff;
+          box-shadow: 0 0 10px rgba(34, 197, 94, 0.2);
+        }
+
+        .ctm-checkbox-label {
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: #d1d5db;
+        }
+
+        .ctm-checkbox-checked .ctm-checkbox-label {
+          color: #86efac;
         }
       `}</style>
     </div>
