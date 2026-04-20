@@ -1,9 +1,10 @@
-import { AlertCircle, CheckCircle, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { AlertCircle, CheckCircle, MessageCircle, X } from 'lucide-react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { useAuthStore } from '../stores/authStore'
 import { api } from '../services/api'
 
 const HISTORY_PREFIX = 's4s_notification_history:'
+const BASE_TITLE = 'S4S Chamados'
 
 function getHistoryKey(email) {
   return `${HISTORY_PREFIX}${email || 'guest'}`
@@ -16,10 +17,96 @@ function appendHistory(email, notifications) {
   localStorage.setItem(getHistoryKey(email), JSON.stringify(updated))
 }
 
+/**
+ * Request browser notification permission on first interaction.
+ */
+function requestNotificationPermission() {
+  if (!('Notification' in window)) return
+  if (Notification.permission === 'default') {
+    Notification.requestPermission()
+  }
+}
+
+/**
+ * Show a native browser notification.
+ */
+function showBrowserNotification(title, body) {
+  if (!('Notification' in window)) return
+  if (Notification.permission !== 'granted') return
+
+  try {
+    const notification = new Notification(title, {
+      body,
+      icon: '/favicon.png',
+      badge: '/favicon.png',
+      tag: `s4s-${Date.now()}`,
+      requireInteraction: false,
+      silent: false,
+    })
+
+    // Auto-close after 6 seconds
+    setTimeout(() => notification.close(), 6000)
+
+    // Focus the tab when clicked
+    notification.onclick = () => {
+      window.focus()
+      notification.close()
+    }
+  } catch {
+    // Service worker may be required on some browsers for Notification constructor
+  }
+}
+
 export default function NotificationCenter() {
   const [notifications, setNotifications] = useState([])
   const { user, isAuthenticated } = useAuthStore()
+  const unreadCountRef = useRef(0)
+  const hasRequestedPermission = useRef(false)
 
+  // Request notification permission once the user interacts
+  useEffect(() => {
+    if (!isAuthenticated || hasRequestedPermission.current) return
+
+    const requestOnInteraction = () => {
+      requestNotificationPermission()
+      hasRequestedPermission.current = true
+      // Clean up listeners
+      document.removeEventListener('click', requestOnInteraction)
+      document.removeEventListener('keydown', requestOnInteraction)
+    }
+
+    document.addEventListener('click', requestOnInteraction, { once: true })
+    document.addEventListener('keydown', requestOnInteraction, { once: true })
+
+    return () => {
+      document.removeEventListener('click', requestOnInteraction)
+      document.removeEventListener('keydown', requestOnInteraction)
+    }
+  }, [isAuthenticated])
+
+  // Update tab title with unread count (like WhatsApp)
+  const updateTabTitle = useCallback((count) => {
+    unreadCountRef.current = count
+    if (count > 0) {
+      document.title = `(${count}) ${BASE_TITLE}`
+    } else {
+      document.title = BASE_TITLE
+    }
+  }, [])
+
+  // Keep tab title in sync with notification count
+  useEffect(() => {
+    updateTabTitle(notifications.length)
+  }, [notifications.length, updateTabTitle])
+
+  // Reset title on unmount
+  useEffect(() => {
+    return () => {
+      document.title = BASE_TITLE
+    }
+  }, [])
+
+  // Poll for new notifications
   useEffect(() => {
     if (!isAuthenticated || !user?.email) return
 
@@ -29,6 +116,14 @@ export default function NotificationCenter() {
         if (Array.isArray(notes) && notes.length > 0) {
           setNotifications((prev) => [...prev, ...notes].slice(-5))
           appendHistory(user.email, notes)
+
+          // Show browser native notification for each new one
+          notes.forEach((note) => {
+            showBrowserNotification(
+              note.title?.replace(/^[\p{Emoji}\s]+/u, '') || 'S4S Chamados',
+              note.message
+            )
+          })
         }
       } catch {
         // Keep UI running even if backend is unavailable momentarily.
@@ -53,27 +148,70 @@ export default function NotificationCenter() {
     return () => clearTimeout(timer)
   }, [notifications])
 
+  const getNotifStyle = (type) => {
+    if (type === 'success') {
+      return {
+        bg: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 78, 59, 0.25) 100%)',
+        border: 'rgba(16, 185, 129, 0.35)',
+        shadow: '0 8px 32px rgba(16, 185, 129, 0.15), 0 0 0 1px rgba(16, 185, 129, 0.05)',
+        iconBg: 'rgba(16, 185, 129, 0.2)',
+        iconGlow: '0 0 12px rgba(16, 185, 129, 0.3)',
+        iconColor: '#34d399',
+        textColor: '#a7f3d0',
+        barColor: '#34d399',
+        barBg: 'rgba(16, 185, 129, 0.15)',
+      }
+    }
+    if (type === 'info') {
+      return {
+        bg: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(30, 58, 138, 0.25) 100%)',
+        border: 'rgba(59, 130, 246, 0.35)',
+        shadow: '0 8px 32px rgba(59, 130, 246, 0.15), 0 0 0 1px rgba(59, 130, 246, 0.05)',
+        iconBg: 'rgba(59, 130, 246, 0.2)',
+        iconGlow: '0 0 12px rgba(59, 130, 246, 0.3)',
+        iconColor: '#60a5fa',
+        textColor: '#bfdbfe',
+        barColor: '#60a5fa',
+        barBg: 'rgba(59, 130, 246, 0.15)',
+      }
+    }
+    // error / default
+    return {
+      bg: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(127, 29, 29, 0.25) 100%)',
+      border: 'rgba(239, 68, 68, 0.35)',
+      shadow: '0 8px 32px rgba(239, 68, 68, 0.15), 0 0 0 1px rgba(239, 68, 68, 0.05)',
+      iconBg: 'rgba(239, 68, 68, 0.2)',
+      iconGlow: '0 0 12px rgba(239, 68, 68, 0.3)',
+      iconColor: '#f87171',
+      textColor: '#fca5a5',
+      barColor: '#f87171',
+      barBg: 'rgba(239, 68, 68, 0.15)',
+    }
+  }
+
+  const getIcon = (type) => {
+    if (type === 'success') return <CheckCircle size={20} />
+    if (type === 'info') return <MessageCircle size={20} />
+    return <AlertCircle size={20} />
+  }
+
   return (
     <div className="fixed top-20 right-4 z-50 space-y-3" style={{ maxWidth: '380px', width: '100%' }}>
       {notifications.map((notification) => {
-        const isSuccess = notification.type === 'success'
+        const s = getNotifStyle(notification.type)
         return (
           <div
             key={notification.id}
             className="animate-slideInRight"
             style={{
               position: 'relative',
-              background: isSuccess
-                ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 78, 59, 0.25) 100%)'
-                : 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(127, 29, 29, 0.25) 100%)',
+              background: s.bg,
               backdropFilter: 'blur(16px)',
               WebkitBackdropFilter: 'blur(16px)',
-              border: `1px solid ${isSuccess ? 'rgba(16, 185, 129, 0.35)' : 'rgba(239, 68, 68, 0.35)'}`,
+              border: `1px solid ${s.border}`,
               borderRadius: '16px',
               padding: '16px 18px',
-              boxShadow: isSuccess 
-                ? '0 8px 32px rgba(16, 185, 129, 0.15), 0 0 0 1px rgba(16, 185, 129, 0.05)'
-                : '0 8px 32px rgba(239, 68, 68, 0.15), 0 0 0 1px rgba(239, 68, 68, 0.05)',
+              boxShadow: s.shadow,
               display: 'flex',
               alignItems: 'flex-start',
               gap: '14px',
@@ -89,19 +227,12 @@ export default function NotificationCenter() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
-                background: isSuccess
-                  ? 'rgba(16, 185, 129, 0.2)'
-                  : 'rgba(239, 68, 68, 0.2)',
-                boxShadow: isSuccess
-                  ? '0 0 12px rgba(16, 185, 129, 0.3)'
-                  : '0 0 12px rgba(239, 68, 68, 0.3)',
+                background: s.iconBg,
+                boxShadow: s.iconGlow,
+                color: s.iconColor,
               }}
             >
-              {isSuccess ? (
-                <CheckCircle size={20} style={{ color: '#34d399' }} />
-              ) : (
-                <AlertCircle size={20} style={{ color: '#f87171' }} />
-              )}
+              {getIcon(notification.type)}
             </div>
 
             {/* Content */}
@@ -120,7 +251,7 @@ export default function NotificationCenter() {
               <p
                 style={{
                   fontSize: '12.5px',
-                  color: isSuccess ? '#a7f3d0' : '#fca5a5',
+                  color: s.textColor,
                   margin: '4px 0 0 0',
                   lineHeight: 1.4,
                   opacity: 0.9,
@@ -168,9 +299,7 @@ export default function NotificationCenter() {
                 right: '16px',
                 height: '2px',
                 borderRadius: '1px',
-                background: isSuccess
-                  ? 'rgba(16, 185, 129, 0.15)'
-                  : 'rgba(239, 68, 68, 0.15)',
+                background: s.barBg,
                 overflow: 'hidden',
               }}
             >
@@ -178,7 +307,7 @@ export default function NotificationCenter() {
                 style={{
                   height: '100%',
                   borderRadius: '1px',
-                  background: isSuccess ? '#34d399' : '#f87171',
+                  background: s.barColor,
                   animation: 'notifProgress 6s linear forwards',
                 }}
               />
