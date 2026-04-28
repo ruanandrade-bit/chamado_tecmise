@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "name": "s4s-chamados",
   "private": true,
   "version": "1.0.0",
@@ -26,5 +27,20 @@
     "tailwindcss": "^3.3.6",
     "postcss": "^8.4.31",
     "autoprefixer": "^10.4.16"
+=======
+  "name": "projectbia",
+  "version": "1.0.0",
+  "description": "Bot Discord de design automatizado com ChatGPT + DALL-E para redes sociais",
+  "main": "src/bot.js",
+  "scripts": {
+    "start": "node src/bot.js",
+    "dev": "node --watch src/bot.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "openai": "^4.73.1",
+    "dotenv": "^16.4.5",
+    "sharp": "^0.33.5"
+>>>>>>> 2a33665 (Primeiro commit)
   }
 }
