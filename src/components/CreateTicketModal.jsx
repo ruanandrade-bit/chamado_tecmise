@@ -7,14 +7,14 @@ const SCHOOL_DEVICES = {
   'Colégio Frei': ['059', '063', '064'],
   'Colégio Dom José': ['048', '053', '069'],
   'Colégio Honorata': ['035', '055'],
-  'Colégio Rotary': ['045', '066'],
+  'Colégio Rotary': ['074', '066'],
   'Colégio Mercedes': ['056', '072'],
-  'Colégio Terezinha': ['023', '026', '027', '029', '042', '043', '044', '065'],
   'Colégio Cemma': ['050', '067', '071', '076'],
   'Colégio Grace': ['032', '036', '037', '038'],
   'Colégio Graziela': ['012', '014'],
   'Colégio Antônio': ['011', '013'],
   'Colégio Médici': ['034', '070', '073'],
+  'Colégio CeFrei': ['061'],
 }
 
 const SCHOOL_NAMES = Object.keys(SCHOOL_DEVICES)
@@ -24,7 +24,7 @@ export default function CreateTicketModal({ onClose }) {
   const { user } = useAuthStore()
   const fileInputRef = useRef(null)
   const dropZoneRef = useRef(null)
-  
+
   const [formData, setFormData] = useState({
     school: '',
     classroom: '',
@@ -34,7 +34,7 @@ export default function CreateTicketModal({ onClose }) {
     description: '',
     priority: 'media'
   })
-  
+
   const [images, setImages] = useState([])
   const [loading, setLoading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
@@ -50,7 +50,7 @@ export default function CreateTicketModal({ onClose }) {
   ]
 
   const availableDevices = formData.school ? (SCHOOL_DEVICES[formData.school] || []) : []
-  
+
   const handleChange = (e) => {
     const { name, value } = e.target
     if (name === 'school') {
@@ -322,7 +322,7 @@ export default function CreateTicketModal({ onClose }) {
           {/* Image upload with drag and drop */}
           <div className="ctm-field">
             <label className="ctm-label">Anexar Imagens (até 5)</label>
-            
+
             {/* Upload area with drag and drop */}
             <div
               ref={dropZoneRef}

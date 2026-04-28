@@ -1,16 +1,20 @@
-import { LayoutDashboard, Kanban, Archive, FileText, X } from 'lucide-react'
+import { LayoutDashboard, Kanban, Archive, FileText, Wifi, X } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
+import { useAuthStore } from '../stores/authStore'
 
 export default function Sidebar({ currentPage, onPageChange, isMobileOpen, onMobileClose }) {
   const { getStatistics } = useTicketsStore()
+  const { user } = useAuthStore()
   const stats = getStatistics()
   const uniqueResponsibles = Object.keys(stats.byResponsible).length
+  const isAdmin = user?.canDragDrop === true
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'kanban', label: 'Kanban', icon: Kanban },
     { id: 'archived', label: 'Chamados Resolvidos', icon: Archive },
     { id: 'monthly-report', label: 'Relatório Mensal', icon: FileText },
+    ...(isAdmin ? [{ id: 'devices-online', label: 'Devices Online', icon: Wifi }] : []),
   ]
 
   return (

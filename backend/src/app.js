@@ -7,6 +7,7 @@ import healthRoutes from './routes/health.js'
 import notificationsRoutes from './routes/notifications.js'
 import ticketsRoutes from './routes/tickets.js'
 import reportsRoutes from './routes/reports.js'
+import devicesRoutes from './routes/devices.js'
 
 const app = express()
 
@@ -45,6 +46,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/tickets', ticketsRoutes)
 app.use('/api/notifications', notificationsRoutes)
 app.use('/api/reports', reportsRoutes)
+app.use('/api/devices', devicesRoutes)
 
 app.use((err, _req, res, _next) => {
   return res.status(500).json({
