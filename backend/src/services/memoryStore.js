@@ -16,7 +16,7 @@ function loadFromDisk() {
       const data = JSON.parse(raw)
       if (Array.isArray(data.tickets)) {
         console.log(`[store] 📁 Loaded ${data.tickets.length} tickets from disk.`)
-        return { tickets: data.tickets, notifications: data.notifications || [], monthlyReports: data.monthlyReports || {} }
+        return { tickets: data.tickets, notifications: data.notifications || [], monthlyReports: data.monthlyReports || {}, inventory: data.inventory || null }
       }
     }
   } catch (err) {
@@ -32,6 +32,7 @@ function saveToDisk() {
       tickets: state.tickets,
       notifications: state.notifications,
       monthlyReports: state.monthlyReports,
+      inventory: state.inventory,
       _savedAt: new Date().toISOString()
     }, null, 2))
   } catch (err) {
@@ -67,7 +68,7 @@ async function loadFromMongo() {
     const doc = await mongoCollection.findOne({ _id: 'app_state' })
     if (doc && Array.isArray(doc.tickets)) {
       console.log(`[store] ☁️  Loaded ${doc.tickets.length} tickets from MongoDB.`)
-      return { tickets: doc.tickets, notifications: doc.notifications || [], monthlyReports: doc.monthlyReports || {} }
+      return { tickets: doc.tickets, notifications: doc.notifications || [], monthlyReports: doc.monthlyReports || {}, inventory: doc.inventory || null }
     }
   } catch (err) {
     console.warn('[store] ⚠️  Failed to load from MongoDB:', err.message)
@@ -84,6 +85,7 @@ function saveToMongo() {
       tickets: state.tickets,
       notifications: state.notifications,
       monthlyReports: state.monthlyReports,
+      inventory: state.inventory,
       _savedAt: new Date()
     },
     { upsert: true }
@@ -102,7 +104,8 @@ function persistState() {
 const state = {
   tickets: structuredClone(TICKETS),
   notifications: [],
-  monthlyReports: {}   // key: "month-year" → { observations: [...] }
+  monthlyReports: {},   // key: "month-year" → { observations: [...] }
+  inventory: null       // will be initialized with defaults on first access
 }
 
 /**
@@ -120,10 +123,12 @@ export async function initStore() {
     state.tickets = mongoData.tickets
     state.notifications = mongoData.notifications
     state.monthlyReports = mongoData.monthlyReports
+    if (mongoData.inventory) state.inventory = mongoData.inventory
   } else if (diskData) {
     state.tickets = diskData.tickets
     state.notifications = diskData.notifications
     state.monthlyReports = diskData.monthlyReports
+    if (diskData.inventory) state.inventory = diskData.inventory
     // Seed MongoDB if it's empty but connected
     if (connected) {
       console.log('[store] 🔄 Syncing disk data to MongoDB...')
@@ -443,5 +448,31 @@ export const memoryStore = {
     obs.editedAt = new Date().toISOString()
     persistState()
     return report
+  },
+
+  // ─── Inventory ─────────────────────────────────────────────────────
+  getInventory(defaultItems) {
+    if (!state.inventory) {
+      state.inventory = structuredClone(defaultItems)
+      persistState()
+    } else {
+      // Merge: add any new default items not yet in state
+      const existingIds = new Set(state.inventory.map(i => i.id))
+      for (const item of defaultItems) {
+        if (!existingIds.has(item.id)) {
+          state.inventory.push(structuredClone(item))
+        }
+      }
+    }
+    return state.inventory
+  },
+
+  updateInventoryItem(id, quantity) {
+    if (!state.inventory) return null
+    const item = state.inventory.find(i => i.id === id)
+    if (!item) return null
+    item.quantity = Math.max(0, Math.floor(quantity))
+    persistState()
+    return state.inventory
   }
 }
