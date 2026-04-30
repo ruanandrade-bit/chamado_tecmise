@@ -9,6 +9,7 @@ import Kanban from './components/Kanban'
 import ArchivedTickets from './components/ArchivedTickets'
 import MonthlyReport from './components/MonthlyReport'
 import DevicesOnline from './components/DevicesOnline'
+import Inventory from './components/Inventory'
 import NotificationCenter from './components/NotificationCenter'
 
 export default function App() {
@@ -79,6 +80,7 @@ export default function App() {
             {currentPage === 'archived' && <ArchivedTickets />}
             {currentPage === 'monthly-report' && <MonthlyReport />}
             {currentPage === 'devices-online' && <DevicesOnline />}
+            {currentPage === 'inventory' && <Inventory />}
           </div>
         </main>
       </div>
