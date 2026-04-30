@@ -103,66 +103,113 @@ export default function Inventory() {
     const now = new Date()
     const dateStr = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
     const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const inStock = items.filter(i => i.quantity > 0).length
+    const outOfStock = items.filter(i => i.quantity === 0).length
 
-    const rows = items.map((item, i) => `
-      <tr style="${i % 2 === 0 ? 'background: #f8f9fa;' : ''}">
-        <td style="padding: 10px 14px; border-bottom: 1px solid #e9ecef; font-size: 14px; color: #495057;">${item.name}</td>
-        <td style="padding: 10px 14px; border-bottom: 1px solid #e9ecef; font-size: 14px; text-align: center; font-weight: 700; color: ${item.quantity > 0 ? '#16a34a' : '#dc2626'};">${item.quantity}</td>
-      </tr>
-    `).join('')
+    const rows = items.map((item, i) => {
+      const hasStock = item.quantity > 0
+      const rowBg = i % 2 === 0 ? '#1e1e3a' : '#16162e'
+      const badgeBg = hasStock ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'
+      const badgeColor = hasStock ? '#4ade80' : '#f87171'
+      const badgeBorder = hasStock ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'
+      const badgeText = hasStock ? 'Em estoque' : 'Zerado'
+      const qtyColor = hasStock ? '#4ade80' : '#6b7280'
 
-    const html = `
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-      <head>
-        <meta charset="UTF-8">
-        <title>Estoque S4S - ${dateStr}</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1a1a2e; }
-          .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 3px solid #7c3aed; }
-          .logo { font-size: 24px; font-weight: 800; color: #7c3aed; }
-          .logo span { color: #16a34a; }
-          .date { font-size: 12px; color: #6b7280; text-align: right; }
-          .date strong { display: block; font-size: 14px; color: #374151; }
-          h1 { font-size: 20px; color: #1f2937; margin-bottom: 6px; }
-          .subtitle { font-size: 13px; color: #6b7280; margin-bottom: 24px; }
-          table { width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-          thead th { background: #7c3aed; color: white; padding: 12px 14px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-          thead th:first-child { text-align: left; }
-          thead th:last-child { text-align: center; }
-          .summary { display: flex; gap: 24px; margin-top: 24px; padding: 16px 20px; background: #f3f4f6; border-radius: 8px; }
-          .summary-item { font-size: 13px; color: #6b7280; }
-          .summary-item strong { color: #1f2937; font-size: 16px; }
-          .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #9ca3af; text-align: center; }
-          @media print { body { padding: 20px; } }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <div class="logo">S4<span>S</span> Chamados</div>
-          <div class="date"><strong>${dateStr}</strong>${timeStr}</div>
+      return `
+        <tr style="background: ${rowBg};">
+          <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #9ca3af; font-size: 12px; font-weight: 600; width: 40px;">${String(i + 1).padStart(2, '0')}</td>
+          <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #e5e7eb; font-size: 14px; font-weight: 600;">${item.name}</td>
+          <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); text-align: center;">
+            <span style="display: inline-block; padding: 4px 12px; border-radius: 8px; background: ${badgeBg}; border: 1px solid ${badgeBorder}; color: ${badgeColor}; font-size: 11px; font-weight: 600;">${badgeText}</span>
+          </td>
+          <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); text-align: center; font-size: 20px; font-weight: 800; color: ${qtyColor}; letter-spacing: -0.5px;">${item.quantity}</td>
+        </tr>`
+    }).join('')
+
+    const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Estoque S4S - ${dateStr}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', 'Segoe UI', sans-serif; background: #0a0a1a; color: #e5e7eb; min-height: 100vh; }
+    .page { max-width: 800px; margin: 0 auto; padding: 40px 32px; }
+    .header { background: linear-gradient(135deg, #1a1040 0%, #0d0d2b 50%, #0a1628 100%); border-radius: 20px; padding: 32px; margin-bottom: 28px; border: 1px solid rgba(139,92,246,0.15); position: relative; overflow: hidden; }
+    .header::before { content: ''; position: absolute; top: -50%; right: -30%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%); border-radius: 50%; }
+    .header-top { display: flex; justify-content: space-between; align-items: flex-start; position: relative; z-index: 1; }
+    .logo { font-size: 28px; font-weight: 900; letter-spacing: -1px; }
+    .logo-s4 { color: #a78bfa; }
+    .logo-s { color: #4ade80; }
+    .logo-sub { display: block; font-size: 11px; font-weight: 500; color: #6b7280; margin-top: 2px; letter-spacing: 1px; text-transform: uppercase; }
+    .date-box { text-align: right; padding: 10px 16px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); }
+    .date-val { font-size: 16px; font-weight: 700; color: #f3f4f6; }
+    .time-val { font-size: 12px; color: #6b7280; margin-top: 2px; }
+    .report-title { position: relative; z-index: 1; margin-top: 24px; font-size: 22px; font-weight: 800; color: #f3f4f6; letter-spacing: -0.3px; }
+    .report-subtitle { position: relative; z-index: 1; font-size: 13px; color: #6b7280; margin-top: 6px; }
+    .summary-grid { display: flex; gap: 12px; margin-bottom: 24px; }
+    .summary-card { flex: 1; padding: 18px 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.06); text-align: center; }
+    .sc-purple { background: linear-gradient(135deg, rgba(139,92,246,0.1), rgba(139,92,246,0.03)); border-color: rgba(139,92,246,0.15); }
+    .sc-green { background: linear-gradient(135deg, rgba(34,197,94,0.1), rgba(34,197,94,0.03)); border-color: rgba(34,197,94,0.15); }
+    .sc-red { background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.03)); border-color: rgba(239,68,68,0.15); }
+    .sc-blue { background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.03)); border-color: rgba(59,130,246,0.15); }
+    .sc-value { font-size: 28px; font-weight: 900; letter-spacing: -1px; }
+    .v-purple { color: #c4b5fd; } .v-green { color: #86efac; } .v-red { color: #fca5a5; } .v-blue { color: #93c5fd; }
+    .sc-label { font-size: 11px; font-weight: 600; color: #6b7280; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .table-wrap { background: #12122a; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { padding: 14px 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); }
+    thead th:first-child { text-align: left; }
+    thead th:nth-child(3), thead th:last-child { text-align: center; }
+    .footer { text-align: center; padding: 20px; font-size: 11px; color: #4b5563; border-top: 1px solid rgba(255,255,255,0.04); }
+    .footer-line { display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .footer-dot { display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: #4b5563; }
+    @media print { body { background: #0a0a1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page { padding: 20px; } }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="header">
+      <div class="header-top">
+        <div>
+          <div class="logo"><span class="logo-s4">S4</span><span class="logo-s">S</span></div>
+          <span class="logo-sub">Sistema de Chamados</span>
         </div>
-        <h1>📦 Relatório de Estoque</h1>
-        <p class="subtitle">Lista completa de componentes e materiais</p>
-        <table>
-          <thead>
-            <tr>
-              <th>Item</th>
-              <th>Quantidade</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <div class="summary">
-          <div class="summary-item">Itens: <strong>${items.length}</strong></div>
-          <div class="summary-item">Total em estoque: <strong>${totalItems}</strong></div>
+        <div class="date-box">
+          <div class="date-val">${dateStr}</div>
+          <div class="time-val">${timeStr}</div>
         </div>
-        <div class="footer">Gerado automaticamente pelo S4S Chamados — ${dateStr} às ${timeStr}</div>
-        <script>window.onload = () => { window.print(); }<\/script>
-      </body>
-      </html>
-    `
+      </div>
+      <div class="report-title">📦 Relatório de Estoque</div>
+      <div class="report-subtitle">Inventário completo de componentes e materiais</div>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card sc-purple"><div class="sc-value v-purple">${items.length}</div><div class="sc-label">Total Itens</div></div>
+      <div class="summary-card sc-blue"><div class="sc-value v-blue">${totalItems}</div><div class="sc-label">Em Estoque</div></div>
+      <div class="summary-card sc-green"><div class="sc-value v-green">${inStock}</div><div class="sc-label">Disponíveis</div></div>
+      <div class="summary-card sc-red"><div class="sc-value v-red">${outOfStock}</div><div class="sc-label">Zerados</div></div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th style="width:50px">#</th><th style="text-align:left">Item</th><th>Status</th><th style="width:100px">Qtd</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+
+    <div class="footer">
+      <div class="footer-line">
+        <span>S4S Chamados</span><span class="footer-dot"></span>
+        <span>Relatório gerado em ${dateStr} às ${timeStr}</span><span class="footer-dot"></span>
+        <span>Tecmise</span>
+      </div>
+    </div>
+  </div>
+  <script>window.onload = () => { window.print(); }<\/script>
+</body>
+</html>`
 
     const printWindow = window.open('', '_blank')
     if (printWindow) {
