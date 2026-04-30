@@ -19,6 +19,7 @@ const DEFAULT_ITEMS = [
   { id: 'tomada-nova', name: 'Tomada Nova', quantity: 0 },
   { id: 'tomada-original', name: 'Tomada Original', quantity: 0 },
   { id: 'cam-logitech', name: 'Câm Logitech', quantity: 0 },
+  { id: 'usb-cam-logi', name: 'USB da Câmera Logi', quantity: 0 },
   { id: 'raspberry-pi', name: 'Raspberry Pi', quantity: 0 },
   { id: 'micro-sd', name: 'Micro SD', quantity: 0 },
   { id: 'cooler', name: 'Cooler', quantity: 0 },

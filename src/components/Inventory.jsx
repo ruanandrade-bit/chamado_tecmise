@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   Package, Plus, Minus, Pencil, Check, X, Loader2,
-  Plug, Zap, Battery, Camera, Cpu, HardDrive, Fan, Cable, Printer, CheckCircle2
+  Plug, Zap, Battery, Camera, Cpu, HardDrive, Fan, Cable, Printer, CheckCircle2, Usb
 } from 'lucide-react'
 import { api } from '../services/api'
 
@@ -10,6 +10,7 @@ const ITEM_CONFIG = {
   'tomada-nova':      { Icon: Zap,          color: '#22d3ee', bg: 'rgba(34,211,238,0.12)',  border: 'rgba(34,211,238,0.25)' },
   'tomada-original':  { Icon: Battery,      color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.25)' },
   'cam-logitech':     { Icon: Camera,       color: '#f472b6', bg: 'rgba(244,114,182,0.12)', border: 'rgba(244,114,182,0.25)' },
+  'usb-cam-logi':     { Icon: Usb,          color: '#fb7185', bg: 'rgba(251,113,133,0.12)', border: 'rgba(251,113,133,0.25)' },
   'raspberry-pi':     { Icon: Cpu,          color: '#34d399', bg: 'rgba(52,211,153,0.12)',  border: 'rgba(52,211,153,0.25)' },
   'micro-sd':         { Icon: HardDrive,    color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',  border: 'rgba(96,165,250,0.25)' },
   'cooler':           { Icon: Fan,          color: '#67e8f9', bg: 'rgba(103,232,249,0.12)', border: 'rgba(103,232,249,0.25)' },
