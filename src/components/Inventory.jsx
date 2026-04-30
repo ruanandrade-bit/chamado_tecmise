@@ -1,18 +1,31 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Package, Plus, Minus, Pencil, Check, X, Loader2 } from 'lucide-react'
+import {
+  Package, Plus, Minus, Pencil, Check, X, Loader2,
+  Plug, Zap, Battery, Camera, Cpu, HardDrive, Fan, Cable, Printer, CheckCircle2
+} from 'lucide-react'
 import { api } from '../services/api'
 
-const ITEM_ICONS = {
-  'tomada-inicial': '🔌',
-  'tomada-nova': '⚡',
-  'tomada-original': '🔋',
-  'cam-logitech': '📷',
-  'raspberry-pi': '🖥️',
-  'micro-sd': '💾',
-  'cooler': '❄️',
-  'cabo-usb': '🔗',
-  'falta-imprimir': '🖨️',
-  'completo': '✅',
+const ITEM_CONFIG = {
+  'tomada-inicial':   { Icon: Plug,         color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.25)' },
+  'tomada-nova':      { Icon: Zap,          color: '#22d3ee', bg: 'rgba(34,211,238,0.12)',  border: 'rgba(34,211,238,0.25)' },
+  'tomada-original':  { Icon: Battery,      color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.25)' },
+  'cam-logitech':     { Icon: Camera,       color: '#f472b6', bg: 'rgba(244,114,182,0.12)', border: 'rgba(244,114,182,0.25)' },
+  'raspberry-pi':     { Icon: Cpu,          color: '#34d399', bg: 'rgba(52,211,153,0.12)',  border: 'rgba(52,211,153,0.25)' },
+  'micro-sd':         { Icon: HardDrive,    color: '#60a5fa', bg: 'rgba(96,165,250,0.12)',  border: 'rgba(96,165,250,0.25)' },
+  'cooler':           { Icon: Fan,          color: '#67e8f9', bg: 'rgba(103,232,249,0.12)', border: 'rgba(103,232,249,0.25)' },
+  'cabo-usb':         { Icon: Cable,        color: '#fb923c', bg: 'rgba(251,146,60,0.12)',  border: 'rgba(251,146,60,0.25)' },
+  'falta-imprimir':   { Icon: Printer,      color: '#fbbf24', bg: 'rgba(251,191,36,0.12)',  border: 'rgba(251,191,36,0.25)' },
+  'completo':         { Icon: CheckCircle2, color: '#4ade80', bg: 'rgba(74,222,128,0.12)',  border: 'rgba(74,222,128,0.25)' },
+}
+
+function ItemIcon({ itemId }) {
+  const config = ITEM_CONFIG[itemId] || { Icon: Package, color: '#9ca3af', bg: 'rgba(156,163,175,0.12)', border: 'rgba(156,163,175,0.25)' }
+  const { Icon, color, bg, border } = config
+  return (
+    <div className="inv-icon-circle" style={{ background: bg, borderColor: border, boxShadow: `0 0 16px ${bg}` }}>
+      <Icon size={22} style={{ color }} />
+    </div>
+  )
 }
 
 export default function Inventory() {
@@ -122,7 +135,6 @@ export default function Inventory() {
       ) : (
         <div className="inv-grid">
           {items.map((item, idx) => {
-            const icon = ITEM_ICONS[item.id] || '📦'
             const isEditing = editingId === item.id
             const isUpdating = updatingId === item.id
             const isEmpty = item.quantity === 0
@@ -135,7 +147,7 @@ export default function Inventory() {
               >
                 {/* Item icon & name */}
                 <div className="inv-card-header">
-                  <span className="inv-card-icon">{icon}</span>
+                  <ItemIcon itemId={item.id} />
                   <h3 className="inv-card-name">{item.name}</h3>
                 </div>
 
@@ -361,6 +373,21 @@ export default function Inventory() {
         .inv-card-icon {
           font-size: 2rem;
           line-height: 1;
+        }
+
+        .inv-icon-circle {
+          width: 48px;
+          height: 48px;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1.5px solid;
+          transition: all 0.3s ease;
+        }
+
+        .inv-card:hover .inv-icon-circle {
+          transform: scale(1.08);
         }
 
         .inv-card-name {
