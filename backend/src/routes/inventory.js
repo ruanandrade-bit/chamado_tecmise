@@ -9,9 +9,9 @@ router.use(authRequired, adminOnly)
 
 // Default items (used to initialize on first access)
 const DEFAULT_ITEMS = [
-  { id: 'fonte-inicial', name: 'Fonte Inicial', quantity: 0 },
-  { id: 'fonte-nova', name: 'Fonte Nova', quantity: 0 },
-  { id: 'fonte-original', name: 'Fonte Original', quantity: 0 },
+  { id: 'tomada-inicial', name: 'Fonte Inicial', quantity: 0 },
+  { id: 'tomada-nova', name: 'Fonte Nova', quantity: 0 },
+  { id: 'tomada-original', name: 'Fonte Original', quantity: 0 },
   { id: 'cam-logitech', name: 'Câm Logitech', quantity: 0 },
   { id: 'usb-cam-logi', name: 'USB da Câmera Logi', quantity: 0 },
   { id: 'raspberry-pi', name: 'Raspberry Pi', quantity: 0 },

@@ -7,9 +7,9 @@ import { api } from '../services/api'
 import { S4S_LOGO_BASE64 } from '../utils/logoBase64'
 
 const ITEM_CONFIG = {
-  'fonte-inicial': { Icon: Plug, color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)' },
-  'fonte-nova': { Icon: Zap, color: '#22d3ee', bg: 'rgba(34,211,238,0.12)', border: 'rgba(34,211,238,0.25)' },
-  'fonte-original': { Icon: Battery, color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.25)' },
+  'tomada-inicial': { Icon: Plug, color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)' },
+  'tomada-nova': { Icon: Zap, color: '#22d3ee', bg: 'rgba(34,211,238,0.12)', border: 'rgba(34,211,238,0.25)' },
+  'tomada-original': { Icon: Battery, color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.25)' },
   'cam-logitech': { Icon: Camera, color: '#f472b6', bg: 'rgba(244,114,182,0.12)', border: 'rgba(244,114,182,0.25)' },
   'usb-cam-logi': { Icon: Usb, color: '#fb7185', bg: 'rgba(251,113,133,0.12)', border: 'rgba(251,113,133,0.25)' },
   'raspberry-pi': { Icon: Cpu, color: '#34d399', bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.25)' },

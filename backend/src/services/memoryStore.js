@@ -456,12 +456,20 @@ export const memoryStore = {
       state.inventory = structuredClone(defaultItems)
       persistState()
     } else {
+      const defaultIds = new Set(defaultItems.map(i => i.id))
+      // Remove items no longer in defaults
+      state.inventory = state.inventory.filter(i => defaultIds.has(i.id))
       // Merge: add any new default items not yet in state
       const existingIds = new Set(state.inventory.map(i => i.id))
       for (const item of defaultItems) {
         if (!existingIds.has(item.id)) {
           state.inventory.push(structuredClone(item))
         }
+      }
+      // Sync display names with defaults
+      const nameMap = new Map(defaultItems.map(i => [i.id, i.name]))
+      for (const item of state.inventory) {
+        if (nameMap.has(item.id)) item.name = nameMap.get(item.id)
       }
     }
     return state.inventory
