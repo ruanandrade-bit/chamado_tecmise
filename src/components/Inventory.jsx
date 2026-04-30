@@ -117,12 +117,12 @@ export default function Inventory() {
 
       return `
         <tr style="background: ${rowBg};">
-          <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #9ca3af; font-size: 12px; font-weight: 600; width: 40px;">${String(i + 1).padStart(2, '0')}</td>
-          <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #e5e7eb; font-size: 14px; font-weight: 600;">${item.name}</td>
-          <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); text-align: center;">
-            <span style="display: inline-block; padding: 4px 12px; border-radius: 8px; background: ${badgeBg}; border: 1px solid ${badgeBorder}; color: ${badgeColor}; font-size: 11px; font-weight: 600;">${badgeText}</span>
+          <td style="padding: 7px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #9ca3af; font-size: 11px; font-weight: 600; width: 36px;">${String(i + 1).padStart(2, '0')}</td>
+          <td style="padding: 7px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); color: #e5e7eb; font-size: 12px; font-weight: 600;">${item.name}</td>
+          <td style="padding: 7px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); text-align: center;">
+            <span style="display: inline-block; padding: 2px 10px; border-radius: 6px; background: ${badgeBg}; border: 1px solid ${badgeBorder}; color: ${badgeColor}; font-size: 10px; font-weight: 600;">${badgeText}</span>
           </td>
-          <td style="padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.04); text-align: center; font-size: 20px; font-weight: 800; color: ${qtyColor}; letter-spacing: -0.5px;">${item.quantity}</td>
+          <td style="padding: 7px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); text-align: center; font-size: 16px; font-weight: 800; color: ${qtyColor};">${item.quantity}</td>
         </tr>`
     }).join('')
 
@@ -133,68 +133,84 @@ export default function Inventory() {
   <title>Estoque S4S - ${dateStr}</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
+    @page { margin: 0; size: A4; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Inter', 'Segoe UI', sans-serif; background: #0a0a1a; color: #e5e7eb; min-height: 100vh; }
-    .page { max-width: 800px; margin: 0 auto; padding: 40px 32px; }
-    .header { background: linear-gradient(135deg, #1a1040 0%, #0d0d2b 50%, #0a1628 100%); border-radius: 20px; padding: 32px; margin-bottom: 28px; border: 1px solid rgba(139,92,246,0.15); position: relative; overflow: hidden; }
-    .header::before { content: ''; position: absolute; top: -50%; right: -30%; width: 300px; height: 300px; background: radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%); border-radius: 50%; }
-    .header-top { display: flex; justify-content: space-between; align-items: flex-start; position: relative; z-index: 1; }
-    .logo { font-size: 28px; font-weight: 900; letter-spacing: -1px; }
+    body { font-family: 'Inter', 'Segoe UI', sans-serif; background: #0a0a1a; color: #e5e7eb; }
+    .page { max-width: 100%; padding: 24px 28px; }
+    .header { background: linear-gradient(135deg, #1a1040 0%, #0d0d2b 50%, #0a1628 100%); border-radius: 14px; padding: 20px 24px; margin-bottom: 16px; border: 1px solid rgba(139,92,246,0.15); position: relative; overflow: hidden; }
+    .header::before { content: ''; position: absolute; top: -50%; right: -30%; width: 250px; height: 250px; background: radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%); border-radius: 50%; }
+    .header-top { display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1; }
+    .logo { font-size: 24px; font-weight: 900; letter-spacing: -1px; }
     .logo-s4 { color: #a78bfa; }
     .logo-s { color: #4ade80; }
-    .logo-sub { display: block; font-size: 11px; font-weight: 500; color: #6b7280; margin-top: 2px; letter-spacing: 1px; text-transform: uppercase; }
-    .date-box { text-align: right; padding: 10px 16px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); }
-    .date-val { font-size: 16px; font-weight: 700; color: #f3f4f6; }
-    .time-val { font-size: 12px; color: #6b7280; margin-top: 2px; }
-    .report-title { position: relative; z-index: 1; margin-top: 24px; font-size: 22px; font-weight: 800; color: #f3f4f6; letter-spacing: -0.3px; }
-    .report-subtitle { position: relative; z-index: 1; font-size: 13px; color: #6b7280; margin-top: 6px; }
-    .summary-grid { display: flex; gap: 12px; margin-bottom: 24px; }
-    .summary-card { flex: 1; padding: 18px 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.06); text-align: center; }
+    .logo-sub { font-size: 10px; font-weight: 500; color: #6b7280; margin-left: 8px; letter-spacing: 1px; text-transform: uppercase; }
+    .date-box { text-align: right; padding: 8px 14px; background: rgba(255,255,255,0.03); border-radius: 10px; border: 1px solid rgba(255,255,255,0.06); }
+    .date-val { font-size: 14px; font-weight: 700; color: #f3f4f6; }
+    .time-val { font-size: 11px; color: #6b7280; }
+    .report-info { position: relative; z-index: 1; margin-top: 14px; display: flex; align-items: baseline; gap: 10px; }
+    .report-title { font-size: 18px; font-weight: 800; color: #f3f4f6; }
+    .report-subtitle { font-size: 11px; color: #6b7280; }
+    .summary-grid { display: flex; gap: 10px; margin-bottom: 14px; }
+    .summary-card { flex: 1; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); text-align: center; }
     .sc-purple { background: linear-gradient(135deg, rgba(139,92,246,0.1), rgba(139,92,246,0.03)); border-color: rgba(139,92,246,0.15); }
     .sc-green { background: linear-gradient(135deg, rgba(34,197,94,0.1), rgba(34,197,94,0.03)); border-color: rgba(34,197,94,0.15); }
     .sc-red { background: linear-gradient(135deg, rgba(239,68,68,0.1), rgba(239,68,68,0.03)); border-color: rgba(239,68,68,0.15); }
     .sc-blue { background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(59,130,246,0.03)); border-color: rgba(59,130,246,0.15); }
-    .sc-value { font-size: 28px; font-weight: 900; letter-spacing: -1px; }
+    .sc-value { font-size: 22px; font-weight: 900; letter-spacing: -1px; }
     .v-purple { color: #c4b5fd; } .v-green { color: #86efac; } .v-red { color: #fca5a5; } .v-blue { color: #93c5fd; }
-    .sc-label { font-size: 11px; font-weight: 600; color: #6b7280; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .table-wrap { background: #12122a; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 24px; }
+    .sc-label { font-size: 9px; font-weight: 600; color: #6b7280; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .table-wrap { background: #12122a; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.06); margin-bottom: 14px; }
     table { width: 100%; border-collapse: collapse; }
-    thead th { padding: 14px 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); }
+    thead th { padding: 8px 14px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.02); }
     thead th:first-child { text-align: left; }
     thead th:nth-child(3), thead th:last-child { text-align: center; }
-    .footer { text-align: center; padding: 20px; font-size: 11px; color: #4b5563; border-top: 1px solid rgba(255,255,255,0.04); }
+    .footer { text-align: center; padding: 12px; font-size: 10px; color: #4b5563; border-top: 1px solid rgba(255,255,255,0.04); }
     .footer-line { display: flex; align-items: center; justify-content: center; gap: 8px; }
-    .footer-dot { display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: #4b5563; }
-    @media print { body { background: #0a0a1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page { padding: 20px; } }
+    .footer-dot { display: inline-block; width: 3px; height: 3px; border-radius: 50%; background: #4b5563; }
+    .logo-img { width: 44px; height: 44px; border-radius: 10px; }
+    .logo-text { display: flex; flex-direction: column; }
+    .logo-name { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; }
+    .logo-s4 { color: #a78bfa; }
+    .logo-s { color: #4ade80; }
+    .logo-sub { font-size: 9px; font-weight: 500; color: #6b7280; letter-spacing: 1.2px; text-transform: uppercase; margin-top: -2px; }
+    @media print {
+      @page { margin: 0; }
+      body { background: #0a0a1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
   </style>
 </head>
 <body>
   <div class="page">
     <div class="header">
       <div class="header-top">
-        <div>
-          <div class="logo"><span class="logo-s4">S4</span><span class="logo-s">S</span></div>
-          <span class="logo-sub">Sistema de Chamados</span>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <img class="logo-img" src="data:image/png;base64,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" alt="S4S">
+          <div class="logo-text">
+            <div class="logo-name"><span class="logo-s4">S4</span><span class="logo-s">S</span> Chamados</div>
+            <span class="logo-sub">Sistema de Chamados</span>
+          </div>
         </div>
         <div class="date-box">
           <div class="date-val">${dateStr}</div>
           <div class="time-val">${timeStr}</div>
         </div>
       </div>
-      <div class="report-title">📦 Relatório de Estoque</div>
-      <div class="report-subtitle">Inventário completo de componentes e materiais</div>
+      <div class="report-info">
+        <div class="report-title">\ud83d\udce6 Relat\u00f3rio de Estoque</div>
+        <div class="report-subtitle">Invent\u00e1rio completo de componentes e materiais</div>
+      </div>
     </div>
 
     <div class="summary-grid">
       <div class="summary-card sc-purple"><div class="sc-value v-purple">${items.length}</div><div class="sc-label">Total Itens</div></div>
       <div class="summary-card sc-blue"><div class="sc-value v-blue">${totalItems}</div><div class="sc-label">Em Estoque</div></div>
-      <div class="summary-card sc-green"><div class="sc-value v-green">${inStock}</div><div class="sc-label">Disponíveis</div></div>
+      <div class="summary-card sc-green"><div class="sc-value v-green">${inStock}</div><div class="sc-label">Dispon\u00edveis</div></div>
       <div class="summary-card sc-red"><div class="sc-value v-red">${outOfStock}</div><div class="sc-label">Zerados</div></div>
     </div>
 
     <div class="table-wrap">
       <table>
-        <thead><tr><th style="width:50px">#</th><th style="text-align:left">Item</th><th>Status</th><th style="width:100px">Qtd</th></tr></thead>
+        <thead><tr><th style="width:36px">#</th><th style="text-align:left">Item</th><th>Status</th><th style="width:80px">Qtd</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -202,7 +218,7 @@ export default function Inventory() {
     <div class="footer">
       <div class="footer-line">
         <span>S4S Chamados</span><span class="footer-dot"></span>
-        <span>Relatório gerado em ${dateStr} às ${timeStr}</span><span class="footer-dot"></span>
+        <span>Gerado em ${dateStr} \u00e0s ${timeStr}</span><span class="footer-dot"></span>
         <span>Tecmise</span>
       </div>
     </div>
