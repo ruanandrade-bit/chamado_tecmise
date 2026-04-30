@@ -171,9 +171,8 @@ export default function Inventory() {
     .logo-img { width: 44px; height: 44px; border-radius: 10px; }
     .logo-text { display: flex; flex-direction: column; }
     .logo-name { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; }
-    .logo-s4 { color: #a78bfa; }
+    .logo-s4 { color: #4ade80; }
     .logo-s { color: #4ade80; }
-    .logo-sub { font-size: 9px; font-weight: 500; color: #6b7280; letter-spacing: 1.2px; text-transform: uppercase; margin-top: -2px; }
     @media print {
       @page { margin: 0; }
       body { background: #0a0a1a; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -187,8 +186,7 @@ export default function Inventory() {
         <div style="display:flex;align-items:center;gap:12px;">
           <img class="logo-img" src="${S4S_LOGO_BASE64}" alt="S4S">
           <div class="logo-text">
-            <div class="logo-name"><span class="logo-s4">S4</span><span class="logo-s">S</span> Chamados</div>
-            <span class="logo-sub">Sistema de Chamados</span>
+            <div class="logo-name"><span class="logo-s4">S4</span><span class="logo-s">S</span> Estoque</div>
           </div>
         </div>
         <div class="date-box">
@@ -197,8 +195,7 @@ export default function Inventory() {
         </div>
       </div>
       <div class="report-info">
-        <div class="report-title">\ud83d\udce6 Relat\u00f3rio de Estoque</div>
-        <div class="report-subtitle">Invent\u00e1rio completo de componentes e materiais</div>
+        <div class="report-title">Relat\u00f3rio de Estoque</div>
       </div>
     </div>
 
@@ -206,7 +203,6 @@ export default function Inventory() {
       <div class="summary-card sc-purple"><div class="sc-value v-purple">${items.length}</div><div class="sc-label">Total Itens</div></div>
       <div class="summary-card sc-blue"><div class="sc-value v-blue">${totalItems}</div><div class="sc-label">Em Estoque</div></div>
       <div class="summary-card sc-green"><div class="sc-value v-green">${inStock}</div><div class="sc-label">Dispon\u00edveis</div></div>
-      <div class="summary-card sc-red"><div class="sc-value v-red">${outOfStock}</div><div class="sc-label">Zerados</div></div>
     </div>
 
     <div class="table-wrap">
@@ -218,7 +214,7 @@ export default function Inventory() {
 
     <div class="footer">
       <div class="footer-line">
-        <span>S4S Chamados</span><span class="footer-dot"></span>
+        <span>S4S Estoque</span><span class="footer-dot"></span>
         <span>Gerado em ${dateStr} \u00e0s ${timeStr}</span><span class="footer-dot"></span>
         <span>Tecmise</span>
       </div>
