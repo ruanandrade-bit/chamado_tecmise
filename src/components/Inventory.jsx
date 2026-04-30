@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  Package, Plus, Minus, Pencil, Check, X, Loader2,
+  Package, Plus, Minus, Pencil, Check, X, Loader2, Download,
   Plug, Zap, Battery, Camera, Cpu, HardDrive, Fan, Cable, Printer, CheckCircle2, Usb
 } from 'lucide-react'
 import { api } from '../services/api'
@@ -99,6 +99,78 @@ export default function Inventory() {
 
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0)
 
+  const generatePDF = () => {
+    const now = new Date()
+    const dateStr = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+    const rows = items.map((item, i) => `
+      <tr style="${i % 2 === 0 ? 'background: #f8f9fa;' : ''}">
+        <td style="padding: 10px 14px; border-bottom: 1px solid #e9ecef; font-size: 14px; color: #495057;">${item.name}</td>
+        <td style="padding: 10px 14px; border-bottom: 1px solid #e9ecef; font-size: 14px; text-align: center; font-weight: 700; color: ${item.quantity > 0 ? '#16a34a' : '#dc2626'};">${item.quantity}</td>
+      </tr>
+    `).join('')
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8">
+        <title>Estoque S4S - ${dateStr}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1a1a2e; }
+          .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 3px solid #7c3aed; }
+          .logo { font-size: 24px; font-weight: 800; color: #7c3aed; }
+          .logo span { color: #16a34a; }
+          .date { font-size: 12px; color: #6b7280; text-align: right; }
+          .date strong { display: block; font-size: 14px; color: #374151; }
+          h1 { font-size: 20px; color: #1f2937; margin-bottom: 6px; }
+          .subtitle { font-size: 13px; color: #6b7280; margin-bottom: 24px; }
+          table { width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+          thead th { background: #7c3aed; color: white; padding: 12px 14px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+          thead th:first-child { text-align: left; }
+          thead th:last-child { text-align: center; }
+          .summary { display: flex; gap: 24px; margin-top: 24px; padding: 16px 20px; background: #f3f4f6; border-radius: 8px; }
+          .summary-item { font-size: 13px; color: #6b7280; }
+          .summary-item strong { color: #1f2937; font-size: 16px; }
+          .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #9ca3af; text-align: center; }
+          @media print { body { padding: 20px; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <div class="logo">S4<span>S</span> Chamados</div>
+          <div class="date"><strong>${dateStr}</strong>${timeStr}</div>
+        </div>
+        <h1>📦 Relatório de Estoque</h1>
+        <p class="subtitle">Lista completa de componentes e materiais</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Quantidade</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="summary">
+          <div class="summary-item">Itens: <strong>${items.length}</strong></div>
+          <div class="summary-item">Total em estoque: <strong>${totalItems}</strong></div>
+        </div>
+        <div class="footer">Gerado automaticamente pelo S4S Chamados — ${dateStr} às ${timeStr}</div>
+        <script>window.onload = () => { window.print(); }<\/script>
+      </body>
+      </html>
+    `
+
+    const printWindow = window.open('', '_blank')
+    if (printWindow) {
+      printWindow.document.write(html)
+      printWindow.document.close()
+    }
+  }
+
   return (
     <div className="inv-container">
       {/* Header */}
@@ -124,6 +196,15 @@ export default function Inventory() {
             <span className="inv-stat-value">{totalItems}</span>
             <span className="inv-stat-label">Total em estoque</span>
           </div>
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={generatePDF}
+            className="inv-pdf-btn"
+            title="Baixar PDF do estoque"
+          >
+            <Download size={15} />
+            Baixar PDF
+          </button>
         </div>
       )}
 
@@ -307,6 +388,29 @@ export default function Inventory() {
 
         .inv-stat-value { font-weight: 800; }
         .inv-stat-label { font-weight: 400; opacity: 0.8; }
+
+        .inv-pdf-btn {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          padding: 8px 16px;
+          border-radius: 10px;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          background: linear-gradient(135deg, rgba(139, 92, 246, 0.15), rgba(124, 58, 237, 0.1));
+          border: 1px solid rgba(139, 92, 246, 0.25);
+          color: #c4b5fd;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+
+        .inv-pdf-btn:hover {
+          background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(124, 58, 237, 0.18));
+          border-color: rgba(139, 92, 246, 0.4);
+          box-shadow: 0 2px 12px rgba(139, 92, 246, 0.12);
+          color: #ddd6fe;
+        }
 
         /* ── Loading ── */
         .inv-loading {
