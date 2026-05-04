@@ -290,7 +290,7 @@ export default function CreateTicketModal({ onClose }) {
                 <p className="ctm-hint" style={{ marginTop: 0 }}>Selecione uma escola primeiro</p>
               ) : (
                 <>
-                  <div className="ctm-checkbox-grid">
+                  <div className="ctm-turma-grid">
                     {availableTurmas.map(({ name, device }) => (
                       <label
                         key={`${device}-${name}`}
@@ -1018,6 +1018,16 @@ export default function CreateTicketModal({ onClose }) {
         }
 
         /* ── Turma device badge ── */
+        .ctm-turma-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+        }
+
+        @media (max-width: 480px) {
+          .ctm-turma-grid { grid-template-columns: 1fr; }
+        }
+
         .ctm-turma-device {
           font-size: 0.625rem;
           font-weight: 600;
