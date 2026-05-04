@@ -1,23 +1,63 @@
-import { useState, useRef } from 'react'
-import { X, Upload, Image as ImageIcon, Plus, Loader2 } from 'lucide-react'
+import { useState, useRef, useMemo } from 'react'
+import { X, Upload, Image as ImageIcon, Plus, Loader2, Lock } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
 
-const SCHOOL_DEVICES = {
-  'Colégio Frei': ['059', '063', '064'],
-  'Colégio Dom José': ['048', '053', '069'],
-  'Colégio Honorata': ['035', '055'],
-  'Colégio Rotary': ['074', '066'],
-  'Colégio Mercedes': ['056', '072'],
-  'Colégio Cemma': ['050', '067', '071', '076'],
-  'Colégio Grace': ['032', '036', '037', '038'],
-  'Colégio Graziela': ['012', '014'],
-  'Colégio Antônio': ['011', '013'],
-  'Colégio Médici': ['034', '070', '073'],
-  'Colégio CeFrei': ['061'],
+// ── School → Device → Turmas mapping ──
+const SCHOOL_DATA = {
+  'Colégio Graziela': {
+    '012': ['1°A', '1°B'],
+    '014': ['2°A', '3°B'],
+  },
+  'Colégio Antônio': {
+    '013': ['5°Ano', '4°Ano'],
+    '011': ['1°Ano', 'Infantil 5'],
+  },
+  'Colégio Honorata': {
+    '055': ['1°02', '1°03'],
+    '035': ['1°01', '1°04'],
+  },
+  'Colégio Grace': {
+    '038': ['Infantil 5A', 'Infantil 5B'],
+    '037': ['5°Ano A', '5°Ano B'],
+    '032': ['9°Ano B'],
+    '036': ['1°Ano EM'],
+  },
+  'Colégio Frei': {
+    '059': ['2°Ano A', 'Reforço'],
+    '063': ['4°Ano A', '4°Ano C'],
+    '064': ['4°Ano B', '4°Ano D'],
+  },
+  'Colégio Dom José': {
+    '048': ['7°Ano'],
+    '053': ['1°Ano'],
+    '069': ['2°Ano'],
+  },
+  'Colégio Rotary': {
+    '066': ['401/4º Ano'],
+    '074': ['502/5º Ano'],
+  },
+  'Colégio Mercedes': {
+    '072': ['4°Ano'],
+    '056': ['5°Ano'],
+  },
+  'Colégio Cemma': {
+    '050': ['9°Ano 03', '9°Ano 06'],
+    '067': ['8°Ano 01', '8°Ano 04'],
+    '071': ['8°Ano 02', '9°Ano 05'],
+    '076': ['7°Ano 02', '7°Ano 05'],
+  },
+  'Colégio Médici': {
+    '034': ['5°Ano B'],
+    '070': ['5°Ano A'],
+    '073': ['5°Ano A'],
+  },
+  'Colégio CeFrei': {
+    '061': ['5°Ano B', '2°Ano B'],
+  },
 }
 
-const SCHOOL_NAMES = Object.keys(SCHOOL_DEVICES)
+const SCHOOL_NAMES = Object.keys(SCHOOL_DATA)
 
 export default function CreateTicketModal({ onClose }) {
   const { addTicket } = useTicketsStore()
@@ -27,7 +67,7 @@ export default function CreateTicketModal({ onClose }) {
 
   const [formData, setFormData] = useState({
     school: '',
-    classroom: '',
+    selectedTurmas: [],
     selectedPeriods: ['Matutino'],
     selectedDevices: [],
     problemType: '',
@@ -49,19 +89,66 @@ export default function CreateTicketModal({ onClose }) {
     'Criação de acesso S4S'
   ]
 
-  const availableDevices = formData.school ? (SCHOOL_DEVICES[formData.school] || []) : []
+  // Build turma list for selected school: { turmaName, device }
+  const availableTurmas = useMemo(() => {
+    if (!formData.school) return []
+    const schoolDevices = SCHOOL_DATA[formData.school] || {}
+    const turmas = []
+    for (const [device, turmaList] of Object.entries(schoolDevices)) {
+      for (const turma of turmaList) {
+        turmas.push({ name: turma, device })
+      }
+    }
+    return turmas
+  }, [formData.school])
+
+  // All devices for this school
+  const allDevices = useMemo(() => {
+    if (!formData.school) return []
+    return Object.keys(SCHOOL_DATA[formData.school] || {})
+  }, [formData.school])
+
+  // Devices that are allowed (linked to selected turmas)
+  const allowedDevices = useMemo(() => {
+    const devices = new Set()
+    for (const turma of formData.selectedTurmas) {
+      const match = availableTurmas.find(t => t.name === turma)
+      if (match) devices.add(match.device)
+    }
+    return devices
+  }, [formData.selectedTurmas, availableTurmas])
 
   const handleChange = (e) => {
     const { name, value } = e.target
     if (name === 'school') {
-      // Reset devices when school changes
-      setFormData(prev => ({ ...prev, school: value, selectedDevices: [] }))
+      setFormData(prev => ({ ...prev, school: value, selectedTurmas: [], selectedDevices: [] }))
     } else {
       setFormData(prev => ({ ...prev, [name]: value }))
     }
   }
 
+  const toggleTurma = (turmaName) => {
+    setFormData(prev => {
+      const isSelected = prev.selectedTurmas.includes(turmaName)
+      const newTurmas = isSelected
+        ? prev.selectedTurmas.filter(t => t !== turmaName)
+        : [...prev.selectedTurmas, turmaName]
+
+      // Recalculate which devices are allowed after turma change
+      const newAllowedDevices = new Set()
+      for (const t of newTurmas) {
+        const match = availableTurmas.find(at => at.name === t)
+        if (match) newAllowedDevices.add(match.device)
+      }
+      // Remove any selected devices no longer allowed
+      const newSelectedDevices = prev.selectedDevices.filter(d => newAllowedDevices.has(d))
+
+      return { ...prev, selectedTurmas: newTurmas, selectedDevices: newSelectedDevices }
+    })
+  }
+
   const toggleDevice = (dev) => {
+    if (!allowedDevices.has(dev)) return
     setFormData(prev => {
       const selected = prev.selectedDevices.includes(dev)
         ? prev.selectedDevices.filter(d => d !== dev)
@@ -121,7 +208,7 @@ export default function CreateTicketModal({ onClose }) {
 
     const missingFields = []
     if (!formData.school.trim()) missingFields.push('Escola')
-    if (!formData.classroom.trim()) missingFields.push('Turma')
+    if (formData.selectedTurmas.length === 0) missingFields.push('Turma')
     if (formData.selectedDevices.length === 0) missingFields.push('Device')
     if (!formData.description.trim()) missingFields.push('Descrição')
 
@@ -135,7 +222,7 @@ export default function CreateTicketModal({ onClose }) {
     try {
       await addTicket({
         school: formData.school.trim(),
-        classroom: formData.classroom.trim(),
+        classroom: formData.selectedTurmas.join(', '),
         device: formData.selectedDevices.join(', '),
         period: formData.selectedPeriods.join(' • '),
         problemType: formData.problemType,
@@ -196,45 +283,80 @@ export default function CreateTicketModal({ onClose }) {
               </select>
             </div>
 
-            {/* Classroom */}
+            {/* Turma - Predefined checkboxes */}
             <div className="ctm-field">
               <label className="ctm-label">Turma <span className="ctm-required">*</span></label>
-              <input
-                type="text"
-                name="classroom"
-                value={formData.classroom}
-                onChange={handleChange}
-                placeholder="Ex: 5º B, 3º D"
-                className="ctm-input"
-                required
-              />
-            </div>
-
-            {/* Device - Checkboxes filtrados pela escola */}
-            <div className="ctm-field">
-              <label className="ctm-label">Device <span className="ctm-required">*</span></label>
               {!formData.school ? (
                 <p className="ctm-hint" style={{ marginTop: 0 }}>Selecione uma escola primeiro</p>
               ) : (
                 <>
                   <div className="ctm-checkbox-grid">
-                    {availableDevices.map(dev => (
-                      <label key={dev} className={`ctm-checkbox-item ${formData.selectedDevices.includes(dev) ? 'ctm-checkbox-checked' : ''}`}>
-                        <span className={`ctm-checkbox-box ${formData.selectedDevices.includes(dev) ? 'ctm-checkbox-box-checked' : ''}`}>
-                          {formData.selectedDevices.includes(dev) && '✓'}
+                    {availableTurmas.map(({ name, device }) => (
+                      <label
+                        key={`${device}-${name}`}
+                        className={`ctm-checkbox-item ${formData.selectedTurmas.includes(name) ? 'ctm-checkbox-checked' : ''}`}
+                        title={`Device ${device}`}
+                      >
+                        <span className={`ctm-checkbox-box ${formData.selectedTurmas.includes(name) ? 'ctm-checkbox-box-checked' : ''}`}>
+                          {formData.selectedTurmas.includes(name) && '✓'}
                         </span>
-                        <span className="ctm-checkbox-label">{dev}</span>
+                        <span className="ctm-checkbox-label">{name}</span>
+                        <span className="ctm-turma-device">{device}</span>
                         <input
                           type="checkbox"
-                          checked={formData.selectedDevices.includes(dev)}
-                          onChange={() => toggleDevice(dev)}
+                          checked={formData.selectedTurmas.includes(name)}
+                          onChange={() => toggleTurma(name)}
                           style={{ display: 'none' }}
                         />
                       </label>
                     ))}
                   </div>
                   <p className="ctm-hint">
-                    {formData.selectedDevices.length} de {availableDevices.length} selecionado{formData.selectedDevices.length !== 1 ? 's' : ''}
+                    {formData.selectedTurmas.length} turma{formData.selectedTurmas.length !== 1 ? 's' : ''} selecionada{formData.selectedTurmas.length !== 1 ? 's' : ''}
+                  </p>
+                </>
+              )}
+            </div>
+
+            {/* Device - Checkboxes filtrados pelas turmas selecionadas */}
+            <div className="ctm-field">
+              <label className="ctm-label">Device <span className="ctm-required">*</span></label>
+              {!formData.school ? (
+                <p className="ctm-hint" style={{ marginTop: 0 }}>Selecione uma escola primeiro</p>
+              ) : formData.selectedTurmas.length === 0 ? (
+                <p className="ctm-hint" style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Lock size={12} /> Selecione uma turma primeiro
+                </p>
+              ) : (
+                <>
+                  <div className="ctm-checkbox-grid">
+                    {allDevices.map(dev => {
+                      const isAllowed = allowedDevices.has(dev)
+                      const isSelected = formData.selectedDevices.includes(dev)
+                      return (
+                        <label
+                          key={dev}
+                          className={`ctm-checkbox-item ${isSelected ? 'ctm-checkbox-checked' : ''} ${!isAllowed ? 'ctm-checkbox-disabled' : ''}`}
+                          onClick={(e) => { if (!isAllowed) e.preventDefault() }}
+                        >
+                          <span className={`ctm-checkbox-box ${isSelected ? 'ctm-checkbox-box-checked' : ''}`}>
+                            {isSelected ? '✓' : (!isAllowed ? '' : '')}
+                          </span>
+                          <span className="ctm-checkbox-label">{dev}</span>
+                          {!isAllowed && <Lock size={11} style={{ color: '#4b5563', marginLeft: 'auto' }} />}
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleDevice(dev)}
+                            disabled={!isAllowed}
+                            style={{ display: 'none' }}
+                          />
+                        </label>
+                      )
+                    })}
+                  </div>
+                  <p className="ctm-hint">
+                    {formData.selectedDevices.length} de {allowedDevices.size} disponíve{allowedDevices.size !== 1 ? 'is' : 'l'} selecionado{formData.selectedDevices.length !== 1 ? 's' : ''}
                   </p>
                 </>
               )}
@@ -893,6 +1015,34 @@ export default function CreateTicketModal({ onClose }) {
 
         .ctm-checkbox-checked .ctm-checkbox-label {
           color: #86efac;
+        }
+
+        /* ── Turma device badge ── */
+        .ctm-turma-device {
+          font-size: 0.625rem;
+          font-weight: 600;
+          color: #6b7280;
+          background: rgba(255, 255, 255, 0.06);
+          padding: 2px 6px;
+          border-radius: 4px;
+          margin-left: auto;
+          letter-spacing: 0.5px;
+        }
+
+        .ctm-checkbox-checked .ctm-turma-device {
+          color: #4ade80;
+          background: rgba(34, 197, 94, 0.1);
+        }
+
+        /* ── Disabled device checkbox ── */
+        .ctm-checkbox-disabled {
+          opacity: 0.35;
+          cursor: not-allowed !important;
+          pointer-events: none;
+        }
+
+        .ctm-checkbox-disabled .ctm-checkbox-label {
+          color: #4b5563;
         }
       `}</style>
     </div>
