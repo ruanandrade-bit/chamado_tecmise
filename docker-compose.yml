@@ -1,0 +1,72 @@
+# ─── S4S Chamados — Docker Compose ───────────────────────────────────
+# Sobe 3 serviços: MongoDB, Backend (Express) e Frontend (Nginx)
+#
+# Uso:
+#   docker compose up -d --build     # Subir tudo
+#   docker compose logs -f           # Ver logs
+#   docker compose down              # Parar tudo
+#   docker compose down -v           # Parar e apagar dados do MongoDB
+
+services:
+  # ─── MongoDB ─────────────────────────────────────────────────────────
+  mongo:
+    image: mongo:7
+    container_name: s4s-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-s4s_admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-s4s_secret_2026}
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ─── Backend (Express API) ──────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: s4s-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      PORT: 4000
+      JWT_SECRET: ${JWT_SECRET:-s4s-chamados-docker-secret-change-me}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000,http://localhost}
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER:-s4s_admin}:${MONGO_ROOT_PASSWORD:-s4s_secret_2026}@mongo:27017/s4s_chamados?authSource=admin
+      TAILSCALE_API_KEY: ${TAILSCALE_API_KEY:-}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ─── Frontend (Nginx + Vite Build) ─────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:4000/api}
+    container_name: s4s-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  mongo_data:
+    driver: local

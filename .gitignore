@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 node_modules
 dist
 build
@@ -17,12 +16,10 @@ build
 .turbo
 out
 .vercel
+output/
 
 # Persisted backend data (generated at runtime)
 backend/src/data/store.json
-=======
-node_modules/
-.env
-output/
-*.log
->>>>>>> 2a33665 (Primeiro commit)
+
+# Docker
+.env.docker

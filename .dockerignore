@@ -1,0 +1,12 @@
+node_modules
+backend
+dist
+.git
+.vercel
+.env
+.env.local
+.env.*.local
+.codex
+referencias
+npm-debug.log*
+*.log
