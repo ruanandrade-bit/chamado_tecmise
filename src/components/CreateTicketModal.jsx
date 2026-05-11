@@ -13,10 +13,6 @@ const SCHOOL_DATA = {
     '013': ['5°Ano', '4°Ano'],
     '011': ['1°Ano', 'Infantil 5'],
   },
-  'Colégio Honorata': {
-    '055': ['1°02', '1°03'],
-    '035': ['1°01', '1°04'],
-  },
   'Colégio Grace': {
     '038': ['Infantil 5A', 'Infantil 5B'],
     '037': ['5°Ano A', '5°Ano B'],

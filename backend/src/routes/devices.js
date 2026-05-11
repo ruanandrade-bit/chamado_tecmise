@@ -10,7 +10,6 @@ router.use(authRequired, adminOnly)
 const SCHOOL_DEVICES = {
   'Colégio Frei': ['059', '063', '064'],
   'Colégio Dom José': ['048', '053', '069'],
-  'Colégio Honorata': ['035', '055'],
   'Colégio Rotary': ['074', '066'],
   'Colégio Mercedes': ['056', '072'],
   'Colégio Cemma': ['050', '067', '071', '076'],
