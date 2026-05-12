@@ -311,8 +311,6 @@ export default function ArchivedTickets() {
                 ticket={ticket}
                 onClick={() => setSelectedTicketId(ticket.id)}
                 draggable={false}
-                showDeleteAction={canDeleteTicket}
-                onDelete={handleDeleteRequest}
               />
             </div>
           ))}

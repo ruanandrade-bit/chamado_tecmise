@@ -1,4 +1,4 @@
-import { Paperclip, Archive, Trash2 } from 'lucide-react'
+import { Paperclip, Archive } from 'lucide-react'
 
 const PRIORITY_CONFIG = {
   alta: { label: 'Alta', bg: 'bg-red-500/20', text: 'text-red-300', border: 'border-red-500/30' },
@@ -11,9 +11,7 @@ export default function TicketCard({
   onClick,
   draggable,
   showArchiveAction = false,
-  onArchive,
-  showDeleteAction = false,
-  onDelete
+  onArchive
 }) {
   const priorityConfig = PRIORITY_CONFIG[ticket.priority] || PRIORITY_CONFIG.medium
 
@@ -76,39 +74,22 @@ export default function TicketCard({
               Arquivar
             </button>
           )}
-          {showDeleteAction && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                onDelete?.(ticket)
-              }}
-              className="tk-card-action-btn tk-card-action-delete"
-              title="Excluir chamado"
-            >
-              <Trash2 size={13} />
-              Excluir
-            </button>
-          )}
         </div>
         
         {ticket.archived && ticket.resolvedAt ? (
-          <div style={{ textAlign: 'right' }}>
+          <div className="tk-card-footer-dates">
+            <p className="tk-card-date">
+              Aberto em {new Date(ticket.createdAt).toLocaleDateString('pt-BR', { 
+                month: 'short', 
+                day: 'numeric'
+              })}
+            </p>
             <p className="tk-card-date">
               Resolvido em {new Date(ticket.resolvedAt).toLocaleDateString('pt-BR', { 
                 month: 'short', 
                 day: 'numeric'
               })}
             </p>
-            {(() => {
-              const daysLeft = Math.max(0, 14 - Math.floor((Date.now() - new Date(ticket.resolvedAt).getTime()) / (1000 * 60 * 60 * 24)))
-              return (
-                <p className={`tk-card-days-left ${daysLeft <= 3 ? 'tk-days-danger' : daysLeft <= 7 ? 'tk-days-warn' : ''}`}>
-                  {daysLeft === 0 ? 'Será excluído em breve' : `${daysLeft}d restantes`}
-                </p>
-              )
-            })()}
           </div>
         ) : (
           <p className="tk-card-date">
@@ -269,20 +250,16 @@ export default function TicketCard({
           color: #f87171;
         }
 
+        .tk-card-footer-dates {
+          display: flex;
+          justify-content: space-between;
+          flex: 1;
+        }
+
         .tk-card-date {
           font-size: 0.75rem;
           color: #6b7280;
         }
-
-        .tk-card-days-left {
-          font-size: 0.75rem;
-          font-weight: 500;
-          margin-top: 2px;
-          color: #6b7280;
-        }
-
-        .tk-days-danger { color: #f87171; }
-        .tk-days-warn { color: #fbbf24; }
       `}</style>
     </div>
   )
