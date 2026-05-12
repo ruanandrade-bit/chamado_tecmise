@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Archive, Trash2, Timer, Loader2, ShieldAlert } from 'lucide-react'
+import { Archive, Trash2, CalendarDays, Filter, Loader2, ShieldAlert } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
 import TicketCard from './TicketCard'
@@ -178,9 +178,52 @@ export default function ArchivedTickets() {
   const [ticketToDelete, setTicketToDelete] = useState(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
+  // ── Date filters ──
+  const currentYear = new Date().getFullYear()
+  const currentMonth = new Date().getMonth() + 1
+  const [filterYear, setFilterYear] = useState(String(currentYear))
+  const [filterMonth, setFilterMonth] = useState(String(currentMonth))
+
   const archivedTickets = getArchivedTickets()
-  const selectedTicket = archivedTickets.find((ticket) => ticket.id === selectedTicketId) || null
   const canDeleteTicket = user?.canDragDrop === true
+
+  // Build available years from ticket data
+  const availableYears = [...new Set(archivedTickets.map(t => {
+    const d = new Date(t.resolvedAt || t.archivedAt || t.createdAt)
+    return d.getFullYear()
+  }))].sort((a, b) => b - a)
+
+  // If current year has no tickets, add it anyway
+  if (!availableYears.includes(currentYear)) availableYears.unshift(currentYear)
+
+  const months = [
+    { value: '0', label: 'Todos os meses' },
+    { value: '1', label: 'Janeiro' },
+    { value: '2', label: 'Fevereiro' },
+    { value: '3', label: 'Março' },
+    { value: '4', label: 'Abril' },
+    { value: '5', label: 'Maio' },
+    { value: '6', label: 'Junho' },
+    { value: '7', label: 'Julho' },
+    { value: '8', label: 'Agosto' },
+    { value: '9', label: 'Setembro' },
+    { value: '10', label: 'Outubro' },
+    { value: '11', label: 'Novembro' },
+    { value: '12', label: 'Dezembro' },
+  ]
+
+  // Filter by year and month
+  const filteredTickets = archivedTickets.filter(ticket => {
+    const d = new Date(ticket.resolvedAt || ticket.archivedAt || ticket.createdAt)
+    const ticketYear = d.getFullYear()
+    const ticketMonth = d.getMonth() + 1
+
+    if (String(ticketYear) !== filterYear) return false
+    if (filterMonth !== '0' && ticketMonth !== Number(filterMonth)) return false
+    return true
+  })
+
+  const selectedTicket = filteredTickets.find((ticket) => ticket.id === selectedTicketId) || null
 
   const handleDeleteRequest = (ticket) => {
     setTicketToDelete(ticket)
@@ -224,26 +267,45 @@ export default function ArchivedTickets() {
         </div>
       </div>
 
-      {/* Auto-delete warning banner */}
-      <div className="arc-warning-banner">
-        <div className="arc-warning-icon-wrap">
-          <Timer size={18} style={{ color: '#f59e0b' }} />
+      {/* ── Year/Month filter bar ── */}
+      <div className="arc-filter-bar">
+        <div className="arc-filter-group">
+          <CalendarDays size={16} style={{ color: '#86efac', flexShrink: 0 }} />
+          <select
+            className="arc-filter-select"
+            value={filterYear}
+            onChange={(e) => setFilterYear(e.target.value)}
+          >
+            {availableYears.map(year => (
+              <option key={year} value={String(year)}>{year}</option>
+            ))}
+          </select>
+          <select
+            className="arc-filter-select"
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(e.target.value)}
+          >
+            {months.map(m => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
         </div>
-        <p className="arc-warning-text">
-          Os chamados resolvidos são excluídos automaticamente após <strong>2 semanas</strong> da data de resolução.
-        </p>
+        <div className="arc-filter-count">
+          <Filter size={13} style={{ color: '#6b7280' }} />
+          <span>{filteredTickets.length} chamado{filteredTickets.length !== 1 ? 's' : ''}</span>
+        </div>
       </div>
 
-      {archivedTickets.length === 0 ? (
+      {filteredTickets.length === 0 ? (
         <div className="arc-empty">
           <div className="arc-empty-icon">
             <Archive size={28} style={{ color: '#4b5563' }} />
           </div>
-          <p className="arc-empty-text">Nenhum chamado arquivado ainda.</p>
+          <p className="arc-empty-text">Nenhum chamado encontrado para o período selecionado.</p>
         </div>
       ) : (
         <div className="arc-grid">
-          {archivedTickets.map((ticket, index) => (
+          {filteredTickets.map((ticket, index) => (
             <div key={ticket.id} className="arc-card-wrap" style={{ animationDelay: `${index * 0.06}s` }}>
               <TicketCard
                 ticket={ticket}
@@ -309,40 +371,64 @@ export default function ArchivedTickets() {
           margin-top: 2px;
         }
 
-        /* ── Warning Banner ── */
-        .arc-warning-banner {
+        /* ── Filter Bar ── */
+        .arc-filter-bar {
           display: flex;
           align-items: center;
+          justify-content: space-between;
           gap: 14px;
-          padding: 16px 20px;
+          padding: 14px 20px;
           background: rgba(15, 15, 30, 0.5);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
-          border: 1px solid rgba(245, 158, 11, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 16px;
           box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+          flex-wrap: wrap;
         }
 
-        .arc-warning-icon-wrap {
-          width: 38px;
-          height: 38px;
-          flex-shrink: 0;
-          border-radius: 10px;
+        .arc-filter-group {
           display: flex;
           align-items: center;
-          justify-content: center;
-          background: rgba(245, 158, 11, 0.1);
-          border: 1px solid rgba(245, 158, 11, 0.15);
+          gap: 10px;
+          flex-wrap: wrap;
         }
 
-        .arc-warning-text {
-          font-size: 0.875rem;
-          color: #fbbf24;
-          line-height: 1.5;
+        .arc-filter-select {
+          padding: 8px 32px 8px 14px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 10px;
+          color: #e5e7eb;
+          font-size: 0.85rem;
+          font-weight: 500;
+          outline: none;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          font-family: inherit;
+          appearance: none;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+          background-repeat: no-repeat;
+          background-position: right 10px center;
         }
 
-        .arc-warning-text strong {
-          color: #fde68a;
+        .arc-filter-select:focus {
+          border-color: rgba(34, 197, 94, 0.4);
+          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08);
+        }
+
+        .arc-filter-select option {
+          background: #1a1a2e;
+          color: #e5e7eb;
+        }
+
+        .arc-filter-count {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 0.8125rem;
+          color: #6b7280;
+          font-weight: 500;
         }
 
         /* ── Empty State ── */

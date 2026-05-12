@@ -138,10 +138,6 @@ export async function initStore() {
     console.log('[store] 🆕 First run — seeding with mock data.')
     persistState()
   }
-
-  // Run auto-cleanup on startup and then every hour
-  cleanupExpiredArchived()
-  setInterval(cleanupExpiredArchived, 60 * 60 * 1000)
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -156,29 +152,6 @@ function nextTicketId() {
 
 function addHistory(ticket, action, by) {
   ticket.history = [...(ticket.history || []), { action, by, date: new Date().toISOString() }]
-}
-
-/**
- * Auto-delete archived tickets that have been resolved for more than 14 days.
- */
-const ARCHIVE_TTL_MS = 14 * 24 * 60 * 60 * 1000 // 2 weeks
-
-function cleanupExpiredArchived() {
-  const now = Date.now()
-  const before = state.tickets.length
-
-  state.tickets = state.tickets.filter((ticket) => {
-    if (!ticket.archived) return true
-    const resolvedDate = ticket.resolvedAt || ticket.archivedAt || null
-    if (!resolvedDate) return true
-    return (now - new Date(resolvedDate).getTime()) < ARCHIVE_TTL_MS
-  })
-
-  const removed = before - state.tickets.length
-  if (removed > 0) {
-    console.log(`[store] 🗑️  Auto-deleted ${removed} expired archived ticket(s).`)
-    persistState()
-  }
 }
 
 /**
