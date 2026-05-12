@@ -52,30 +52,28 @@ export default function TicketCard({
 
       {/* Footer with attachments and date */}
       <div className="tk-card-footer">
-        <div className="tk-card-footer-left">
-          {ticket.attachments.length > 0 && (
-            <div className="tk-card-attach">
-              <Paperclip size={14} />
-              <span>{ticket.attachments.length}</span>
-            </div>
-          )}
-          {showArchiveAction && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                onArchive?.(ticket)
-              }}
-              className="tk-card-action-btn tk-card-action-archive"
-              title="Arquivar chamado"
-            >
-              <Archive size={13} />
-              Arquivar
-            </button>
-          )}
-        </div>
-        
+        {ticket.attachments.length > 0 && (
+          <div className="tk-card-attach">
+            <Paperclip size={14} />
+            <span>({ticket.attachments.length})</span>
+          </div>
+        )}
+        {showArchiveAction && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onArchive?.(ticket)
+            }}
+            className="tk-card-action-btn tk-card-action-archive"
+            title="Arquivar chamado"
+          >
+            <Archive size={13} />
+            Arquivar
+          </button>
+        )}
+
         {ticket.archived && ticket.resolvedAt ? (
           <div className="tk-card-footer-dates">
             <p className="tk-card-date">
@@ -92,7 +90,7 @@ export default function TicketCard({
             </p>
           </div>
         ) : (
-          <p className="tk-card-date">
+          <p className="tk-card-date" style={{ marginLeft: 'auto' }}>
             {new Date(ticket.createdAt).toLocaleDateString('pt-BR', { 
               month: 'short', 
               day: 'numeric'
@@ -195,6 +193,8 @@ export default function TicketCard({
           display: flex;
           align-items: center;
           justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 8px;
           padding-top: 10px;
           border-top: 1px solid rgba(255, 255, 255, 0.06);
         }
