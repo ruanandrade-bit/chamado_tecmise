@@ -320,7 +320,7 @@ export default function MonthlyReport() {
         </div>
       </div>
 
-      {/* Month Banner */}
+      {/* Combined Month Banner */}
       <div className="mr-month-banner">
         {/* Decorative glows */}
         <div className="mr-banner-glow mr-banner-glow-1" />
@@ -330,7 +330,7 @@ export default function MonthlyReport() {
           <div className="mr-banner-icon">
             <CalendarDays size={26} style={{ color: '#22c55e' }} />
           </div>
-          <div>
+          <div className="mr-banner-info">
             <h2 className="mr-banner-title">
               Relatório de Devices do Mês de {monthName}
             </h2>
@@ -338,21 +338,16 @@ export default function MonthlyReport() {
               {currentYear} • {observations.length} observação{observations.length !== 1 ? 'ões' : ''} registrada{observations.length !== 1 ? 's' : ''}
             </p>
           </div>
-        </div>
-      </div>
-
-      {/* Tickets opened this month */}
-      <div className="mr-tickets-card">
-        <div className="mr-tickets-icon">
-          <Ticket size={22} style={{ color: '#60a5fa' }} />
-        </div>
-        <div>
-          <p className="mr-tickets-text">
-            Neste mês, <span className="mr-tickets-count">{ticketsThisMonth}</span> chamado{ticketsThisMonth !== 1 ? 's foram abertos' : ' foi aberto'}.
-          </p>
-          <p className="mr-tickets-sub">
-            Atualizado automaticamente a cada novo chamado
-          </p>
+          <div className="mr-banner-divider" />
+          <div className="mr-banner-tickets">
+            <div className="mr-banner-tickets-icon">
+              <Ticket size={18} style={{ color: '#60a5fa' }} />
+            </div>
+            <div>
+              <p className="mr-banner-tickets-count">{ticketsThisMonth}</p>
+              <p className="mr-banner-tickets-label">chamado{ticketsThisMonth !== 1 ? 's' : ''} aberto{ticketsThisMonth !== 1 ? 's' : ''}</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -644,6 +639,12 @@ export default function MonthlyReport() {
           display: flex;
           align-items: center;
           gap: 18px;
+          flex-wrap: wrap;
+        }
+
+        .mr-banner-info {
+          flex: 1;
+          min-width: 180px;
         }
 
         .mr-banner-icon {
@@ -671,24 +672,28 @@ export default function MonthlyReport() {
           margin-top: 4px;
         }
 
-        /* ── Tickets This Month ── */
-        .mr-tickets-card {
-          display: flex;
-          align-items: center;
-          gap: 18px;
-          padding: 22px 24px;
-          background: rgba(15, 15, 30, 0.5);
-          backdrop-filter: blur(12px);
-          border: 1px solid rgba(59, 130, 246, 0.15);
-          border-radius: 18px;
-          box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        .mr-banner-divider {
+          width: 1px;
+          height: 48px;
+          background: rgba(255, 255, 255, 0.08);
+          flex-shrink: 0;
         }
 
-        .mr-tickets-icon {
+        @media (max-width: 640px) {
+          .mr-banner-divider { display: none; }
+        }
+
+        .mr-banner-tickets {
+          display: flex;
+          align-items: center;
+          gap: 12px;
           flex-shrink: 0;
-          width: 48px;
-          height: 48px;
-          border-radius: 14px;
+        }
+
+        .mr-banner-tickets-icon {
+          width: 40px;
+          height: 40px;
+          border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -696,21 +701,17 @@ export default function MonthlyReport() {
           border: 1px solid rgba(59,130,246,0.25);
         }
 
-        .mr-tickets-text {
-          font-size: 1.0625rem;
-          font-weight: 700;
-          color: #e5e7eb;
-        }
-
-        .mr-tickets-count {
+        .mr-banner-tickets-count {
+          font-size: 1.5rem;
+          font-weight: 800;
           color: #60a5fa;
-          font-size: 1.125rem;
+          line-height: 1;
         }
 
-        .mr-tickets-sub {
-          font-size: 0.75rem;
+        .mr-banner-tickets-label {
+          font-size: 0.6875rem;
           color: #6b7280;
-          margin-top: 4px;
+          margin-top: 2px;
         }
 
         /* ── Add Observation Section ── */
@@ -889,11 +890,17 @@ export default function MonthlyReport() {
           font-size: 0.8125rem;
         }
 
-        /* ── Observations List ── */
+        /* ── Observations Grid ── */
         .mr-obs-list {
-          display: flex;
-          flex-direction: column;
+          display: grid;
+          grid-template-columns: 1fr;
           gap: 12px;
+        }
+
+        @media (min-width: 768px) {
+          .mr-obs-list {
+            grid-template-columns: repeat(2, 1fr);
+          }
         }
 
         .mr-obs-card {
