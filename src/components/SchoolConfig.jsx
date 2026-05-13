@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Settings, School, Cpu, BookOpen, Plus, Trash2, Save, Loader2, AlertTriangle, ChevronDown, ChevronRight, ShieldAlert } from 'lucide-react'
+import { Settings, School, Cpu, BookOpen, Plus, Trash2, Save, Loader2, AlertTriangle, ChevronDown, ChevronRight, ShieldAlert, Pencil, Check } from 'lucide-react'
 import { api } from '../services/api'
 
 export default function SchoolConfig() {
@@ -13,6 +13,9 @@ export default function SchoolConfig() {
   const [newSchoolName, setNewSchoolName] = useState('')
   const [newDeviceInputs, setNewDeviceInputs] = useState({}) // { schoolName: 'value' }
   const [newTurmaInputs, setNewTurmaInputs] = useState({})  // { 'school|device': 'value' }
+
+  // Editing device state: { school, oldId, newId }
+  const [editingDevice, setEditingDevice] = useState(null)
 
   // Confirm delete modal state: { type: 'school'|'device'|'turma', label, action }
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -93,6 +96,33 @@ export default function SchoolConfig() {
       delete devices[deviceId]
       return { ...prev, [schoolName]: devices }
     })
+    setHasChanges(true)
+  }
+
+  const startEditDevice = (schoolName, deviceId) => {
+    setEditingDevice({ school: schoolName, oldId: deviceId, newId: deviceId })
+  }
+
+  const confirmEditDevice = () => {
+    if (!editingDevice) return
+    const { school, oldId, newId } = editingDevice
+    const trimmed = newId.trim()
+    if (!trimmed || trimmed === oldId) {
+      setEditingDevice(null)
+      return
+    }
+    if (schoolData[school]?.[trimmed]) {
+      alert('Já existe um device com esse número nesta escola.')
+      return
+    }
+    setSchoolData(prev => {
+      const devices = { ...prev[school] }
+      const turmas = devices[oldId] || []
+      delete devices[oldId]
+      devices[trimmed] = turmas
+      return { ...prev, [school]: devices }
+    })
+    setEditingDevice(null)
     setHasChanges(true)
   }
 
@@ -251,14 +281,38 @@ export default function SchoolConfig() {
                           return (
                             <div key={deviceId} className="sc-device-card">
                               <div className="sc-device-header">
-                                <span className="sc-device-id">{deviceId}</span>
-                                <button
-                                  className="sc-remove-btn sc-remove-btn-sm"
-                                  onClick={() => requestDelete('device', `${deviceId} (${schoolName})`, () => removeDevice(schoolName, deviceId))}
-                                  title="Remover device"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
+                                {editingDevice?.school === schoolName && editingDevice?.oldId === deviceId ? (
+                                  <div className="sc-edit-inline">
+                                    <input
+                                      className="sc-input sc-input-xs sc-edit-input"
+                                      value={editingDevice.newId}
+                                      onChange={e => setEditingDevice(prev => ({ ...prev, newId: e.target.value }))}
+                                      onKeyDown={e => { if (e.key === 'Enter') confirmEditDevice(); if (e.key === 'Escape') setEditingDevice(null) }}
+                                      autoFocus
+                                    />
+                                    <button className="sc-edit-confirm" onClick={confirmEditDevice} title="Confirmar">
+                                      <Check size={12} />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="sc-device-id">{deviceId}</span>
+                                )}
+                                <div className="sc-device-actions">
+                                  <button
+                                    className="sc-remove-btn sc-remove-btn-sm"
+                                    onClick={() => startEditDevice(schoolName, deviceId)}
+                                    title="Editar device"
+                                  >
+                                    <Pencil size={12} />
+                                  </button>
+                                  <button
+                                    className="sc-remove-btn sc-remove-btn-sm"
+                                    onClick={() => requestDelete('device', `${deviceId} (${schoolName})`, () => removeDevice(schoolName, deviceId))}
+                                    title="Remover device"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
                               </div>
 
                               {/* Turmas */}
@@ -636,11 +690,51 @@ const baseStyles = `
     justify-content: space-between;
   }
 
+  .sc-device-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
   .sc-device-id {
     font-size: 1.125rem;
     font-weight: 800;
     color: #60a5fa;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+
+  .sc-edit-inline {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+  }
+
+  .sc-edit-input {
+    width: 80px;
+    font-weight: 700;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    color: #60a5fa;
+  }
+
+  .sc-edit-confirm {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1px solid rgba(34,197,94,0.25);
+    background: rgba(34,197,94,0.1);
+    color: #86efac;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+
+  .sc-edit-confirm:hover {
+    background: rgba(34,197,94,0.2);
+    box-shadow: 0 0 8px rgba(34,197,94,0.15);
   }
 
   /* ── Turmas ── */
