@@ -159,6 +159,20 @@ function addHistory(ticket, action, by) {
   ticket.history = [...(ticket.history || []), { action, by, date: new Date().toISOString() }]
 }
 
+function monthlyKey(month, year) {
+  return `${month}-${year}`
+}
+
+function countOpenedTicketsInMonth(month, year) {
+  return state.tickets.reduce((acc, ticket) => {
+    const createdAt = ticket.createdAt ? new Date(ticket.createdAt) : null
+    if (!createdAt || Number.isNaN(createdAt.getTime())) return acc
+    const ticketMonth = createdAt.getMonth() + 1
+    const ticketYear = createdAt.getFullYear()
+    return (ticketMonth === month && ticketYear === year) ? acc + 1 : acc
+  }, 0)
+}
+
 /**
  * Find a user's email by their display name.
  * Used as fallback when ticket.createdByEmail is missing (legacy tickets).
@@ -379,12 +393,22 @@ export const memoryStore = {
 
   // ─── Monthly Reports ────────────────────────────────────────────
   getMonthlyReport(month, year) {
-    const key = `${month}-${year}`
-    return state.monthlyReports[key] || { month, year, observations: [], ticketCount: 0 }
+    const key = monthlyKey(month, year)
+    const existing = state.monthlyReports[key] || { month, year, observations: [], ticketCount: 0 }
+    const storedCount = Number(existing.ticketCount || 0)
+    const derivedCount = countOpenedTicketsInMonth(month, year)
+
+    return {
+      ...existing,
+      month,
+      year,
+      observations: Array.isArray(existing.observations) ? existing.observations : [],
+      ticketCount: Math.max(storedCount, derivedCount)
+    }
   },
 
   addMonthlyObservation(month, year, text, user) {
-    const key = `${month}-${year}`
+    const key = monthlyKey(month, year)
     if (!state.monthlyReports[key]) {
       state.monthlyReports[key] = { month, year, observations: [] }
     }
@@ -402,7 +426,7 @@ export const memoryStore = {
   },
 
   deleteMonthlyObservation(month, year, observationId) {
-    const key = `${month}-${year}`
+    const key = monthlyKey(month, year)
     const report = state.monthlyReports[key]
     if (!report) return null
 
@@ -415,7 +439,7 @@ export const memoryStore = {
   },
 
   editMonthlyObservation(month, year, observationId, newText) {
-    const key = `${month}-${year}`
+    const key = monthlyKey(month, year)
     const report = state.monthlyReports[key]
     if (!report) return null
 

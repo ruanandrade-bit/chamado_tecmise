@@ -178,7 +178,12 @@ export default function MonthlyReport() {
   const now = new Date()
   const currentMonth = now.getMonth() + 1
   const currentYear = now.getFullYear()
-  const monthName = MONTH_NAMES[currentMonth - 1]
+  const currentPeriod = `${currentYear}-${String(currentMonth).padStart(2, '0')}`
+  const [selectedPeriod, setSelectedPeriod] = useState(currentPeriod)
+  const [selectedYearRaw, selectedMonthRaw] = selectedPeriod.split('-')
+  const selectedMonth = Number(selectedMonthRaw) || currentMonth
+  const selectedYear = Number(selectedYearRaw) || currentYear
+  const monthName = MONTH_NAMES[selectedMonth - 1] || MONTH_NAMES[currentMonth - 1]
 
   const [ticketsThisMonth, setTicketsThisMonth] = useState(0)
 
@@ -204,7 +209,7 @@ export default function MonthlyReport() {
 
   const loadReport = useCallback(async () => {
     try {
-      const data = await api.get(`/reports/monthly?month=${currentMonth}&year=${currentYear}`)
+      const data = await api.get(`/reports/monthly?month=${selectedMonth}&year=${selectedYear}`)
       setObservations(data.observations || [])
       setTicketsThisMonth(data.ticketCount || 0)
     } catch (err) {
@@ -212,9 +217,10 @@ export default function MonthlyReport() {
     } finally {
       setIsLoading(false)
     }
-  }, [currentMonth, currentYear])
+  }, [selectedMonth, selectedYear])
 
   useEffect(() => {
+    setIsLoading(true)
     loadReport()
   }, [loadReport])
 
@@ -229,11 +235,12 @@ export default function MonthlyReport() {
     setIsSending(true)
     try {
       const data = await api.post('/reports/monthly', {
-        month: currentMonth,
-        year: currentYear,
+        month: selectedMonth,
+        year: selectedYear,
         observation: newObservation
       })
       setObservations(data.observations || [])
+      setTicketsThisMonth(data.ticketCount || 0)
       setNewObservation('')
     } catch (err) {
       alert(err.message || 'Erro ao adicionar observação.')
@@ -248,8 +255,9 @@ export default function MonthlyReport() {
     if (!observationId || deletingId) return
     setDeletingId(observationId)
     try {
-      const data = await api.delete(`/reports/monthly/${currentMonth}/${currentYear}/${observationId}`)
+      const data = await api.delete(`/reports/monthly/${selectedMonth}/${selectedYear}/${observationId}`)
       setObservations(data.observations || [])
+      setTicketsThisMonth(data.ticketCount || 0)
       setConfirmDeleteId(null)
     } catch (err) {
       alert(err.message || 'Erro ao remover observação.')
@@ -275,10 +283,11 @@ export default function MonthlyReport() {
     setIsSavingEdit(true)
     try {
       const data = await api.put(
-        `/reports/monthly/${currentMonth}/${currentYear}/${editingId}`,
+        `/reports/monthly/${selectedMonth}/${selectedYear}/${editingId}`,
         { text: editText }
       )
       setObservations(data.observations || [])
+      setTicketsThisMonth(data.ticketCount || 0)
       setEditingId(null)
       setEditText('')
     } catch (err) {
@@ -320,6 +329,29 @@ export default function MonthlyReport() {
         </div>
       </div>
 
+      <div className="mr-filter-row">
+        <div className="mr-filter-label">
+          <CalendarDays size={15} />
+          Mês do relatório
+        </div>
+        <div className="mr-filter-controls">
+          <input
+            type="month"
+            value={selectedPeriod}
+            onChange={(e) => setSelectedPeriod(e.target.value)}
+            className="mr-month-input"
+          />
+          <button
+            onClick={() => setSelectedPeriod(currentPeriod)}
+            className="mr-current-month-btn"
+            disabled={selectedPeriod === currentPeriod}
+            title="Voltar para o mês atual"
+          >
+            Mês atual
+          </button>
+        </div>
+      </div>
+
       {/* Combined Month Banner */}
       <div className="mr-month-banner">
         {/* Decorative glows */}
@@ -332,10 +364,10 @@ export default function MonthlyReport() {
           </div>
           <div className="mr-banner-info">
             <h2 className="mr-banner-title">
-              Relatório de Devices do Mês de {monthName}
+              Relatório de Devices de {monthName} de {selectedYear}
             </h2>
             <p className="mr-banner-sub">
-              {currentYear} • {observations.length} observação{observations.length !== 1 ? 'ões' : ''} registrada{observations.length !== 1 ? 's' : ''}
+              {observations.length} observação{observations.length !== 1 ? 'ões' : ''} registrada{observations.length !== 1 ? 's' : ''}
             </p>
           </div>
           <div className="mr-banner-divider" />
@@ -345,7 +377,7 @@ export default function MonthlyReport() {
             </div>
             <div>
               <p className="mr-banner-tickets-count">{ticketsThisMonth}</p>
-              <p className="mr-banner-tickets-label">chamado{ticketsThisMonth !== 1 ? 's' : ''} aberto{ticketsThisMonth !== 1 ? 's' : ''}</p>
+              <p className="mr-banner-tickets-label">chamado{ticketsThisMonth !== 1 ? 's' : ''} aberto{ticketsThisMonth !== 1 ? 's' : ''} no mês</p>
             </div>
           </div>
         </div>
@@ -363,7 +395,7 @@ export default function MonthlyReport() {
           <textarea
             value={newObservation}
             onChange={(e) => setNewObservation(e.target.value)}
-            placeholder="Descreva a observação do mês..."
+            placeholder={`Descreva a observação de ${monthName} de ${selectedYear}...`}
             rows={5}
             className="mr-textarea"
             onKeyDown={(e) => {
@@ -410,8 +442,8 @@ export default function MonthlyReport() {
           <p className="mr-empty-title">Nenhuma observação registrada</p>
           <p className="mr-empty-sub">
             {isAdmin
-              ? 'Adicione a primeira observação do mês acima.'
-              : 'As observações do mês aparecerão aqui quando forem registradas.'}
+              ? 'Adicione a primeira observação para o mês selecionado.'
+              : 'As observações do mês selecionado aparecerão aqui quando forem registradas.'}
           </p>
         </div>
       ) : (
@@ -596,6 +628,80 @@ export default function MonthlyReport() {
           font-size: 0.9375rem;
           color: #9ca3af;
           margin-top: 2px;
+        }
+
+        /* ── Month Filter ── */
+        .mr-filter-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          padding: 14px 16px;
+          background: rgba(15, 15, 30, 0.45);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 14px;
+        }
+
+        .mr-filter-label {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          color: #9ca3af;
+        }
+
+        .mr-filter-controls {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .mr-month-input {
+          height: 38px;
+          border-radius: 10px;
+          border: 1px solid rgba(34, 197, 94, 0.2);
+          background: rgba(255, 255, 255, 0.04);
+          color: #e5e7eb;
+          padding: 0 10px;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          outline: none;
+          transition: all 0.2s ease;
+        }
+
+        .mr-month-input::-webkit-calendar-picker-indicator {
+          filter: invert(0.9);
+          cursor: pointer;
+        }
+
+        .mr-month-input:focus {
+          border-color: rgba(34, 197, 94, 0.4);
+          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08);
+        }
+
+        .mr-current-month-btn {
+          height: 38px;
+          padding: 0 12px;
+          border-radius: 10px;
+          border: 1px solid rgba(99, 102, 241, 0.22);
+          background: rgba(99, 102, 241, 0.08);
+          color: #a5b4fc;
+          font-size: 0.75rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+
+        .mr-current-month-btn:hover:not(:disabled) {
+          background: rgba(99, 102, 241, 0.16);
+          border-color: rgba(99, 102, 241, 0.35);
+        }
+
+        .mr-current-month-btn:disabled {
+          opacity: 0.45;
+          cursor: not-allowed;
         }
 
         /* ── Month Banner ── */
@@ -1112,6 +1218,21 @@ export default function MonthlyReport() {
         .mr-info-text {
           font-size: 0.875rem;
           color: #a5b4fc;
+        }
+
+        @media (max-width: 640px) {
+          .mr-filter-row {
+            flex-direction: column;
+            align-items: stretch;
+          }
+
+          .mr-filter-controls {
+            width: 100%;
+          }
+
+          .mr-month-input {
+            flex: 1;
+          }
         }
       `}</style>
     </div>
