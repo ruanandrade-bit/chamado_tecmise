@@ -1,65 +1,27 @@
-import { useState, useRef, useMemo } from 'react'
+import { useState, useRef, useMemo, useEffect } from 'react'
 import { X, Upload, Image as ImageIcon, Plus, Loader2, Lock } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
-
-// ── School → Device → Turmas mapping ──
-const SCHOOL_DATA = {
-  'Colégio Graziela': {
-    '012': ['1°A', '1°B'],
-    '014': ['2°A', '3°B'],
-  },
-  'Colégio Antônio': {
-    '013': ['5°Ano', '4°Ano'],
-    '011': ['1°Ano', 'Infantil 5'],
-  },
-  'Colégio Grace': {
-    '038': ['Infantil 5A', 'Infantil 5B'],
-    '037': ['5°Ano A', '5°Ano B'],
-    '032': ['9°Ano B'],
-    '036': ['1°Ano EM'],
-  },
-  'Colégio Frei': {
-    '059': ['2°Ano A', 'Reforço'],
-    '063': ['4°Ano A', '4°Ano C'],
-    '064': ['4°Ano B', '4°Ano D'],
-  },
-  'Colégio Dom José': {
-    '048': ['7°Ano'],
-    '053': ['1°Ano'],
-    '069': ['2°Ano'],
-  },
-  'Colégio Rotary': {
-    '066': ['401/4º Ano'],
-    '074': ['502/5º Ano'],
-  },
-  'Colégio Mercedes': {
-    '072': ['4°Ano'],
-    '056': ['5°Ano'],
-  },
-  'Colégio Cemma': {
-    '050': ['9°Ano 03', '9°Ano 06'],
-    '067': ['8°Ano 01', '8°Ano 04'],
-    '071': ['8°Ano 02', '9°Ano 05'],
-    '076': ['7°Ano 02', '7°Ano 05'],
-  },
-  'Colégio Médici': {
-    '034': ['5°Ano B'],
-    '070': ['5°Ano A'],
-    '073': ['5°Ano A'],
-  },
-  'Colégio CeFrei': {
-    '061': ['5°Ano B', '2°Ano B'],
-  },
-}
-
-const SCHOOL_NAMES = Object.keys(SCHOOL_DATA)
+import { api } from '../services/api'
 
 export default function CreateTicketModal({ onClose }) {
   const { addTicket } = useTicketsStore()
   const { user } = useAuthStore()
   const fileInputRef = useRef(null)
   const dropZoneRef = useRef(null)
+
+  // Load school data from API
+  const [schoolData, setSchoolData] = useState({})
+  const [schoolsLoading, setSchoolsLoading] = useState(true)
+
+  useEffect(() => {
+    api.get('/schools')
+      .then(data => setSchoolData(data || {}))
+      .catch(err => console.error('Erro ao carregar escolas:', err))
+      .finally(() => setSchoolsLoading(false))
+  }, [])
+
+  const SCHOOL_NAMES = useMemo(() => Object.keys(schoolData), [schoolData])
 
   const [formData, setFormData] = useState({
     school: '',
@@ -88,7 +50,7 @@ export default function CreateTicketModal({ onClose }) {
   // Build turma list for selected school: { turmaName, device }
   const availableTurmas = useMemo(() => {
     if (!formData.school) return []
-    const schoolDevices = SCHOOL_DATA[formData.school] || {}
+    const schoolDevices = schoolData[formData.school] || {}
     const turmas = []
     for (const [device, turmaList] of Object.entries(schoolDevices)) {
       for (const turma of turmaList) {
@@ -96,13 +58,13 @@ export default function CreateTicketModal({ onClose }) {
       }
     }
     return turmas
-  }, [formData.school])
+  }, [formData.school, schoolData])
 
   // All devices for this school
   const allDevices = useMemo(() => {
     if (!formData.school) return []
-    return Object.keys(SCHOOL_DATA[formData.school] || {})
-  }, [formData.school])
+    return Object.keys(schoolData[formData.school] || {})
+  }, [formData.school, schoolData])
 
   // Devices that are allowed (linked to selected turmas)
   const allowedDevices = useMemo(() => {

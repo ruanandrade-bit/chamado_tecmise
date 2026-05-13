@@ -10,6 +10,7 @@ import ArchivedTickets from './components/ArchivedTickets'
 import MonthlyReport from './components/MonthlyReport'
 import DevicesOnline from './components/DevicesOnline'
 import Inventory from './components/Inventory'
+import SchoolConfig from './components/SchoolConfig'
 import NotificationCenter from './components/NotificationCenter'
 
 export default function App() {
@@ -81,6 +82,7 @@ export default function App() {
             {currentPage === 'monthly-report' && <MonthlyReport />}
             {currentPage === 'devices-online' && <DevicesOnline />}
             {currentPage === 'inventory' && <Inventory />}
+            {currentPage === 'school-config' && <SchoolConfig />}
           </div>
         </main>
       </div>

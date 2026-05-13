@@ -16,7 +16,7 @@ function loadFromDisk() {
       const data = JSON.parse(raw)
       if (Array.isArray(data.tickets)) {
         console.log(`[store] 📁 Loaded ${data.tickets.length} tickets from disk.`)
-        return { tickets: data.tickets, notifications: data.notifications || [], monthlyReports: data.monthlyReports || {}, inventory: data.inventory || null }
+        return { tickets: data.tickets, notifications: data.notifications || [], monthlyReports: data.monthlyReports || {}, inventory: data.inventory || null, schoolData: data.schoolData || null }
       }
     }
   } catch (err) {
@@ -33,6 +33,7 @@ function saveToDisk() {
       notifications: state.notifications,
       monthlyReports: state.monthlyReports,
       inventory: state.inventory,
+      schoolData: state.schoolData,
       _savedAt: new Date().toISOString()
     }, null, 2))
   } catch (err) {
@@ -68,7 +69,7 @@ async function loadFromMongo() {
     const doc = await mongoCollection.findOne({ _id: 'app_state' })
     if (doc && Array.isArray(doc.tickets)) {
       console.log(`[store] ☁️  Loaded ${doc.tickets.length} tickets from MongoDB.`)
-      return { tickets: doc.tickets, notifications: doc.notifications || [], monthlyReports: doc.monthlyReports || {}, inventory: doc.inventory || null }
+      return { tickets: doc.tickets, notifications: doc.notifications || [], monthlyReports: doc.monthlyReports || {}, inventory: doc.inventory || null, schoolData: doc.schoolData || null }
     }
   } catch (err) {
     console.warn('[store] ⚠️  Failed to load from MongoDB:', err.message)
@@ -86,6 +87,7 @@ function saveToMongo() {
       notifications: state.notifications,
       monthlyReports: state.monthlyReports,
       inventory: state.inventory,
+      schoolData: state.schoolData,
       _savedAt: new Date()
     },
     { upsert: true }
@@ -105,7 +107,8 @@ const state = {
   tickets: structuredClone(TICKETS),
   notifications: [],
   monthlyReports: {},   // key: "month-year" → { observations: [...] }
-  inventory: null       // will be initialized with defaults on first access
+  inventory: null,      // will be initialized with defaults on first access
+  schoolData: null      // school→device→turma config, managed via admin panel
 }
 
 /**
@@ -124,11 +127,13 @@ export async function initStore() {
     state.notifications = mongoData.notifications
     state.monthlyReports = mongoData.monthlyReports
     if (mongoData.inventory) state.inventory = mongoData.inventory
+    if (mongoData.schoolData) state.schoolData = mongoData.schoolData
   } else if (diskData) {
     state.tickets = diskData.tickets
     state.notifications = diskData.notifications
     state.monthlyReports = diskData.monthlyReports
     if (diskData.inventory) state.inventory = diskData.inventory
+    if (diskData.schoolData) state.schoolData = diskData.schoolData
     // Seed MongoDB if it's empty but connected
     if (connected) {
       console.log('[store] 🔄 Syncing disk data to MongoDB...')
@@ -455,5 +460,71 @@ export const memoryStore = {
     item.quantity = Math.max(0, Math.floor(quantity))
     persistState()
     return state.inventory
+  },
+
+  // ─── School / Device / Turma Config ────────────────────────────────
+  getSchoolData() {
+    if (!state.schoolData) {
+      // Seed with the default configuration on first access
+      state.schoolData = DEFAULT_SCHOOL_DATA
+      persistState()
+    }
+    return state.schoolData
+  },
+
+  setSchoolData(newData) {
+    state.schoolData = newData
+    persistState()
+    return state.schoolData
   }
+}
+
+// ─── Default School Data (seeds once, then managed via admin panel) ──
+const DEFAULT_SCHOOL_DATA = {
+  'Colégio Graziela': {
+    '012': ['1°A', '1°B'],
+    '014': ['2°A', '3°B'],
+  },
+  'Colégio Antônio': {
+    '013': ['5°Ano', '4°Ano'],
+    '011': ['1°Ano', 'Infantil 5'],
+  },
+  'Colégio Grace': {
+    '038': ['Infantil 5A', 'Infantil 5B'],
+    '037': ['5°Ano A', '5°Ano B'],
+    '032': ['9°Ano B'],
+    '036': ['1°Ano EM'],
+  },
+  'Colégio Frei': {
+    '059': ['2°Ano A', 'Reforço'],
+    '063': ['4°Ano A', '4°Ano C'],
+    '064': ['4°Ano B', '4°Ano D'],
+  },
+  'Colégio Dom José': {
+    '048': ['7°Ano'],
+    '053': ['1°Ano'],
+    '069': ['2°Ano'],
+  },
+  'Colégio Rotary': {
+    '066': ['401/4º Ano'],
+    '074': ['502/5º Ano'],
+  },
+  'Colégio Mercedes': {
+    '072': ['4°Ano'],
+    '056': ['5°Ano'],
+  },
+  'Colégio Cemma': {
+    '050': ['9°Ano 03', '9°Ano 06'],
+    '067': ['8°Ano 01', '8°Ano 04'],
+    '071': ['8°Ano 02', '9°Ano 05'],
+    '076': ['7°Ano 02', '7°Ano 05'],
+  },
+  'Colégio Médici': {
+    '034': ['5°Ano B'],
+    '070': ['5°Ano A'],
+    '073': ['5°Ano A'],
+  },
+  'Colégio CeFrei': {
+    '061': ['5°Ano B', '2°Ano B'],
+  },
 }

@@ -1,27 +1,26 @@
 import { Router } from 'express'
 import { authRequired, adminOnly } from '../middleware/auth.js'
+import { memoryStore } from '../services/memoryStore.js'
 
 const router = Router()
 
 // All device routes require admin
 router.use(authRequired, adminOnly)
 
-// ─── School → Device mapping (same as frontend) ─────────────────────
-const SCHOOL_DEVICES = {
-  'Colégio Frei': ['059', '063', '064'],
-  'Colégio Dom José': ['048', '053', '069'],
-  'Colégio Rotary': ['074', '066'],
-  'Colégio Mercedes': ['056', '072'],
-  'Colégio Cemma': ['050', '067', '071', '076'],
-  'Colégio Grace': ['032', '036', '037', '038'],
-  'Colégio Graziela': ['012', '014'],
-  'Colégio Antônio': ['011', '013'],
-  'Colégio Médici': ['034', '070', '073'],
-  'Colégio CeFrei': ['061'],
+// ─── Dynamic School → Device mapping from config ─────────────────────
+function buildSchoolDeviceMap() {
+  const schoolData = memoryStore.getSchoolData()
+  const result = {}
+  for (const [schoolName, devices] of Object.entries(schoolData)) {
+    result[schoolName] = Object.keys(devices)
+  }
+  return result
 }
 
-// Flatten all known device IDs for quick lookup
-const ALL_DEVICE_IDS = new Set(Object.values(SCHOOL_DEVICES).flat())
+function getAllDeviceIds() {
+  const map = buildSchoolDeviceMap()
+  return new Set(Object.values(map).flat())
+}
 
 // ─── Cache ───────────────────────────────────────────────────────────
 let cachedResult = null
@@ -38,6 +37,9 @@ async function fetchTailscaleDevices() {
   if (cachedResult && (now - cacheTimestamp) < CACHE_TTL_MS) {
     return cachedResult
   }
+
+  const SCHOOL_DEVICES = buildSchoolDeviceMap()
+  const ALL_DEVICE_IDS = getAllDeviceIds()
 
   try {
     const response = await fetch('https://api.tailscale.com/api/v2/tailnet/-/devices', {
@@ -57,12 +59,9 @@ async function fetchTailscaleDevices() {
     // Build a map: hostname → { online, lastSeen, ipv4, os, ... }
     const deviceMap = {}
     for (const device of devices) {
-      // The hostname in Tailscale might contain the device number
-      // Try matching by hostname or name containing the device ID
       const hostname = (device.hostname || device.name || '').toLowerCase()
 
       for (const id of ALL_DEVICE_IDS) {
-        // Match if hostname contains the device id (e.g., "device-059" or "059" or "s4s-059")
         if (hostname.includes(id)) {
           deviceMap[id] = {
             online: device.connectedToControl === true,
