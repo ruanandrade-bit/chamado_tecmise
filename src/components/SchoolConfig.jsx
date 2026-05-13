@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Settings, School, Cpu, BookOpen, Plus, Trash2, Save, Loader2, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react'
+import { Settings, School, Cpu, BookOpen, Plus, Trash2, Save, Loader2, AlertTriangle, ChevronDown, ChevronRight, ShieldAlert } from 'lucide-react'
 import { api } from '../services/api'
 
 export default function SchoolConfig() {
@@ -13,6 +13,18 @@ export default function SchoolConfig() {
   const [newSchoolName, setNewSchoolName] = useState('')
   const [newDeviceInputs, setNewDeviceInputs] = useState({}) // { schoolName: 'value' }
   const [newTurmaInputs, setNewTurmaInputs] = useState({})  // { 'school|device': 'value' }
+
+  // Confirm delete modal state: { type: 'school'|'device'|'turma', label, action }
+  const [deleteTarget, setDeleteTarget] = useState(null)
+
+  const requestDelete = (type, label, action) => {
+    setDeleteTarget({ type, label, action })
+  }
+
+  const confirmDelete = () => {
+    if (deleteTarget?.action) deleteTarget.action()
+    setDeleteTarget(null)
+  }
 
   const loadData = useCallback(async () => {
     try {
@@ -202,7 +214,7 @@ export default function SchoolConfig() {
                   </div>
                   <button
                     className="sc-remove-btn"
-                    onClick={(e) => { e.stopPropagation(); removeSchool(schoolName) }}
+                    onClick={(e) => { e.stopPropagation(); requestDelete('escola', schoolName, () => removeSchool(schoolName)) }}
                     title="Remover escola"
                   >
                     <Trash2 size={14} />
@@ -242,7 +254,7 @@ export default function SchoolConfig() {
                                 <span className="sc-device-id">{deviceId}</span>
                                 <button
                                   className="sc-remove-btn sc-remove-btn-sm"
-                                  onClick={() => removeDevice(schoolName, deviceId)}
+                                  onClick={() => requestDelete('device', `${deviceId} (${schoolName})`, () => removeDevice(schoolName, deviceId))}
                                   title="Remover device"
                                 >
                                   <Trash2 size={12} />
@@ -254,7 +266,7 @@ export default function SchoolConfig() {
                                 {turmas.map((turma, i) => (
                                   <div key={i} className="sc-turma-tag">
                                     <span>{turma}</span>
-                                    <button className="sc-turma-remove" onClick={() => removeTurma(schoolName, deviceId, i)}>×</button>
+                                    <button className="sc-turma-remove" onClick={() => requestDelete('turma', `${turma} (device ${deviceId})`, () => removeTurma(schoolName, deviceId, i))}>×</button>
                                   </div>
                                 ))}
                               </div>
@@ -284,6 +296,33 @@ export default function SchoolConfig() {
           })
         )}
       </div>
+
+      {/* Confirm Delete Modal */}
+      {deleteTarget && (
+        <div className="sc-modal-overlay" onClick={() => setDeleteTarget(null)}>
+          <div className="sc-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="sc-modal-accent" />
+            <div className="sc-modal-body">
+              <div className="sc-modal-icon-wrap">
+                <ShieldAlert size={28} style={{ color: '#f87171' }} />
+              </div>
+              <h3 className="sc-modal-title">Excluir {deleteTarget.type}?</h3>
+              <p className="sc-modal-text">
+                Tem certeza que deseja remover <strong style={{ color: '#f87171' }}>{deleteTarget.label}</strong>?
+                {deleteTarget.type === 'escola' && ' Todos os devices e turmas desta escola também serão removidos.'}
+                {deleteTarget.type === 'device' && ' Todas as turmas deste device também serão removidas.'}
+              </p>
+              <p className="sc-modal-hint">Lembre-se de salvar as alterações para aplicar.</p>
+              <div className="sc-modal-actions">
+                <button className="sc-modal-btn sc-modal-cancel" onClick={() => setDeleteTarget(null)}>Cancelar</button>
+                <button className="sc-modal-btn sc-modal-confirm" onClick={confirmDelete}>
+                  <Trash2 size={14} /> Sim, excluir
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{baseStyles}</style>
     </div>
@@ -665,5 +704,123 @@ const baseStyles = `
   .sc-add-turma-btn:hover {
     background: rgba(34,197,94,0.15);
     box-shadow: 0 0 8px rgba(34,197,94,0.1);
+  }
+
+  /* ── Confirm Delete Modal ── */
+  .sc-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    animation: scFadeIn 0.15s ease-out;
+  }
+
+  .sc-modal-card {
+    width: 100%;
+    max-width: 420px;
+    margin: 0 16px;
+    border-radius: 20px;
+    overflow: hidden;
+    background: linear-gradient(145deg, rgba(30,35,50,0.97), rgba(18,22,34,0.99));
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    box-shadow: 0 25px 80px rgba(0,0,0,0.6), 0 0 40px rgba(239,68,68,0.06);
+    animation: scSlideUp 0.25s cubic-bezier(0.16,1,0.3,1);
+  }
+
+  @keyframes scSlideUp {
+    from { opacity: 0; transform: translateY(20px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  .sc-modal-accent {
+    height: 3px;
+    background: linear-gradient(90deg, transparent, rgba(239,68,68,0.6), rgba(239,68,68,0.8), rgba(239,68,68,0.6), transparent);
+  }
+
+  .sc-modal-body {
+    padding: 28px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 14px;
+  }
+
+  .sc-modal-icon-wrap {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(220,38,38,0.08));
+    border: 1px solid rgba(239,68,68,0.2);
+  }
+
+  .sc-modal-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #f1f5f9;
+  }
+
+  .sc-modal-text {
+    font-size: 0.875rem;
+    color: #94a3b8;
+    line-height: 1.5;
+  }
+
+  .sc-modal-hint {
+    font-size: 0.75rem;
+    color: #4b5563;
+    font-style: italic;
+  }
+
+  .sc-modal-actions {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  .sc-modal-btn {
+    flex: 1;
+    padding: 11px 16px;
+    border-radius: 12px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .sc-modal-cancel {
+    background: rgba(100,116,139,0.1);
+    color: #94a3b8;
+    border: 1px solid rgba(100,116,139,0.15);
+  }
+
+  .sc-modal-cancel:hover {
+    background: rgba(100,116,139,0.18);
+    border-color: rgba(100,116,139,0.3);
+  }
+
+  .sc-modal-confirm {
+    background: linear-gradient(135deg, rgba(239,68,68,0.75), rgba(185,28,28,0.85));
+    color: #fff;
+    border: 1px solid rgba(239,68,68,0.35);
+    box-shadow: 0 4px 16px rgba(239,68,68,0.2);
+  }
+
+  .sc-modal-confirm:hover {
+    box-shadow: 0 6px 24px rgba(239,68,68,0.35);
+    transform: translateY(-1px);
   }
 `

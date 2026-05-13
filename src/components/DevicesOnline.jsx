@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Wifi, WifiOff, RefreshCw, Monitor, Loader2, Clock, ChevronDown, ChevronRight, School } from 'lucide-react'
+import { Wifi, WifiOff, RefreshCw, Monitor, Loader2, Clock, ChevronDown, ChevronRight, School, AlertTriangle } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api } from '../services/api'
 
@@ -229,7 +229,7 @@ export default function DevicesOnline() {
                       {devices.map(d => (
                         <span
                           key={d.id}
-                          className={`dvo-dot ${d.online ? 'dvo-dot-on' : 'dvo-dot-off'}`}
+                          className={`dvo-dot ${d.online ? 'dvo-dot-on' : d.found === false ? 'dvo-dot-warn' : 'dvo-dot-off'}`}
                           title={`Device ${d.id}: ${d.online ? 'Online' : 'Offline'}`}
                         />
                       ))}
@@ -244,7 +244,7 @@ export default function DevicesOnline() {
                     {devices.map(device => (
                       <div
                         key={device.id}
-                        className={`dvo-device-item ${device.online ? 'dvo-device-online' : 'dvo-device-offline'}`}
+                        className={`dvo-device-item ${device.online ? 'dvo-device-online' : !device.found ? 'dvo-device-notfound' : 'dvo-device-offline'}`}
                       >
                         <div className="dvo-device-status-dot">
                           <span className={`dvo-status-indicator ${device.online ? 'dvo-indicator-on' : 'dvo-indicator-off'}`} />
@@ -253,6 +253,12 @@ export default function DevicesOnline() {
                           <div className="dvo-device-id">
                             <Monitor size={14} />
                             <span>Device {device.id}</span>
+                            {!device.found && !device.online && (
+                              <span className="dvo-notfound-badge">
+                                <AlertTriangle size={10} />
+                                Não existe no Tailscale
+                              </span>
+                            )}
                           </div>
                           <div className="dvo-device-meta">
                             {device.online ? (
@@ -265,7 +271,7 @@ export default function DevicesOnline() {
                                 <WifiOff size={11} />
                                 {device.found
                                   ? formatLastSeen(device.lastSeen)
-                                  : 'Não encontrado na rede'}
+                                  : 'Verifique o número do device'}
                               </span>
                             )}
                             {device.hostname && (
@@ -603,6 +609,11 @@ export default function DevicesOnline() {
           opacity: 0.5;
         }
 
+        .dvo-dot-warn {
+          background: #f59e0b;
+          opacity: 0.7;
+        }
+
         /* ── Device list ── */
         .dvo-device-list {
           padding: 0 16px 16px 16px;
@@ -638,6 +649,29 @@ export default function DevicesOnline() {
 
         .dvo-device-offline:hover {
           background: rgba(255, 255, 255, 0.04);
+        }
+
+        .dvo-device-notfound {
+          background: rgba(245, 158, 11, 0.04);
+          border: 1px dashed rgba(245, 158, 11, 0.2);
+        }
+
+        .dvo-device-notfound:hover {
+          background: rgba(245, 158, 11, 0.07);
+        }
+
+        .dvo-notfound-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 2px 8px;
+          border-radius: 6px;
+          font-size: 0.625rem;
+          font-weight: 600;
+          background: rgba(245, 158, 11, 0.1);
+          color: #fbbf24;
+          border: 1px solid rgba(245, 158, 11, 0.2);
+          margin-left: 6px;
         }
 
         .dvo-device-status-dot {
