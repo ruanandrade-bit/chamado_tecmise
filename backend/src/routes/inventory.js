@@ -28,6 +28,29 @@ router.get('/', (_req, res) => {
   res.json({ items })
 })
 
+// POST create a new inventory item
+router.post('/', (req, res) => {
+  memoryStore.getInventory(DEFAULT_ITEMS)
+
+  const { name, quantity } = req.body
+  const numericQuantity = Number(quantity ?? 0)
+
+  if (typeof name !== 'string' || name.trim().length < 2) {
+    return res.status(400).json({ message: 'Nome inválido. Use pelo menos 2 caracteres.' })
+  }
+
+  if (!Number.isFinite(numericQuantity) || numericQuantity < 0) {
+    return res.status(400).json({ message: 'Quantidade inválida.' })
+  }
+
+  const items = memoryStore.createInventoryItem(name, numericQuantity)
+  if (!items) {
+    return res.status(500).json({ message: 'Não foi possível criar o item.' })
+  }
+
+  return res.status(201).json({ items })
+})
+
 // PATCH update a single item's quantity
 router.patch('/:id', (req, res) => {
   const { id } = req.params
@@ -41,6 +64,43 @@ router.patch('/:id', (req, res) => {
   if (!items) {
     return res.status(404).json({ message: 'Item não encontrado.' })
   }
+  return res.json({ items })
+})
+
+// PATCH rename a custom inventory item
+router.patch('/:id/name', (req, res) => {
+  const { id } = req.params
+  const { name } = req.body
+
+  if (!id.startsWith('custom-')) {
+    return res.status(400).json({ message: 'Só itens personalizados podem ter nome editado.' })
+  }
+
+  if (typeof name !== 'string' || name.trim().length < 2) {
+    return res.status(400).json({ message: 'Nome inválido. Use pelo menos 2 caracteres.' })
+  }
+
+  const items = memoryStore.renameInventoryItem(id, name)
+  if (!items) {
+    return res.status(404).json({ message: 'Item não encontrado.' })
+  }
+
+  return res.json({ items })
+})
+
+// DELETE remove a custom inventory item
+router.delete('/:id', (req, res) => {
+  const { id } = req.params
+
+  if (!id.startsWith('custom-')) {
+    return res.status(400).json({ message: 'Só itens personalizados podem ser removidos.' })
+  }
+
+  const items = memoryStore.deleteInventoryItem(id)
+  if (!items) {
+    return res.status(404).json({ message: 'Item não encontrado.' })
+  }
+
   return res.json({ items })
 })
 

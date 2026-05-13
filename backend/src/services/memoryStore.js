@@ -434,9 +434,6 @@ export const memoryStore = {
       state.inventory = structuredClone(defaultItems)
       persistState()
     } else {
-      const defaultIds = new Set(defaultItems.map(i => i.id))
-      // Remove items no longer in defaults
-      state.inventory = state.inventory.filter(i => defaultIds.has(i.id))
       // Merge: add any new default items not yet in state
       const existingIds = new Set(state.inventory.map(i => i.id))
       for (const item of defaultItems) {
@@ -453,11 +450,66 @@ export const memoryStore = {
     return state.inventory
   },
 
+  createInventoryItem(name, quantity = 0) {
+    if (!state.inventory) return null
+
+    const cleanName = String(name || '').trim()
+    if (!cleanName) return null
+
+    const safeQuantity = Math.max(0, Math.floor(Number(quantity) || 0))
+    const slug = cleanName
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+
+    const baseId = `custom-${slug || 'item'}`
+    let id = baseId
+    let suffix = 2
+    const usedIds = new Set(state.inventory.map(i => i.id))
+    while (usedIds.has(id)) {
+      id = `${baseId}-${suffix}`
+      suffix += 1
+    }
+
+    state.inventory.push({
+      id,
+      name: cleanName,
+      quantity: safeQuantity
+    })
+    persistState()
+    return state.inventory
+  },
+
   updateInventoryItem(id, quantity) {
     if (!state.inventory) return null
     const item = state.inventory.find(i => i.id === id)
     if (!item) return null
     item.quantity = Math.max(0, Math.floor(quantity))
+    persistState()
+    return state.inventory
+  },
+
+  renameInventoryItem(id, name) {
+    if (!state.inventory) return null
+    const item = state.inventory.find(i => i.id === id)
+    if (!item) return null
+
+    const cleanName = String(name || '').trim()
+    if (!cleanName) return null
+
+    item.name = cleanName
+    persistState()
+    return state.inventory
+  },
+
+  deleteInventoryItem(id) {
+    if (!state.inventory) return null
+    const index = state.inventory.findIndex(i => i.id === id)
+    if (index < 0) return null
+
+    state.inventory.splice(index, 1)
     persistState()
     return state.inventory
   },

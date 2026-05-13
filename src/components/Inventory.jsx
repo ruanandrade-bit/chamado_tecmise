@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  Package, Plus, Minus, Pencil, Check, X, Loader2, Download,
+  Package, Plus, Minus, Pencil, Check, X, Loader2, Download, Boxes, Trash2,
   Plug, Zap, Battery, Camera, Cpu, HardDrive, Fan, Cable, Printer, CheckCircle2, Usb
 } from 'lucide-react'
 import { api } from '../services/api'
@@ -20,8 +20,15 @@ const ITEM_CONFIG = {
   'completo': { Icon: CheckCircle2, color: '#4ade80', bg: 'rgba(74,222,128,0.12)', border: 'rgba(74,222,128,0.25)' },
 }
 
+const NEW_ITEM_ICON_CONFIG = {
+  Icon: Boxes,
+  color: '#2dd4bf',
+  bg: 'rgba(45,212,191,0.12)',
+  border: 'rgba(45,212,191,0.25)'
+}
+
 function ItemIcon({ itemId }) {
-  const config = ITEM_CONFIG[itemId] || { Icon: Package, color: '#9ca3af', bg: 'rgba(156,163,175,0.12)', border: 'rgba(156,163,175,0.25)' }
+  const config = ITEM_CONFIG[itemId] || NEW_ITEM_ICON_CONFIG
   const { Icon, color, bg, border } = config
   return (
     <div className="inv-icon-circle" style={{ background: bg, borderColor: border, boxShadow: `0 0 16px ${bg}` }}>
@@ -34,8 +41,16 @@ export default function Inventory() {
   const [items, setItems] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [editingId, setEditingId] = useState(null)
+  const [editNameValue, setEditNameValue] = useState('')
   const [editValue, setEditValue] = useState('')
   const [updatingId, setUpdatingId] = useState(null)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [newItemName, setNewItemName] = useState('')
+  const [newItemQty, setNewItemQty] = useState('0')
+  const [isCreating, setIsCreating] = useState(false)
+  const [createError, setCreateError] = useState('')
+
+  const isCustomItem = (itemId) => itemId.startsWith('custom-')
 
   const loadInventory = useCallback(async () => {
     try {
@@ -76,26 +91,128 @@ export default function Inventory() {
 
   const startEdit = (item) => {
     setEditingId(item.id)
+    setEditNameValue(item.name)
     setEditValue(String(item.quantity))
   }
 
   const cancelEdit = () => {
     setEditingId(null)
+    setEditNameValue('')
     setEditValue('')
   }
 
-  const confirmEdit = (item) => {
+  const confirmEdit = async (item) => {
+    const trimmedName = editNameValue.trim()
     const num = parseInt(editValue, 10)
-    if (!isNaN(num) && num >= 0) {
-      updateQuantity(item.id, num)
+
+    if (isCustomItem(item.id) && trimmedName.length < 2) {
+      window.alert('Digite um nome com pelo menos 2 caracteres.')
+      return
     }
-    setEditingId(null)
-    setEditValue('')
+
+    if (isNaN(num) || num < 0) {
+      window.alert('A quantidade precisa ser 0 ou maior.')
+      return
+    }
+
+    const shouldRename = isCustomItem(item.id) && trimmedName !== item.name
+    const shouldUpdateQty = num !== item.quantity
+
+    if (!shouldRename && !shouldUpdateQty) {
+      cancelEdit()
+      return
+    }
+
+    setUpdatingId(item.id)
+    try {
+      if (shouldRename) {
+        const renamed = await api.patch(`/inventory/${item.id}/name`, { name: trimmedName })
+        setItems(renamed.items || [])
+      }
+
+      if (shouldUpdateQty) {
+        const updated = await api.patch(`/inventory/${item.id}`, { quantity: num })
+        setItems(updated.items || [])
+      }
+
+      cancelEdit()
+    } catch (err) {
+      console.error('Erro ao editar item:', err)
+      window.alert(err.message || 'Não foi possível editar o item.')
+    } finally {
+      setUpdatingId(null)
+    }
   }
 
   const handleEditKeyDown = (e, item) => {
     if (e.key === 'Enter') confirmEdit(item)
     if (e.key === 'Escape') cancelEdit()
+  }
+
+  const resetCreateForm = () => {
+    setNewItemName('')
+    setNewItemQty('0')
+    setCreateError('')
+  }
+
+  const openCreateForm = () => {
+    resetCreateForm()
+    setIsCreateOpen(true)
+  }
+
+  const closeCreateForm = () => {
+    setIsCreateOpen(false)
+    resetCreateForm()
+  }
+
+  const createInventoryItem = async () => {
+    const trimmedName = newItemName.trim()
+    const parsedQty = parseInt(newItemQty, 10)
+
+    if (trimmedName.length < 2) {
+      setCreateError('Digite um nome com pelo menos 2 caracteres.')
+      return
+    }
+    if (isNaN(parsedQty) || parsedQty < 0) {
+      setCreateError('A quantidade inicial precisa ser 0 ou maior.')
+      return
+    }
+
+    setCreateError('')
+    setIsCreating(true)
+    try {
+      const data = await api.post('/inventory', { name: trimmedName, quantity: parsedQty })
+      setItems(data.items || [])
+      closeCreateForm()
+    } catch (err) {
+      console.error('Erro ao criar item:', err)
+      setCreateError(err.message || 'Não foi possível criar o item.')
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
+  const handleCreateKeyDown = (e) => {
+    if (e.key === 'Enter') createInventoryItem()
+    if (e.key === 'Escape') closeCreateForm()
+  }
+
+  const handleDeleteItem = async (item) => {
+    if (!isCustomItem(item.id)) return
+
+    const confirmed = window.confirm(`Remover o item "${item.name}" do estoque?`)
+    if (!confirmed) return
+
+    setUpdatingId(item.id)
+    try {
+      const data = await api.delete(`/inventory/${item.id}`)
+      setItems(data.items || [])
+    } catch (err) {
+      console.error('Erro ao remover item:', err)
+      window.alert(err.message || 'Não foi possível remover o item.')
+    } finally {
+      setUpdatingId(null)
+    }
   }
 
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0)
@@ -256,7 +373,15 @@ export default function Inventory() {
             <span className="inv-stat-value">{totalItems}</span>
             <span className="inv-stat-label">Total em estoque</span>
           </div>
-          <div style={{ flex: 1 }} />
+          <div className="inv-stats-spacer" />
+          <button
+            onClick={openCreateForm}
+            className="inv-add-item-btn"
+            title="Adicionar novo item no estoque"
+          >
+            <Plus size={15} />
+            Novo item
+          </button>
           <button
             onClick={generatePDF}
             className="inv-pdf-btn"
@@ -265,6 +390,57 @@ export default function Inventory() {
             <Download size={15} />
             Baixar PDF
           </button>
+        </div>
+      )}
+
+      {isCreateOpen && (
+        <div className="inv-create-panel">
+          <div className="inv-create-panel-title">
+            <Boxes size={16} />
+            Adicionar novo item
+          </div>
+          <div className="inv-create-grid">
+            <input
+              type="text"
+              value={newItemName}
+              onChange={(e) => setNewItemName(e.target.value)}
+              onKeyDown={handleCreateKeyDown}
+              className="inv-create-input"
+              placeholder="Nome do item"
+              maxLength={48}
+              autoFocus
+            />
+            <input
+              type="number"
+              min="0"
+              value={newItemQty}
+              onChange={(e) => setNewItemQty(e.target.value)}
+              onKeyDown={handleCreateKeyDown}
+              className="inv-create-input inv-create-qty"
+              placeholder="0"
+            />
+            <div className="inv-create-actions">
+              <button
+                onClick={createInventoryItem}
+                disabled={isCreating}
+                className="inv-create-btn inv-create-confirm"
+                title="Salvar novo item"
+              >
+                {isCreating ? <Loader2 size={15} className="inv-spin" /> : <Check size={15} />}
+                Salvar
+              </button>
+              <button
+                onClick={closeCreateForm}
+                disabled={isCreating}
+                className="inv-create-btn inv-create-cancel"
+                title="Cancelar criação"
+              >
+                <X size={14} />
+                Cancelar
+              </button>
+            </div>
+          </div>
+          {createError && <p className="inv-create-error">{createError}</p>}
         </div>
       )}
 
@@ -296,30 +472,43 @@ export default function Inventory() {
                 {/* Quantity display */}
                 <div className="inv-card-qty-section">
                   {isEditing ? (
-                    <div className="inv-edit-row">
-                      <input
-                        type="number"
-                        min="0"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        onKeyDown={(e) => handleEditKeyDown(e, item)}
-                        className="inv-edit-input"
-                        autoFocus
-                      />
-                      <button
-                        onClick={() => confirmEdit(item)}
-                        className="inv-edit-btn inv-edit-confirm"
-                        title="Confirmar"
-                      >
-                        <Check size={14} />
-                      </button>
-                      <button
-                        onClick={cancelEdit}
-                        className="inv-edit-btn inv-edit-cancel"
-                        title="Cancelar"
-                      >
-                        <X size={14} />
-                      </button>
+                    <div className="inv-edit-stack">
+                      {isCustomItem(item.id) && (
+                        <input
+                          type="text"
+                          value={editNameValue}
+                          onChange={(e) => setEditNameValue(e.target.value)}
+                          onKeyDown={(e) => handleEditKeyDown(e, item)}
+                          className="inv-edit-name-input"
+                          maxLength={48}
+                          autoFocus
+                        />
+                      )}
+                      <div className="inv-edit-row">
+                        <input
+                          type="number"
+                          min="0"
+                          value={editValue}
+                          onChange={(e) => setEditValue(e.target.value)}
+                          onKeyDown={(e) => handleEditKeyDown(e, item)}
+                          className="inv-edit-input"
+                          autoFocus={!isCustomItem(item.id)}
+                        />
+                        <button
+                          onClick={() => confirmEdit(item)}
+                          className="inv-edit-btn inv-edit-confirm"
+                          title="Confirmar"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="inv-edit-btn inv-edit-cancel"
+                          title="Cancelar"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className={`inv-qty-display ${isEmpty ? 'inv-qty-zero' : 'inv-qty-positive'}`}>
@@ -359,6 +548,16 @@ export default function Inventory() {
                     >
                       <Plus size={16} />
                     </button>
+                    {isCustomItem(item.id) && (
+                      <button
+                        onClick={() => handleDeleteItem(item)}
+                        disabled={isUpdating}
+                        className="inv-action-btn inv-btn-delete"
+                        title="Excluir item"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -446,9 +645,12 @@ export default function Inventory() {
           color: #86efac;
         }
 
+        .inv-stats-spacer { flex: 1; }
+
         .inv-stat-value { font-weight: 800; }
         .inv-stat-label { font-weight: 400; opacity: 0.8; }
 
+        .inv-add-item-btn,
         .inv-pdf-btn {
           display: flex;
           align-items: center;
@@ -465,11 +667,134 @@ export default function Inventory() {
           white-space: nowrap;
         }
 
+        .inv-add-item-btn {
+          background: linear-gradient(135deg, rgba(45, 212, 191, 0.14), rgba(20, 184, 166, 0.08));
+          border: 1px solid rgba(45, 212, 191, 0.3);
+          color: #5eead4;
+        }
+
+        .inv-add-item-btn:hover {
+          background: linear-gradient(135deg, rgba(45, 212, 191, 0.25), rgba(20, 184, 166, 0.15));
+          border-color: rgba(45, 212, 191, 0.45);
+          box-shadow: 0 2px 12px rgba(20, 184, 166, 0.16);
+          color: #99f6e4;
+        }
+
         .inv-pdf-btn:hover {
           background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(124, 58, 237, 0.18));
           border-color: rgba(139, 92, 246, 0.4);
           box-shadow: 0 2px 12px rgba(139, 92, 246, 0.12);
           color: #ddd6fe;
+        }
+
+        .inv-create-panel {
+          padding: 16px;
+          background: rgba(15, 15, 30, 0.5);
+          border: 1px solid rgba(45, 212, 191, 0.2);
+          border-radius: 16px;
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          animation: invCardIn 0.25s ease-out both;
+        }
+
+        .inv-create-panel-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          font-size: 0.875rem;
+          font-weight: 700;
+          color: #99f6e4;
+          margin-bottom: 12px;
+        }
+
+        .inv-create-grid {
+          display: grid;
+          grid-template-columns: minmax(200px, 1fr) 110px auto;
+          gap: 10px;
+          align-items: center;
+        }
+
+        .inv-create-input {
+          height: 40px;
+          border-radius: 10px;
+          border: 1px solid rgba(45, 212, 191, 0.24);
+          background: rgba(12, 12, 28, 0.9);
+          color: #f3f4f6;
+          padding: 0 12px;
+          font-size: 0.875rem;
+          outline: none;
+          transition: all 0.2s ease;
+        }
+
+        .inv-create-qty {
+          text-align: center;
+          -moz-appearance: textfield;
+        }
+
+        .inv-create-qty::-webkit-inner-spin-button,
+        .inv-create-qty::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+
+        .inv-create-input:focus {
+          border-color: rgba(45, 212, 191, 0.45);
+          box-shadow: 0 0 12px rgba(45, 212, 191, 0.12);
+        }
+
+        .inv-create-actions {
+          display: flex;
+          gap: 8px;
+          justify-content: flex-end;
+        }
+
+        .inv-create-btn {
+          height: 38px;
+          border-radius: 10px;
+          border: 1px solid transparent;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 0 12px;
+          font-size: 0.8125rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+
+        .inv-create-btn:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+
+        .inv-create-confirm {
+          color: #99f6e4;
+          border-color: rgba(45, 212, 191, 0.35);
+          background: rgba(20, 184, 166, 0.15);
+        }
+
+        .inv-create-confirm:hover:not(:disabled) {
+          background: rgba(20, 184, 166, 0.24);
+          border-color: rgba(45, 212, 191, 0.5);
+        }
+
+        .inv-create-cancel {
+          color: #fbcfe8;
+          border-color: rgba(236, 72, 153, 0.35);
+          background: rgba(236, 72, 153, 0.1);
+        }
+
+        .inv-create-cancel:hover:not(:disabled) {
+          background: rgba(236, 72, 153, 0.2);
+          border-color: rgba(236, 72, 153, 0.45);
+        }
+
+        .inv-create-error {
+          margin-top: 10px;
+          color: #fda4af;
+          font-size: 0.8125rem;
+          font-weight: 600;
         }
 
         /* ── Loading ── */
@@ -601,6 +926,33 @@ export default function Inventory() {
         }
 
         /* ── Edit row ── */
+        .inv-edit-stack {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .inv-edit-name-input {
+          width: 160px;
+          height: 34px;
+          border-radius: 9px;
+          border: 1.5px solid rgba(45, 212, 191, 0.3);
+          background: rgba(15, 15, 30, 0.85);
+          color: #e5e7eb;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          text-align: center;
+          padding: 0 10px;
+          outline: none;
+          transition: border-color 0.2s;
+        }
+
+        .inv-edit-name-input:focus {
+          border-color: rgba(45, 212, 191, 0.55);
+          box-shadow: 0 0 10px rgba(45, 212, 191, 0.14);
+        }
+
         .inv-edit-row {
           display: flex;
           align-items: center;
@@ -670,6 +1022,7 @@ export default function Inventory() {
           gap: 8px;
           width: 100%;
           justify-content: center;
+          flex-wrap: wrap;
         }
 
         .inv-action-btn {
@@ -724,6 +1077,47 @@ export default function Inventory() {
           background: rgba(192, 132, 252, 0.2);
           border-color: rgba(192, 132, 252, 0.3);
           box-shadow: 0 2px 10px rgba(192, 132, 252, 0.1);
+        }
+
+        .inv-btn-delete {
+          background: rgba(244, 63, 94, 0.1);
+          border: 1px solid rgba(244, 63, 94, 0.2);
+          color: #fda4af;
+        }
+
+        .inv-btn-delete:hover:not(:disabled) {
+          background: rgba(244, 63, 94, 0.2);
+          border-color: rgba(244, 63, 94, 0.35);
+          box-shadow: 0 2px 10px rgba(244, 63, 94, 0.12);
+        }
+
+        @media (max-width: 860px) {
+          .inv-stats-bar {
+            flex-wrap: wrap;
+          }
+
+          .inv-stats-spacer {
+            display: none;
+          }
+
+          .inv-add-item-btn,
+          .inv-pdf-btn {
+            flex: 1;
+            justify-content: center;
+          }
+
+          .inv-create-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .inv-create-actions {
+            justify-content: stretch;
+          }
+
+          .inv-create-btn {
+            flex: 1;
+            justify-content: center;
+          }
         }
 
         @media (max-width: 640px) {
