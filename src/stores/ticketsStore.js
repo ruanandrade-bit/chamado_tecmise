@@ -16,7 +16,7 @@ const FALLBACK_STATUSES = [
   { value: 'recebido', label: 'Recebido', color: 'bg-blue-500' },
   { value: 'em-analise', label: 'Em análise', color: 'bg-yellow-500' },
   { value: 'aguardando-escola', label: 'Aguardando escola', color: 'bg-purple-500' },
-  { value: 'reprocessando', label: 'Reprocessando', color: 'bg-indigo-500' },
+  { value: 'reprocessando', label: 'Processamento', color: 'bg-indigo-500' },
   { value: 'em-resolucao', label: 'Em resolução', color: 'bg-orange-500' },
   { value: 'resolvido', label: 'Resolvido', color: 'bg-primary-light' }
 ]
@@ -193,11 +193,13 @@ export const useTicketsStore = create((set, get) => ({
     const inProgress = activeTickets.filter((item) => (
       item.status !== 'sem-status' && item.status !== 'resolvido'
     )).length
+    const processing = activeTickets.filter((item) => item.status === 'reprocessando').length
 
     return {
       total,
       completed,
       inProgress,
+      processing,
       byResponsible: activeTickets.reduce((acc, ticket) => {
         acc[ticket.responsible] = (acc[ticket.responsible] || 0) + 1
         return acc

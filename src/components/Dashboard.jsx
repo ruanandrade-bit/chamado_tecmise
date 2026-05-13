@@ -33,7 +33,7 @@ export default function Dashboard() {
     },
     {
       label: 'Processamento',
-      value: stats.inProgress,
+      value: stats.processing,
       icon: Cog,
       gradient: 'linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(109,40,217,0.08) 100%)',
       border: 'rgba(139,92,246,0.25)',
@@ -97,55 +97,77 @@ export default function Dashboard() {
         </h2>
         
         <div className="dash-resp-list">
-          {Object.entries(stats.byResponsible).map(([name, count], index) => {
-            const isOpen = expandedPerson === name
-            const personTickets = isOpen ? getTicketsForPerson(name) : []
-            return (
-              <div key={name} style={{ animationDelay: `${index * 0.08}s` }} className="dash-resp-wrapper">
-                <button
-                  className={`dash-resp-item ${isOpen ? 'dash-resp-active' : ''}`}
-                  onClick={() => setExpandedPerson(isOpen ? null : name)}
-                  style={{ animationDelay: `${index * 0.08}s` }}
-                >
-                  <div className="dash-resp-left">
-                    <div className="dash-resp-avatar">
-                      <span>{name[0]}</span>
-                    </div>
-                    <div>
-                      <p className="dash-resp-name">{name}</p>
-                      <p className="dash-resp-count-text">{count} chamado{count !== 1 ? 's' : ''}</p>
-                    </div>
-                  </div>
-                  <div className="dash-resp-right-side">
-                    <div className="dash-resp-badge"><span>{count}</span></div>
-                    {isOpen ? <ChevronDown size={16} style={{color:'#6b7280'}} /> : <ChevronRight size={16} style={{color:'#6b7280'}} />}
-                  </div>
-                </button>
-                {isOpen && (
-                  <div className="dash-person-tickets">
-                    {personTickets.length === 0 ? (
-                      <p className="dash-no-tickets">Nenhum chamado em aberto.</p>
-                    ) : (
-                      personTickets.map(t => (
-                        <div key={t.id} className="dash-ticket-mini">
-                          <div className="dash-ticket-mini-top">
-                            <span className="dash-ticket-id">{t.id}</span>
-                            <span className="dash-ticket-status">{t.status.replace(/-/g,' ')}</span>
-                          </div>
-                          <div className="dash-ticket-mini-info">
-                            <span><School size={11}/> {t.school}</span>
-                            <span><Tag size={11}/> {t.problemType || 'Sem tipo'}</span>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                )}
+          {Object.entries(stats.byResponsible).map(([name, count], index) => (
+            <button
+              key={name}
+              className="dash-resp-item"
+              onClick={() => setExpandedPerson(name)}
+              style={{ animationDelay: `${index * 0.08}s` }}
+            >
+              <div className="dash-resp-left">
+                <div className="dash-resp-avatar">
+                  <span>{name[0]}</span>
+                </div>
+                <div>
+                  <p className="dash-resp-name">{name}</p>
+                  <p className="dash-resp-count-text">{count} chamado{count !== 1 ? 's' : ''}</p>
+                </div>
               </div>
-            )
-          })}
+              <div className="dash-resp-right-side">
+                <div className="dash-resp-badge"><span>{count}</span></div>
+                <ChevronRight size={16} style={{color:'#6b7280'}} />
+              </div>
+            </button>
+          ))}
         </div>
       </div>
+
+      {/* Modal de chamados da pessoa */}
+      {expandedPerson && (() => {
+        const personTickets = getTicketsForPerson(expandedPerson)
+        const priorityMap = { alta: { label: 'Alta', color: '#f87171', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)' }, media: { label: 'Média', color: '#fbbf24', bg: 'rgba(251,191,36,0.1)', border: 'rgba(251,191,36,0.2)' }, baixa: { label: 'Baixa', color: '#60a5fa', bg: 'rgba(96,165,250,0.1)', border: 'rgba(96,165,250,0.2)' } }
+        return (
+          <div className="dash-modal-overlay" onClick={() => setExpandedPerson(null)}>
+            <div className="dash-modal-card" onClick={e => e.stopPropagation()}>
+              <div className="dash-modal-accent" />
+              <div className="dash-modal-header">
+                <div className="dash-modal-avatar"><span>{expandedPerson[0]}</span></div>
+                <div>
+                  <h3 className="dash-modal-title">Chamados de {expandedPerson}</h3>
+                  <p className="dash-modal-sub">{personTickets.length} chamado{personTickets.length !== 1 ? 's' : ''} em aberto</p>
+                </div>
+                <button className="dash-modal-close" onClick={() => setExpandedPerson(null)}>✕</button>
+              </div>
+              <div className="dash-modal-body">
+                {personTickets.length === 0 ? (
+                  <p className="dash-no-tickets">Nenhum chamado em aberto.</p>
+                ) : (
+                  personTickets.map(t => {
+                    const pr = priorityMap[t.priority] || priorityMap.media
+                    return (
+                      <div key={t.id} className="dash-ticket-card">
+                        <div className="dash-ticket-top-row">
+                          <span className="dash-ticket-id">{t.id}</span>
+                          <span className="dash-ticket-status">{t.status.replace(/-/g, ' ')}</span>
+                        </div>
+                        <p className="dash-ticket-desc">{t.description || 'Sem descrição'}</p>
+                        <div className="dash-ticket-footer">
+                          <span className="dash-ticket-priority" style={{color: pr.color, background: pr.bg, borderColor: pr.border}}>
+                            {pr.label}
+                          </span>
+                          <span className="dash-ticket-date">
+                            {new Date(t.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       <style>{`
         .dash-container {
@@ -314,10 +336,6 @@ export default function Dashboard() {
           gap: 10px;
         }
 
-        .dash-resp-wrapper {
-          animation: dashItemIn 0.4s ease-out both;
-        }
-
         .dash-resp-item {
           width: 100%;
           display: flex;
@@ -328,6 +346,7 @@ export default function Dashboard() {
           border: 1px solid rgba(255, 255, 255, 0.05);
           border-radius: 14px;
           transition: all 0.3s ease;
+          animation: dashItemIn 0.4s ease-out both;
           cursor: pointer;
           font-family: inherit;
           color: inherit;
@@ -341,161 +360,131 @@ export default function Dashboard() {
           box-shadow: 0 4px 16px rgba(0,0,0,0.15);
         }
 
-        .dash-resp-active {
-          background: rgba(134, 239, 172, 0.05);
-          border-color: rgba(134, 239, 172, 0.2);
-          border-bottom-left-radius: 0;
-          border-bottom-right-radius: 0;
-        }
-
         @keyframes dashItemIn {
           from { opacity: 0; transform: translateX(-10px); }
           to { opacity: 1; transform: translateX(0); }
         }
 
-        .dash-resp-left {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-        }
-
-        .dash-resp-right-side {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
+        .dash-resp-left { display: flex; align-items: center; gap: 14px; }
+        .dash-resp-right-side { display: flex; align-items: center; gap: 10px; }
 
         .dash-resp-avatar {
-          width: 42px;
-          height: 42px;
-          border-radius: 12px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(135deg, rgba(134, 239, 172, 0.2), rgba(34, 197, 94, 0.15));
-          border: 1px solid rgba(134, 239, 172, 0.2);
+          width: 42px; height: 42px; border-radius: 12px;
+          display: flex; align-items: center; justify-content: center;
+          background: linear-gradient(135deg, rgba(134,239,172,0.2), rgba(34,197,94,0.15));
+          border: 1px solid rgba(134,239,172,0.2);
           transition: all 0.3s ease;
         }
-
         .dash-resp-item:hover .dash-resp-avatar {
-          background: linear-gradient(135deg, rgba(134, 239, 172, 0.3), rgba(34, 197, 94, 0.25));
-          box-shadow: 0 0 16px rgba(34, 197, 94, 0.15);
+          background: linear-gradient(135deg, rgba(134,239,172,0.3), rgba(34,197,94,0.25));
+          box-shadow: 0 0 16px rgba(34,197,94,0.15);
         }
-
-        .dash-resp-avatar span {
-          font-size: 0.9375rem;
-          font-weight: 700;
-          color: #86efac;
-        }
-
-        .dash-resp-name {
-          font-weight: 600;
-          color: #e5e7eb;
-          font-size: 0.9375rem;
-        }
-
-        .dash-resp-count-text {
-          font-size: 0.75rem;
-          color: #6b7280;
-          margin-top: 2px;
-        }
+        .dash-resp-avatar span { font-size: 0.9375rem; font-weight: 700; color: #86efac; }
+        .dash-resp-name { font-weight: 600; color: #e5e7eb; font-size: 0.9375rem; }
+        .dash-resp-count-text { font-size: 0.75rem; color: #6b7280; margin-top: 2px; }
 
         .dash-resp-badge {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          min-width: 36px;
-          height: 36px;
-          padding: 0 12px;
-          background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(22, 163, 74, 0.15));
-          border: 1px solid rgba(34, 197, 94, 0.25);
-          border-radius: 12px;
+          display: flex; align-items: center; justify-content: center;
+          min-width: 36px; height: 36px; padding: 0 12px;
+          background: linear-gradient(135deg, rgba(34,197,94,0.2), rgba(22,163,74,0.15));
+          border: 1px solid rgba(34,197,94,0.25); border-radius: 12px;
           transition: all 0.3s ease;
         }
-
         .dash-resp-item:hover .dash-resp-badge {
-          background: linear-gradient(135deg, rgba(34, 197, 94, 0.3), rgba(22, 163, 74, 0.25));
-          box-shadow: 0 0 12px rgba(34, 197, 94, 0.15);
+          background: linear-gradient(135deg, rgba(34,197,94,0.3), rgba(22,163,74,0.25));
+          box-shadow: 0 0 12px rgba(34,197,94,0.15);
         }
+        .dash-resp-badge span { font-size: 0.875rem; font-weight: 700; color: #86efac; }
 
-        .dash-resp-badge span {
-          font-size: 0.875rem;
-          font-weight: 700;
-          color: #86efac;
+        /* ── Modal ── */
+        .dash-modal-overlay {
+          position: fixed; inset: 0; z-index: 9999;
+          display: flex; align-items: center; justify-content: center;
+          background: rgba(0,0,0,0.65); backdrop-filter: blur(8px);
+          animation: dashFadeIn 0.15s ease-out;
         }
-
-        /* ── Expanded Tickets Panel ── */
-        .dash-person-tickets {
-          padding: 12px 16px 16px;
-          background: rgba(15, 15, 30, 0.4);
-          border: 1px solid rgba(134, 239, 172, 0.1);
-          border-top: none;
-          border-bottom-left-radius: 14px;
-          border-bottom-right-radius: 14px;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          animation: dashFadeIn 0.25s ease-out;
+        .dash-modal-card {
+          width: 100%; max-width: 560px; max-height: 80vh; margin: 0 16px;
+          border-radius: 20px; overflow: hidden;
+          background: linear-gradient(145deg, rgba(30,35,50,0.97), rgba(18,22,34,0.99));
+          border: 1px solid rgba(134,239,172,0.15);
+          box-shadow: 0 25px 80px rgba(0,0,0,0.6);
+          display: flex; flex-direction: column;
+          animation: dashSlideUp 0.25s cubic-bezier(0.16,1,0.3,1);
         }
-
+        @keyframes dashSlideUp {
+          from { opacity: 0; transform: translateY(20px) scale(0.97); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .dash-modal-accent {
+          height: 3px;
+          background: linear-gradient(90deg, transparent, rgba(34,197,94,0.5), rgba(134,239,172,0.7), rgba(34,197,94,0.5), transparent);
+        }
+        .dash-modal-header {
+          display: flex; align-items: center; gap: 14px;
+          padding: 20px 24px 16px;
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .dash-modal-avatar {
+          width: 44px; height: 44px; border-radius: 12px;
+          display: flex; align-items: center; justify-content: center;
+          background: linear-gradient(135deg, rgba(134,239,172,0.2), rgba(34,197,94,0.15));
+          border: 1px solid rgba(134,239,172,0.2); flex-shrink: 0;
+        }
+        .dash-modal-avatar span { font-size: 1rem; font-weight: 700; color: #86efac; }
+        .dash-modal-title { font-size: 1.0625rem; font-weight: 700; color: #f1f5f9; }
+        .dash-modal-sub { font-size: 0.75rem; color: #6b7280; margin-top: 2px; }
+        .dash-modal-close {
+          margin-left: auto; width: 32px; height: 32px; border-radius: 8px;
+          border: none; background: rgba(255,255,255,0.04); color: #6b7280;
+          cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;
+          transition: all 0.2s;
+        }
+        .dash-modal-close:hover { background: rgba(239,68,68,0.1); color: #f87171; }
+        .dash-modal-body {
+          padding: 16px 24px 24px;
+          overflow-y: auto; display: flex; flex-direction: column; gap: 10px;
+        }
         .dash-no-tickets {
-          font-size: 0.8125rem;
-          color: #6b7280;
-          text-align: center;
-          padding: 12px;
+          font-size: 0.8125rem; color: #6b7280; text-align: center; padding: 24px;
         }
 
-        .dash-ticket-mini {
-          padding: 10px 14px;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          border-radius: 10px;
-          transition: all 0.2s ease;
+        /* ── Ticket Cards ── */
+        .dash-ticket-card {
+          padding: 14px 16px; border-radius: 12px;
+          background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+          transition: all 0.2s;
         }
-
-        .dash-ticket-mini:hover {
-          background: rgba(255, 255, 255, 0.05);
-          border-color: rgba(255, 255, 255, 0.1);
+        .dash-ticket-card:hover {
+          background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1);
         }
-
-        .dash-ticket-mini-top {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 6px;
+        .dash-ticket-top-row {
+          display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;
         }
-
         .dash-ticket-id {
-          font-size: 0.8125rem;
-          font-weight: 700;
-          color: #60a5fa;
+          font-size: 0.875rem; font-weight: 700; color: #60a5fa;
           font-family: 'JetBrains Mono', monospace;
         }
-
         .dash-ticket-status {
-          font-size: 0.6875rem;
-          font-weight: 600;
-          padding: 2px 8px;
-          border-radius: 6px;
-          background: rgba(139, 92, 246, 0.1);
-          color: #c4b5fd;
-          border: 1px solid rgba(139, 92, 246, 0.15);
+          font-size: 0.6875rem; font-weight: 600; padding: 3px 10px;
+          border-radius: 6px; background: rgba(139,92,246,0.1);
+          color: #c4b5fd; border: 1px solid rgba(139,92,246,0.15);
           text-transform: capitalize;
         }
-
-        .dash-ticket-mini-info {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          flex-wrap: wrap;
+        .dash-ticket-desc {
+          font-size: 0.8125rem; color: #d1d5db; line-height: 1.5;
+          margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical; overflow: hidden;
         }
-
-        .dash-ticket-mini-info span {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          font-size: 0.75rem;
-          color: #9ca3af;
+        .dash-ticket-footer {
+          display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+        }
+        .dash-ticket-priority {
+          font-size: 0.6875rem; font-weight: 600; padding: 3px 10px;
+          border-radius: 6px; border: 1px solid;
+        }
+        .dash-ticket-date {
+          font-size: 0.6875rem; color: #6b7280;
         }
       `}</style>
     </div>
