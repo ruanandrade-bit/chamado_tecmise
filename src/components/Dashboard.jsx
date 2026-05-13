@@ -1,9 +1,16 @@
-import { CheckCircle, Clock, AlertCircle } from 'lucide-react'
+import { useState } from 'react'
+import { Cog, Clock, AlertCircle, ChevronDown, ChevronRight, School, Tag } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 
 export default function Dashboard() {
-  const { getStatistics } = useTicketsStore()
+  const { tickets, getStatistics } = useTicketsStore()
   const stats = getStatistics()
+  const [expandedPerson, setExpandedPerson] = useState(null)
+
+  // Get active (non-archived) tickets for a specific person
+  const getTicketsForPerson = (name) => {
+    return tickets.filter(t => !t.archived && t.responsible === name && t.status !== 'resolvido')
+  }
 
   const statCards = [
     {
@@ -25,13 +32,13 @@ export default function Dashboard() {
       glowColor: 'rgba(249,115,22,0.1)',
     },
     {
-      label: 'Concluídos',
-      value: stats.completed,
-      icon: CheckCircle,
-      gradient: 'linear-gradient(135deg, rgba(34,197,94,0.15) 0%, rgba(22,163,74,0.08) 100%)',
-      border: 'rgba(34,197,94,0.25)',
-      iconColor: '#86efac',
-      glowColor: 'rgba(34,197,94,0.1)',
+      label: 'Processamento',
+      value: stats.inProgress,
+      icon: Cog,
+      gradient: 'linear-gradient(135deg, rgba(139,92,246,0.15) 0%, rgba(109,40,217,0.08) 100%)',
+      border: 'rgba(139,92,246,0.25)',
+      iconColor: '#c4b5fd',
+      glowColor: 'rgba(139,92,246,0.1)',
     }
   ]
 
@@ -90,26 +97,53 @@ export default function Dashboard() {
         </h2>
         
         <div className="dash-resp-list">
-          {Object.entries(stats.byResponsible).map(([name, count], index) => (
-            <div
-              key={name}
-              className="dash-resp-item"
-              style={{ animationDelay: `${index * 0.08}s` }}
-            >
-              <div className="dash-resp-left">
-                <div className="dash-resp-avatar">
-                  <span>{name[0]}</span>
-                </div>
-                <div>
-                  <p className="dash-resp-name">{name}</p>
-                  <p className="dash-resp-count-text">{count} chamado{count !== 1 ? 's' : ''}</p>
-                </div>
+          {Object.entries(stats.byResponsible).map(([name, count], index) => {
+            const isOpen = expandedPerson === name
+            const personTickets = isOpen ? getTicketsForPerson(name) : []
+            return (
+              <div key={name} style={{ animationDelay: `${index * 0.08}s` }} className="dash-resp-wrapper">
+                <button
+                  className={`dash-resp-item ${isOpen ? 'dash-resp-active' : ''}`}
+                  onClick={() => setExpandedPerson(isOpen ? null : name)}
+                  style={{ animationDelay: `${index * 0.08}s` }}
+                >
+                  <div className="dash-resp-left">
+                    <div className="dash-resp-avatar">
+                      <span>{name[0]}</span>
+                    </div>
+                    <div>
+                      <p className="dash-resp-name">{name}</p>
+                      <p className="dash-resp-count-text">{count} chamado{count !== 1 ? 's' : ''}</p>
+                    </div>
+                  </div>
+                  <div className="dash-resp-right-side">
+                    <div className="dash-resp-badge"><span>{count}</span></div>
+                    {isOpen ? <ChevronDown size={16} style={{color:'#6b7280'}} /> : <ChevronRight size={16} style={{color:'#6b7280'}} />}
+                  </div>
+                </button>
+                {isOpen && (
+                  <div className="dash-person-tickets">
+                    {personTickets.length === 0 ? (
+                      <p className="dash-no-tickets">Nenhum chamado em aberto.</p>
+                    ) : (
+                      personTickets.map(t => (
+                        <div key={t.id} className="dash-ticket-mini">
+                          <div className="dash-ticket-mini-top">
+                            <span className="dash-ticket-id">{t.id}</span>
+                            <span className="dash-ticket-status">{t.status.replace(/-/g,' ')}</span>
+                          </div>
+                          <div className="dash-ticket-mini-info">
+                            <span><School size={11}/> {t.school}</span>
+                            <span><Tag size={11}/> {t.problemType || 'Sem tipo'}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="dash-resp-badge">
-                <span>{count}</span>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
@@ -280,7 +314,12 @@ export default function Dashboard() {
           gap: 10px;
         }
 
+        .dash-resp-wrapper {
+          animation: dashItemIn 0.4s ease-out both;
+        }
+
         .dash-resp-item {
+          width: 100%;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -289,8 +328,10 @@ export default function Dashboard() {
           border: 1px solid rgba(255, 255, 255, 0.05);
           border-radius: 14px;
           transition: all 0.3s ease;
-          animation: dashItemIn 0.4s ease-out both;
-          cursor: default;
+          cursor: pointer;
+          font-family: inherit;
+          color: inherit;
+          text-align: left;
         }
 
         .dash-resp-item:hover {
@@ -298,6 +339,13 @@ export default function Dashboard() {
           border-color: rgba(134, 239, 172, 0.15);
           transform: translateX(4px);
           box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        }
+
+        .dash-resp-active {
+          background: rgba(134, 239, 172, 0.05);
+          border-color: rgba(134, 239, 172, 0.2);
+          border-bottom-left-radius: 0;
+          border-bottom-right-radius: 0;
         }
 
         @keyframes dashItemIn {
@@ -309,6 +357,12 @@ export default function Dashboard() {
           display: flex;
           align-items: center;
           gap: 14px;
+        }
+
+        .dash-resp-right-side {
+          display: flex;
+          align-items: center;
+          gap: 10px;
         }
 
         .dash-resp-avatar {
@@ -368,6 +422,80 @@ export default function Dashboard() {
           font-size: 0.875rem;
           font-weight: 700;
           color: #86efac;
+        }
+
+        /* ── Expanded Tickets Panel ── */
+        .dash-person-tickets {
+          padding: 12px 16px 16px;
+          background: rgba(15, 15, 30, 0.4);
+          border: 1px solid rgba(134, 239, 172, 0.1);
+          border-top: none;
+          border-bottom-left-radius: 14px;
+          border-bottom-right-radius: 14px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          animation: dashFadeIn 0.25s ease-out;
+        }
+
+        .dash-no-tickets {
+          font-size: 0.8125rem;
+          color: #6b7280;
+          text-align: center;
+          padding: 12px;
+        }
+
+        .dash-ticket-mini {
+          padding: 10px 14px;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 10px;
+          transition: all 0.2s ease;
+        }
+
+        .dash-ticket-mini:hover {
+          background: rgba(255, 255, 255, 0.05);
+          border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .dash-ticket-mini-top {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 6px;
+        }
+
+        .dash-ticket-id {
+          font-size: 0.8125rem;
+          font-weight: 700;
+          color: #60a5fa;
+          font-family: 'JetBrains Mono', monospace;
+        }
+
+        .dash-ticket-status {
+          font-size: 0.6875rem;
+          font-weight: 600;
+          padding: 2px 8px;
+          border-radius: 6px;
+          background: rgba(139, 92, 246, 0.1);
+          color: #c4b5fd;
+          border: 1px solid rgba(139, 92, 246, 0.15);
+          text-transform: capitalize;
+        }
+
+        .dash-ticket-mini-info {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          flex-wrap: wrap;
+        }
+
+        .dash-ticket-mini-info span {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 0.75rem;
+          color: #9ca3af;
         }
       `}</style>
     </div>
