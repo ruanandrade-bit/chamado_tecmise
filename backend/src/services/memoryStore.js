@@ -16,7 +16,14 @@ function loadFromDisk() {
       const data = JSON.parse(raw)
       if (Array.isArray(data.tickets)) {
         console.log(`[store] 📁 Loaded ${data.tickets.length} tickets from disk.`)
-        return { tickets: data.tickets, notifications: data.notifications || [], monthlyReports: data.monthlyReports || {}, inventory: data.inventory || null, schoolData: data.schoolData || null }
+        return {
+          tickets: data.tickets,
+          notifications: data.notifications || [],
+          monthlyReports: data.monthlyReports || {},
+          inventory: data.inventory || null,
+          schoolData: data.schoolData || null,
+          professionals: Array.isArray(data.professionals) ? data.professionals : null
+        }
       }
     }
   } catch (err) {
@@ -34,6 +41,7 @@ function saveToDisk() {
       monthlyReports: state.monthlyReports,
       inventory: state.inventory,
       schoolData: state.schoolData,
+      professionals: state.professionals,
       _savedAt: new Date().toISOString()
     }, null, 2))
   } catch (err) {
@@ -69,7 +77,14 @@ async function loadFromMongo() {
     const doc = await mongoCollection.findOne({ _id: 'app_state' })
     if (doc && Array.isArray(doc.tickets)) {
       console.log(`[store] ☁️  Loaded ${doc.tickets.length} tickets from MongoDB.`)
-      return { tickets: doc.tickets, notifications: doc.notifications || [], monthlyReports: doc.monthlyReports || {}, inventory: doc.inventory || null, schoolData: doc.schoolData || null }
+      return {
+        tickets: doc.tickets,
+        notifications: doc.notifications || [],
+        monthlyReports: doc.monthlyReports || {},
+        inventory: doc.inventory || null,
+        schoolData: doc.schoolData || null,
+        professionals: Array.isArray(doc.professionals) ? doc.professionals : null
+      }
     }
   } catch (err) {
     console.warn('[store] ⚠️  Failed to load from MongoDB:', err.message)
@@ -88,6 +103,7 @@ function saveToMongo() {
       monthlyReports: state.monthlyReports,
       inventory: state.inventory,
       schoolData: state.schoolData,
+      professionals: state.professionals,
       _savedAt: new Date()
     },
     { upsert: true }
@@ -108,7 +124,8 @@ const state = {
   notifications: [],
   monthlyReports: {},   // key: "month-year" → { observations: [...] }
   inventory: null,      // will be initialized with defaults on first access
-  schoolData: null      // school→device→turma config, managed via admin panel
+  schoolData: null,     // school→device→turma config, managed via admin panel
+  professionals: null   // [{ id, name, role }], managed via admin panel
 }
 
 /**
@@ -128,12 +145,14 @@ export async function initStore() {
     state.monthlyReports = mongoData.monthlyReports
     if (mongoData.inventory) state.inventory = mongoData.inventory
     if (mongoData.schoolData) state.schoolData = mongoData.schoolData
+    if (mongoData.professionals) state.professionals = mongoData.professionals
   } else if (diskData) {
     state.tickets = diskData.tickets
     state.notifications = diskData.notifications
     state.monthlyReports = diskData.monthlyReports
     if (diskData.inventory) state.inventory = diskData.inventory
     if (diskData.schoolData) state.schoolData = diskData.schoolData
+    if (diskData.professionals) state.professionals = diskData.professionals
     // Seed MongoDB if it's empty but connected
     if (connected) {
       console.log('[store] 🔄 Syncing disk data to MongoDB...')
@@ -141,6 +160,11 @@ export async function initStore() {
     }
   } else {
     console.log('[store] 🆕 First run — seeding with mock data.')
+    persistState()
+  }
+
+  if (!Array.isArray(state.professionals) || state.professionals.length === 0) {
+    state.professionals = DEFAULT_PROFESSIONALS
     persistState()
   }
 }
@@ -563,6 +587,20 @@ export const memoryStore = {
     state.schoolData = newData
     persistState()
     return state.schoolData
+  },
+
+  getProfessionals() {
+    if (!Array.isArray(state.professionals) || state.professionals.length === 0) {
+      state.professionals = DEFAULT_PROFESSIONALS
+      persistState()
+    }
+    return state.professionals
+  },
+
+  setProfessionals(newList) {
+    state.professionals = Array.isArray(newList) ? newList : []
+    persistState()
+    return state.professionals
   }
 }
 
@@ -615,3 +653,11 @@ const DEFAULT_SCHOOL_DATA = {
     '061': ['5°Ano B', '2°Ano B'],
   },
 }
+
+const DEFAULT_PROFESSIONALS = Object.values(USERS)
+  .filter((user) => !user.viewOnly)
+  .map((user) => ({
+    id: `user-${user.id}`,
+    name: user.name,
+    role: user.role
+  }))

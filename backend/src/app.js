@@ -10,6 +10,7 @@ import reportsRoutes from './routes/reports.js'
 import devicesRoutes from './routes/devices.js'
 import inventoryRoutes from './routes/inventory.js'
 import schoolsRoutes from './routes/schools.js'
+import professionalsRoutes from './routes/professionals.js'
 
 const app = express()
 
@@ -51,6 +52,7 @@ app.use('/api/reports', reportsRoutes)
 app.use('/api/devices', devicesRoutes)
 app.use('/api/inventory', inventoryRoutes)
 app.use('/api/schools', schoolsRoutes)
+app.use('/api/professionals', professionalsRoutes)
 
 app.use((err, _req, res, _next) => {
   return res.status(500).json({

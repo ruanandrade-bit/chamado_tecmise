@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { FileText, Plus, Trash2, Send, CalendarDays, ClipboardList, Loader2, Ticket, Pencil, X, Check, AlertTriangle, ShieldAlert } from 'lucide-react'
+import { FileText, Plus, Trash2, Send, CalendarDays, ClipboardList, Loader2, Ticket, Pencil, X, Check, AlertTriangle, ShieldAlert, School, UserRound } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api } from '../services/api'
 
@@ -191,6 +191,8 @@ export default function MonthlyReport() {
   const [newObservation, setNewObservation] = useState('')
   const [newSchool, setNewSchool] = useState('')
   const [newAssignee, setNewAssignee] = useState('')
+  const [schoolOptions, setSchoolOptions] = useState([])
+  const [professionalOptions, setProfessionalOptions] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSending, setIsSending] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
@@ -233,6 +235,29 @@ export default function MonthlyReport() {
     const interval = setInterval(loadReport, 10000)
     return () => clearInterval(interval)
   }, [loadReport])
+
+  useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        const [schoolsData, professionalsData] = await Promise.all([
+          api.get('/schools'),
+          api.get('/professionals')
+        ])
+        const schools = Object.keys(schoolsData || {}).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+        const professionals = (professionalsData?.professionals || [])
+          .map((item) => String(item.name || '').trim())
+          .filter(Boolean)
+          .sort((a, b) => a.localeCompare(b, 'pt-BR'))
+
+        setSchoolOptions(schools)
+        setProfessionalOptions(professionals)
+      } catch (err) {
+        console.error('Erro ao carregar opções de colégio/profissional:', err)
+      }
+    }
+
+    loadOptions()
+  }, [])
 
   const handleAddObservation = async () => {
     if (!newObservation.trim() || isSending) return
@@ -419,22 +444,26 @@ export default function MonthlyReport() {
             }}
           />
           <div className="mr-optional-row">
-            <input
-              type="text"
+            <select
               value={newSchool}
               onChange={(e) => setNewSchool(e.target.value)}
-              placeholder="Colégio (opcional) - ex: Cemma"
-              className="mr-optional-input"
-              maxLength={42}
-            />
-            <input
-              type="text"
+              className="mr-optional-input mr-optional-select"
+            >
+              <option value="">Colégio (opcional)</option>
+              {schoolOptions.map((school) => (
+                <option key={school} value={school}>{school}</option>
+              ))}
+            </select>
+            <select
               value={newAssignee}
               onChange={(e) => setNewAssignee(e.target.value)}
-              placeholder="Pessoa responsável (opcional)"
-              className="mr-optional-input"
-              maxLength={42}
-            />
+              className="mr-optional-input mr-optional-select"
+            >
+              <option value="">Pessoa responsável (opcional)</option>
+              {professionalOptions.map((person) => (
+                <option key={person} value={person}>{person}</option>
+              ))}
+            </select>
           </div>
           <div className="mr-add-footer">
             <span className="mr-add-hint">Ctrl + Enter para enviar</span>
@@ -482,9 +511,6 @@ export default function MonthlyReport() {
         <div className="mr-obs-list">
           {observations.map((obs, index) => {
             const isEditing = editingId === obs.id
-            const metaParts = [formatDate(obs.createdAt)]
-            if (obs.school) metaParts.push(obs.school)
-            if (obs.assignee) metaParts.push(obs.assignee)
 
             return (
               <div
@@ -501,37 +527,57 @@ export default function MonthlyReport() {
                     {/* Observation number badge + meta */}
                     <div className="mr-obs-meta">
                       <span className="mr-obs-badge">{index + 1}</span>
-                      <span className="mr-obs-meta-text">
-                        {metaParts.join(' • ')}
-                        {obs.editedAt && (
-                          <span className="mr-obs-edited">
-                            <Pencil size={8} />
-                            editado
-                          </span>
-                        )}
-                      </span>
+                      <span className="mr-obs-meta-text">{formatDate(obs.createdAt)}</span>
+                      {obs.school && (
+                        <span className="mr-obs-chip mr-obs-chip-school">
+                          <School size={11} />
+                          {obs.school}
+                        </span>
+                      )}
+                      {obs.assignee && (
+                        <span className="mr-obs-chip mr-obs-chip-person">
+                          <UserRound size={11} />
+                          {obs.assignee}
+                        </span>
+                      )}
+                      {obs.editedAt && (
+                        <span className="mr-obs-edited">
+                          <Pencil size={8} />
+                          editado
+                        </span>
+                      )}
                     </div>
 
                     {/* Observation text or edit textarea */}
                     {isEditing ? (
                       <div className="mr-obs-edit-area">
                         <div className="mr-optional-row">
-                          <input
-                            type="text"
+                          <select
                             value={editSchool}
                             onChange={(e) => setEditSchool(e.target.value)}
-                            placeholder="Colégio (opcional)"
-                            className="mr-optional-input"
-                            maxLength={42}
-                          />
-                          <input
-                            type="text"
+                            className="mr-optional-input mr-optional-select"
+                          >
+                            <option value="">Colégio (opcional)</option>
+                            {editSchool && !schoolOptions.includes(editSchool) && (
+                              <option value={editSchool}>{editSchool}</option>
+                            )}
+                            {schoolOptions.map((school) => (
+                              <option key={school} value={school}>{school}</option>
+                            ))}
+                          </select>
+                          <select
                             value={editAssignee}
                             onChange={(e) => setEditAssignee(e.target.value)}
-                            placeholder="Pessoa responsável (opcional)"
-                            className="mr-optional-input"
-                            maxLength={42}
-                          />
+                            className="mr-optional-input mr-optional-select"
+                          >
+                            <option value="">Pessoa responsável (opcional)</option>
+                            {editAssignee && !professionalOptions.includes(editAssignee) && (
+                              <option value={editAssignee}>{editAssignee}</option>
+                            )}
+                            {professionalOptions.map((person) => (
+                              <option key={person} value={person}>{person}</option>
+                            ))}
+                          </select>
                         </div>
                         <textarea
                           ref={editTextareaRef}
@@ -971,6 +1017,21 @@ export default function MonthlyReport() {
           background: rgba(255, 255, 255, 0.06);
         }
 
+        .mr-optional-select {
+          appearance: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          background-image: linear-gradient(45deg, transparent 50%, #6b7280 50%), linear-gradient(135deg, #6b7280 50%, transparent 50%);
+          background-position: calc(100% - 16px) calc(50% - 3px), calc(100% - 10px) calc(50% - 3px);
+          background-size: 6px 6px, 6px 6px;
+          background-repeat: no-repeat;
+          padding-right: 30px;
+        }
+
+        .mr-optional-select option {
+          color: #0f172a;
+        }
+
         .mr-add-footer {
           display: flex;
           align-items: center;
@@ -1150,6 +1211,30 @@ export default function MonthlyReport() {
         .mr-obs-meta-text {
           font-size: 0.75rem;
           color: #6b7280;
+        }
+
+        .mr-obs-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 4px 9px;
+          border-radius: 999px;
+          font-size: 0.6875rem;
+          font-weight: 700;
+          letter-spacing: 0.01em;
+          line-height: 1;
+        }
+
+        .mr-obs-chip-school {
+          color: #93c5fd;
+          background: rgba(59, 130, 246, 0.14);
+          border: 1px solid rgba(59, 130, 246, 0.28);
+        }
+
+        .mr-obs-chip-person {
+          color: #86efac;
+          background: rgba(34, 197, 94, 0.14);
+          border: 1px solid rgba(34, 197, 94, 0.28);
         }
 
         .mr-obs-edited {

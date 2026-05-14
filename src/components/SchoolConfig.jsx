@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Settings, School, Cpu, BookOpen, Plus, Trash2, Save, Loader2, AlertTriangle, ChevronDown, ChevronRight, ShieldAlert, Pencil, Check } from 'lucide-react'
+import { Settings, School, Cpu, BookOpen, Plus, Trash2, Save, Loader2, AlertTriangle, ChevronDown, ChevronRight, ShieldAlert, Pencil, Check, Briefcase, Users } from 'lucide-react'
 import { api } from '../services/api'
 
 export default function SchoolConfig() {
   const [schoolData, setSchoolData] = useState({})
+  const [professionals, setProfessionals] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [hasChanges, setHasChanges] = useState(false)
+  const [activeSection, setActiveSection] = useState('schools')
   const [expandedSchool, setExpandedSchool] = useState(null)
 
   // New school / device inputs
@@ -16,6 +18,13 @@ export default function SchoolConfig() {
 
   // Editing device state: { school, oldId, newId }
   const [editingDevice, setEditingDevice] = useState(null)
+
+  // Professionals
+  const [newProfessionalName, setNewProfessionalName] = useState('')
+  const [newProfessionalRole, setNewProfessionalRole] = useState('')
+  const [editingProfessionalId, setEditingProfessionalId] = useState(null)
+  const [editingProfessionalName, setEditingProfessionalName] = useState('')
+  const [editingProfessionalRole, setEditingProfessionalRole] = useState('')
 
   // Confirm delete modal state: { type: 'school'|'device'|'turma', label, action }
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -31,8 +40,12 @@ export default function SchoolConfig() {
 
   const loadData = useCallback(async () => {
     try {
-      const data = await api.get('/schools')
-      setSchoolData(data || {})
+      const [schoolsResponse, professionalsResponse] = await Promise.all([
+        api.get('/schools'),
+        api.get('/professionals')
+      ])
+      setSchoolData(schoolsResponse || {})
+      setProfessionals(professionalsResponse?.professionals || [])
     } catch (err) {
       console.error('Erro ao carregar escolas:', err)
     } finally {
@@ -46,8 +59,12 @@ export default function SchoolConfig() {
     if (isSaving) return
     setIsSaving(true)
     try {
-      const updated = await api.put('/schools', { schoolData })
-      setSchoolData(updated)
+      const [updatedSchools, updatedProfessionals] = await Promise.all([
+        api.put('/schools', { schoolData }),
+        api.put('/professionals', { professionals })
+      ])
+      setSchoolData(updatedSchools || {})
+      setProfessionals(updatedProfessionals?.professionals || [])
       setHasChanges(false)
     } catch (err) {
       alert(err.message || 'Erro ao salvar configuração.')
@@ -155,6 +172,53 @@ export default function SchoolConfig() {
     setHasChanges(true)
   }
 
+  // ── Professionals actions ──
+  const addProfessional = () => {
+    const name = newProfessionalName.trim()
+    const role = newProfessionalRole.trim()
+    if (!name || !role) return
+
+    const duplicated = professionals.some((p) => p.name.toLowerCase() === name.toLowerCase() && p.role.toLowerCase() === role.toLowerCase())
+    if (duplicated) return
+
+    const id = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+    setProfessionals((prev) => [...prev, { id, name, role }])
+    setNewProfessionalName('')
+    setNewProfessionalRole('')
+    setHasChanges(true)
+  }
+
+  const removeProfessional = (id) => {
+    setProfessionals((prev) => prev.filter((p) => p.id !== id))
+    if (editingProfessionalId === id) {
+      setEditingProfessionalId(null)
+      setEditingProfessionalName('')
+      setEditingProfessionalRole('')
+    }
+    setHasChanges(true)
+  }
+
+  const startEditProfessional = (item) => {
+    setEditingProfessionalId(item.id)
+    setEditingProfessionalName(item.name)
+    setEditingProfessionalRole(item.role)
+  }
+
+  const confirmEditProfessional = () => {
+    if (!editingProfessionalId) return
+    const name = editingProfessionalName.trim()
+    const role = editingProfessionalRole.trim()
+    if (!name || !role) return
+
+    setProfessionals((prev) => prev.map((p) => (
+      p.id === editingProfessionalId ? { ...p, name, role } : p
+    )))
+    setEditingProfessionalId(null)
+    setEditingProfessionalName('')
+    setEditingProfessionalRole('')
+    setHasChanges(true)
+  }
+
   const schoolNames = Object.keys(schoolData)
 
   if (isLoading) {
@@ -177,8 +241,8 @@ export default function SchoolConfig() {
           <Settings size={22} style={{ color: '#86efac' }} />
         </div>
         <div style={{ flex: 1 }}>
-          <h1 className="sc-page-title">Configurações de Escolas</h1>
-          <p className="sc-page-subtitle">Gerencie escolas, devices e turmas</p>
+          <h1 className="sc-page-title">Configurações</h1>
+          <p className="sc-page-subtitle">Gerencie escolas, devices, turmas e profissionais</p>
         </div>
         {hasChanges && (
           <button className="sc-save-btn" onClick={handleSave} disabled={isSaving}>
@@ -199,157 +263,254 @@ export default function SchoolConfig() {
         </div>
       )}
 
-      {/* Add school */}
-      <div className="sc-add-bar">
-        <School size={16} style={{ color: '#86efac' }} />
-        <input
-          className="sc-input"
-          placeholder="Nome da nova escola..."
-          value={newSchoolName}
-          onChange={(e) => setNewSchoolName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && addSchool()}
-        />
-        <button className="sc-add-btn" onClick={addSchool} disabled={!newSchoolName.trim()}>
-          <Plus size={14} /> Adicionar Escola
+      <div className="sc-section-switcher">
+        <button
+          className={`sc-section-btn ${activeSection === 'schools' ? 'sc-section-btn-active' : ''}`}
+          onClick={() => setActiveSection('schools')}
+        >
+          <School size={14} />
+          Escolas
+        </button>
+        <button
+          className={`sc-section-btn ${activeSection === 'professionals' ? 'sc-section-btn-active' : ''}`}
+          onClick={() => setActiveSection('professionals')}
+        >
+          <Users size={14} />
+          Outros Profissionais
         </button>
       </div>
 
-      {/* Schools list */}
-      <div className="sc-schools-list">
-        {schoolNames.length === 0 ? (
-          <div className="sc-empty">
-            <School size={28} style={{ color: '#4b5563' }} />
-            <p>Nenhuma escola configurada ainda.</p>
+      {activeSection === 'schools' ? (
+        <>
+          {/* Add school */}
+          <div className="sc-add-bar">
+            <School size={16} style={{ color: '#86efac' }} />
+            <input
+              className="sc-input"
+              placeholder="Nome da nova escola..."
+              value={newSchoolName}
+              onChange={(e) => setNewSchoolName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addSchool()}
+            />
+            <button className="sc-add-btn" onClick={addSchool} disabled={!newSchoolName.trim()}>
+              <Plus size={14} /> Adicionar Escola
+            </button>
           </div>
-        ) : (
-          schoolNames.map(schoolName => {
-            const devices = schoolData[schoolName] || {}
-            const deviceIds = Object.keys(devices)
-            const isExpanded = expandedSchool === schoolName
-            const totalTurmas = deviceIds.reduce((sum, d) => sum + (devices[d]?.length || 0), 0)
 
-            return (
-              <div key={schoolName} className={`sc-school-card ${isExpanded ? 'sc-school-expanded' : ''}`}>
-                {/* School header */}
-                <div className="sc-school-header" onClick={() => setExpandedSchool(isExpanded ? null : schoolName)}>
-                  <div className="sc-school-toggle">
-                    {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                  </div>
-                  <div className="sc-school-info">
-                    <h3 className="sc-school-name">{schoolName}</h3>
-                    <div className="sc-school-badges">
-                      <span className="sc-badge sc-badge-device"><Cpu size={10} /> {deviceIds.length} device{deviceIds.length !== 1 ? 's' : ''}</span>
-                      <span className="sc-badge sc-badge-turma"><BookOpen size={10} /> {totalTurmas} turma{totalTurmas !== 1 ? 's' : ''}</span>
-                    </div>
-                  </div>
-                  <button
-                    className="sc-remove-btn"
-                    onClick={(e) => { e.stopPropagation(); requestDelete('escola', schoolName, () => removeSchool(schoolName)) }}
-                    title="Remover escola"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
+          {/* Schools list */}
+          <div className="sc-schools-list">
+            {schoolNames.length === 0 ? (
+              <div className="sc-empty">
+                <School size={28} style={{ color: '#4b5563' }} />
+                <p>Nenhuma escola configurada ainda.</p>
+              </div>
+            ) : (
+              schoolNames.map(schoolName => {
+                const devices = schoolData[schoolName] || {}
+                const deviceIds = Object.keys(devices)
+                const isExpanded = expandedSchool === schoolName
+                const totalTurmas = deviceIds.reduce((sum, d) => sum + (devices[d]?.length || 0), 0)
 
-                {/* Expanded content */}
-                {isExpanded && (
-                  <div className="sc-school-body">
-                    {/* Add device */}
-                    <div className="sc-add-inline">
-                      <Cpu size={14} style={{ color: '#60a5fa', flexShrink: 0 }} />
-                      <input
-                        className="sc-input sc-input-sm"
-                        placeholder="Nº do device..."
-                        value={newDeviceInputs[schoolName] || ''}
-                        onChange={(e) => setNewDeviceInputs(prev => ({ ...prev, [schoolName]: e.target.value }))}
-                        onKeyDown={(e) => e.key === 'Enter' && addDevice(schoolName)}
-                      />
-                      <button className="sc-add-btn sc-add-btn-sm" onClick={() => addDevice(schoolName)}>
-                        <Plus size={12} /> Device
+                return (
+                  <div key={schoolName} className={`sc-school-card ${isExpanded ? 'sc-school-expanded' : ''}`}>
+                    {/* School header */}
+                    <div className="sc-school-header" onClick={() => setExpandedSchool(isExpanded ? null : schoolName)}>
+                      <div className="sc-school-toggle">
+                        {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                      </div>
+                      <div className="sc-school-info">
+                        <h3 className="sc-school-name">{schoolName}</h3>
+                        <div className="sc-school-badges">
+                          <span className="sc-badge sc-badge-device"><Cpu size={10} /> {deviceIds.length} device{deviceIds.length !== 1 ? 's' : ''}</span>
+                          <span className="sc-badge sc-badge-turma"><BookOpen size={10} /> {totalTurmas} turma{totalTurmas !== 1 ? 's' : ''}</span>
+                        </div>
+                      </div>
+                      <button
+                        className="sc-remove-btn"
+                        onClick={(e) => { e.stopPropagation(); requestDelete('escola', schoolName, () => removeSchool(schoolName)) }}
+                        title="Remover escola"
+                      >
+                        <Trash2 size={14} />
                       </button>
                     </div>
 
-                    {/* Devices grid */}
-                    {deviceIds.length === 0 ? (
-                      <p className="sc-hint">Nenhum device cadastrado nesta escola.</p>
-                    ) : (
-                      <div className="sc-devices-grid">
-                        {deviceIds.map(deviceId => {
-                          const turmas = devices[deviceId] || []
-                          const turmaKey = `${schoolName}|${deviceId}`
+                    {/* Expanded content */}
+                    {isExpanded && (
+                      <div className="sc-school-body">
+                        {/* Add device */}
+                        <div className="sc-add-inline">
+                          <Cpu size={14} style={{ color: '#60a5fa', flexShrink: 0 }} />
+                          <input
+                            className="sc-input sc-input-sm"
+                            placeholder="Nº do device..."
+                            value={newDeviceInputs[schoolName] || ''}
+                            onChange={(e) => setNewDeviceInputs(prev => ({ ...prev, [schoolName]: e.target.value }))}
+                            onKeyDown={(e) => e.key === 'Enter' && addDevice(schoolName)}
+                          />
+                          <button className="sc-add-btn sc-add-btn-sm" onClick={() => addDevice(schoolName)}>
+                            <Plus size={12} /> Device
+                          </button>
+                        </div>
 
-                          return (
-                            <div key={deviceId} className="sc-device-card">
-                              <div className="sc-device-header">
-                                {editingDevice?.school === schoolName && editingDevice?.oldId === deviceId ? (
-                                  <div className="sc-edit-inline">
+                        {/* Devices grid */}
+                        {deviceIds.length === 0 ? (
+                          <p className="sc-hint">Nenhum device cadastrado nesta escola.</p>
+                        ) : (
+                          <div className="sc-devices-grid">
+                            {deviceIds.map(deviceId => {
+                              const turmas = devices[deviceId] || []
+                              const turmaKey = `${schoolName}|${deviceId}`
+
+                              return (
+                                <div key={deviceId} className="sc-device-card">
+                                  <div className="sc-device-header">
+                                    {editingDevice?.school === schoolName && editingDevice?.oldId === deviceId ? (
+                                      <div className="sc-edit-inline">
+                                        <input
+                                          className="sc-input sc-input-xs sc-edit-input"
+                                          value={editingDevice.newId}
+                                          onChange={e => setEditingDevice(prev => ({ ...prev, newId: e.target.value }))}
+                                          onKeyDown={e => { if (e.key === 'Enter') confirmEditDevice(); if (e.key === 'Escape') setEditingDevice(null) }}
+                                          autoFocus
+                                        />
+                                        <button className="sc-edit-confirm" onClick={confirmEditDevice} title="Confirmar">
+                                          <Check size={12} />
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <span className="sc-device-id">{deviceId}</span>
+                                    )}
+                                    <div className="sc-device-actions">
+                                      <button
+                                        className="sc-remove-btn sc-remove-btn-sm"
+                                        onClick={() => startEditDevice(schoolName, deviceId)}
+                                        title="Editar device"
+                                      >
+                                        <Pencil size={12} />
+                                      </button>
+                                      <button
+                                        className="sc-remove-btn sc-remove-btn-sm"
+                                        onClick={() => requestDelete('device', `${deviceId} (${schoolName})`, () => removeDevice(schoolName, deviceId))}
+                                        title="Remover device"
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Turmas */}
+                                  <div className="sc-turmas-list">
+                                    {turmas.map((turma, i) => (
+                                      <div key={i} className="sc-turma-tag">
+                                        <span>{turma}</span>
+                                        <button className="sc-turma-remove" onClick={() => requestDelete('turma', `${turma} (device ${deviceId})`, () => removeTurma(schoolName, deviceId, i))}>×</button>
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  {/* Add turma */}
+                                  <div className="sc-add-turma">
                                     <input
-                                      className="sc-input sc-input-xs sc-edit-input"
-                                      value={editingDevice.newId}
-                                      onChange={e => setEditingDevice(prev => ({ ...prev, newId: e.target.value }))}
-                                      onKeyDown={e => { if (e.key === 'Enter') confirmEditDevice(); if (e.key === 'Escape') setEditingDevice(null) }}
-                                      autoFocus
+                                      className="sc-input sc-input-xs"
+                                      placeholder="Nova turma..."
+                                      value={newTurmaInputs[turmaKey] || ''}
+                                      onChange={(e) => setNewTurmaInputs(prev => ({ ...prev, [turmaKey]: e.target.value }))}
+                                      onKeyDown={(e) => e.key === 'Enter' && addTurma(schoolName, deviceId)}
                                     />
-                                    <button className="sc-edit-confirm" onClick={confirmEditDevice} title="Confirmar">
-                                      <Check size={12} />
+                                    <button className="sc-add-turma-btn" onClick={() => addTurma(schoolName, deviceId)}>
+                                      <Plus size={10} />
                                     </button>
                                   </div>
-                                ) : (
-                                  <span className="sc-device-id">{deviceId}</span>
-                                )}
-                                <div className="sc-device-actions">
-                                  <button
-                                    className="sc-remove-btn sc-remove-btn-sm"
-                                    onClick={() => startEditDevice(schoolName, deviceId)}
-                                    title="Editar device"
-                                  >
-                                    <Pencil size={12} />
-                                  </button>
-                                  <button
-                                    className="sc-remove-btn sc-remove-btn-sm"
-                                    onClick={() => requestDelete('device', `${deviceId} (${schoolName})`, () => removeDevice(schoolName, deviceId))}
-                                    title="Remover device"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
                                 </div>
-                              </div>
-
-                              {/* Turmas */}
-                              <div className="sc-turmas-list">
-                                {turmas.map((turma, i) => (
-                                  <div key={i} className="sc-turma-tag">
-                                    <span>{turma}</span>
-                                    <button className="sc-turma-remove" onClick={() => requestDelete('turma', `${turma} (device ${deviceId})`, () => removeTurma(schoolName, deviceId, i))}>×</button>
-                                  </div>
-                                ))}
-                              </div>
-
-                              {/* Add turma */}
-                              <div className="sc-add-turma">
-                                <input
-                                  className="sc-input sc-input-xs"
-                                  placeholder="Nova turma..."
-                                  value={newTurmaInputs[turmaKey] || ''}
-                                  onChange={(e) => setNewTurmaInputs(prev => ({ ...prev, [turmaKey]: e.target.value }))}
-                                  onKeyDown={(e) => e.key === 'Enter' && addTurma(schoolName, deviceId)}
-                                />
-                                <button className="sc-add-turma-btn" onClick={() => addTurma(schoolName, deviceId)}>
-                                  <Plus size={10} />
-                                </button>
-                              </div>
-                            </div>
-                          )
-                        })}
+                              )
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                )}
+                )
+              })
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="sc-add-bar">
+            <Briefcase size={16} style={{ color: '#86efac' }} />
+            <input
+              className="sc-input"
+              placeholder="Nome do profissional..."
+              value={newProfessionalName}
+              onChange={(e) => setNewProfessionalName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addProfessional()}
+            />
+            <input
+              className="sc-input"
+              placeholder="Cargo..."
+              value={newProfessionalRole}
+              onChange={(e) => setNewProfessionalRole(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addProfessional()}
+            />
+            <button className="sc-add-btn" onClick={addProfessional} disabled={!newProfessionalName.trim() || !newProfessionalRole.trim()}>
+              <Plus size={14} /> Adicionar Profissional
+            </button>
+          </div>
+
+          <div className="sc-prof-list">
+            {professionals.length === 0 ? (
+              <div className="sc-empty">
+                <Users size={28} style={{ color: '#4b5563' }} />
+                <p>Nenhum profissional cadastrado ainda.</p>
               </div>
-            )
-          })
-        )}
-      </div>
+            ) : (
+              professionals.map((item) => (
+                <div key={item.id} className="sc-prof-card">
+                  {editingProfessionalId === item.id ? (
+                    <div className="sc-prof-edit-row">
+                      <input
+                        className="sc-input sc-input-sm"
+                        value={editingProfessionalName}
+                        onChange={(e) => setEditingProfessionalName(e.target.value)}
+                        placeholder="Nome"
+                      />
+                      <input
+                        className="sc-input sc-input-sm"
+                        value={editingProfessionalRole}
+                        onChange={(e) => setEditingProfessionalRole(e.target.value)}
+                        placeholder="Cargo"
+                      />
+                      <button className="sc-edit-confirm" onClick={confirmEditProfessional} title="Confirmar">
+                        <Check size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="sc-prof-main">
+                      <div className="sc-prof-avatar"><Users size={14} /></div>
+                      <div className="sc-prof-info">
+                        <h4 className="sc-prof-name">{item.name}</h4>
+                        <p className="sc-prof-role">{item.role}</p>
+                      </div>
+                      <div className="sc-prof-actions">
+                        <button className="sc-remove-btn sc-remove-btn-sm" onClick={() => startEditProfessional(item)} title="Editar profissional">
+                          <Pencil size={12} />
+                        </button>
+                        <button
+                          className="sc-remove-btn sc-remove-btn-sm"
+                          onClick={() => requestDelete('profissional', `${item.name} (${item.role})`, () => removeProfessional(item.id))}
+                          title="Remover profissional"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
 
       {/* Confirm Delete Modal */}
       {deleteTarget && (
@@ -471,6 +632,43 @@ const baseStyles = `
     font-size: 0.8125rem;
   }
 
+  .sc-section-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px;
+    border-radius: 14px;
+    background: rgba(15, 15, 30, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    width: fit-content;
+  }
+
+  .sc-section-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .sc-section-btn:hover {
+    color: #d1d5db;
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .sc-section-btn-active {
+    color: #86efac;
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.25);
+  }
+
   /* ── Add bar ── */
   .sc-add-bar {
     display: flex;
@@ -527,6 +725,69 @@ const baseStyles = `
   .sc-add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
   .sc-add-btn-sm { padding: 7px 12px; font-size: 0.75rem; }
+
+  .sc-prof-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .sc-prof-card {
+    padding: 14px;
+    background: rgba(15, 15, 30, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 14px;
+  }
+
+  .sc-prof-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .sc-prof-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #86efac;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    flex-shrink: 0;
+  }
+
+  .sc-prof-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .sc-prof-name {
+    color: #f3f4f6;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  .sc-prof-role {
+    color: #9ca3af;
+    font-size: 0.8rem;
+    margin-top: 2px;
+  }
+
+  .sc-prof-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .sc-prof-edit-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 8px;
+    align-items: center;
+  }
 
   /* ── Loading / Empty ── */
   .sc-loading, .sc-empty {
@@ -916,5 +1177,19 @@ const baseStyles = `
   .sc-modal-confirm:hover {
     box-shadow: 0 6px 24px rgba(239,68,68,0.35);
     transform: translateY(-1px);
+  }
+
+  @media (max-width: 860px) {
+    .sc-add-bar {
+      flex-wrap: wrap;
+    }
+
+    .sc-add-bar .sc-input {
+      min-width: 220px;
+    }
+
+    .sc-prof-edit-row {
+      grid-template-columns: 1fr;
+    }
   }
 `
