@@ -105,6 +105,14 @@ export default function DevicesOnline() {
     return { online, total: devices.length }
   }
 
+  const backendStatusMessage = data?.error
+    ? { type: 'error', text: `Falha ao consultar Tailscale: ${data.error}` }
+    : data?.warning
+      ? { type: 'warning', text: data.warning }
+      : data?.stale
+        ? { type: 'warning', text: 'Exibindo cache anterior por falha temporária ao consultar o Tailscale.' }
+        : null
+
   return (
     <div className="dvo-container">
       {/* Header */}
@@ -147,6 +155,11 @@ export default function DevicesOnline() {
                 ? `Atualizado ${formatLastSeen(data.lastFetched)}`
                 : 'Sem dados'}
             </span>
+            {typeof data.matchedDeviceCount === 'number' && (
+              <span className="dvo-match-badge">
+                Relacionados {data.matchedDeviceCount}/{data.totalDevices}
+              </span>
+            )}
             {isWorkingHours() && (
               <span className="dvo-auto-badge">Auto 10min</span>
             )}
@@ -180,6 +193,13 @@ export default function DevicesOnline() {
         <div className="dvo-error">
           <WifiOff size={16} />
           <span>{error}</span>
+        </div>
+      )}
+
+      {!error && backendStatusMessage && (
+        <div className={`dvo-api-status dvo-api-status-${backendStatusMessage.type}`}>
+          <AlertTriangle size={14} />
+          <span>{backendStatusMessage.text}</span>
         </div>
       )}
 
@@ -400,6 +420,17 @@ export default function DevicesOnline() {
           color: #6b7280;
         }
 
+        .dvo-match-badge {
+          padding: 3px 8px;
+          border-radius: 999px;
+          border: 1px solid rgba(96, 165, 250, 0.35);
+          background: rgba(37, 99, 235, 0.16);
+          color: #bfdbfe;
+          font-size: 0.625rem;
+          font-weight: 600;
+          letter-spacing: 0.01em;
+        }
+
         .dvo-auto-badge {
           padding: 2px 8px;
           border-radius: 6px;
@@ -482,6 +513,29 @@ export default function DevicesOnline() {
           border-radius: 12px;
           color: #fca5a5;
           font-size: 0.8125rem;
+        }
+
+        .dvo-api-status {
+          display: flex;
+          align-items: flex-start;
+          gap: 8px;
+          padding: 10px 14px;
+          border-radius: 12px;
+          border: 1px solid;
+          font-size: 0.8125rem;
+          line-height: 1.35;
+        }
+
+        .dvo-api-status-warning {
+          background: rgba(245, 158, 11, 0.08);
+          border-color: rgba(245, 158, 11, 0.35);
+          color: #fcd34d;
+        }
+
+        .dvo-api-status-error {
+          background: rgba(239, 68, 68, 0.1);
+          border-color: rgba(239, 68, 68, 0.35);
+          color: #fca5a5;
         }
 
         /* ── Schools List ── */

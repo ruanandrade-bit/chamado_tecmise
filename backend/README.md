@@ -16,8 +16,26 @@ API disponível em: `http://localhost:4000`
 ## Variáveis de ambiente
 
 - `PORT`: porta do backend (padrão `4000`)
-- `JWT_SECRET`: segredo do token JWT
+- `JWT_SECRET`: segredo do token JWT (mínimo 32 caracteres)
 - `CORS_ORIGIN`: origens permitidas, separadas por vírgula
+- `TAILSCALE_API_KEY`: chave da API do Tailscale (prefixo `tskey-api-...`) para tela Devices Online
+- `TAILSCALE_TAILNET`: tailnet para consulta da API (`-` usa a tailnet padrão da chave)
+
+### Render (produção)
+
+Se o log mostrar `JWT_SECRET ausente ou fraco`, o backend funciona, mas os tokens podem ser invalidados após reinício.
+
+Defina uma chave forte no painel **Environment** do Render:
+
+```bash
+openssl rand -base64 48
+```
+
+Use o valor gerado em `JWT_SECRET`.
+
+Se a tela **Devices Online** mostrar tudo offline/“não existe no Tailscale”, valide no Render:
+- `TAILSCALE_API_KEY` configurada
+- `TAILSCALE_TAILNET` correta (ou `-`)
 
 ## Endpoints principais
 
@@ -34,6 +52,8 @@ API disponível em: `http://localhost:4000`
 - `POST /api/tickets/:id/checklist` (apenas admin)
 - `GET /api/notifications` (`?since=ISO_DATE|timestamp&limit=50`)
 - `POST /api/notifications`
+- `GET /api/devices/status`
+- `POST /api/devices/refresh`
 
 ## Observação importante
 

@@ -13,6 +13,10 @@ import schoolsRoutes from './routes/schools.js'
 import professionalsRoutes from './routes/professionals.js'
 
 const app = express()
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+
+app.disable('x-powered-by')
+app.set('trust proxy', 1)
 
 const DEFAULT_ALLOWED_ORIGINS = [
   'http://localhost:3000',
@@ -51,7 +55,23 @@ function isOriginAllowed(origin) {
   return effectiveAllowedOrigins.some((rule) => matchesOriginRule(origin, rule))
 }
 
-function createRateLimiter({ windowMs, max, keyPrefix, methods = null, ignorePaths = null }) {
+function getClientIp(req) {
+  const forwarded = String(req.headers['x-forwarded-for'] || '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)[0]
+
+  return forwarded || req.ip || 'unknown'
+}
+
+function createRateLimiter({
+  windowMs,
+  max,
+  keyPrefix,
+  methods = null,
+  ignorePaths = null,
+  resolveSubject = null
+}) {
   const hits = new Map()
   let requestCounter = 0
 
@@ -60,7 +80,13 @@ function createRateLimiter({ windowMs, max, keyPrefix, methods = null, ignorePat
     if (ignorePaths && ignorePaths.has(req.path)) return next()
 
     const now = Date.now()
-    const key = `${keyPrefix}:${req.ip}`
+    const clientIp = getClientIp(req)
+    const subject = typeof resolveSubject === 'function'
+      ? String(resolveSubject(req) || '').trim().toLowerCase()
+      : ''
+    const key = subject
+      ? `${keyPrefix}:${clientIp}:${subject}`
+      : `${keyPrefix}:${clientIp}`
     const entry = hits.get(key)
 
     if (!entry || now - entry.startedAt >= windowMs) {
@@ -93,16 +119,30 @@ app.use(cors({
     if (isOriginAllowed(origin)) {
       return callback(null, true)
     }
-    return callback(new Error('Origin não permitida no CORS.'))
+    const error = new Error('Origin não permitida no CORS.')
+    error.status = 403
+    return callback(error)
   }
 }))
+
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('X-Frame-Options', 'DENY')
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+  if (IS_PRODUCTION) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+  }
+  next()
+})
 
 app.use(express.json({ limit: '5mb' }))
 app.use(morgan('dev'))
 app.use('/api/auth/login', createRateLimiter({
   windowMs: 10 * 60 * 1000,
   max: 10,
-  keyPrefix: 'login'
+  keyPrefix: 'login',
+  resolveSubject: (req) => req.body?.email
 }))
 app.use('/api', createRateLimiter({
   windowMs: 60 * 1000,
@@ -131,8 +171,14 @@ app.use('/api/schools', schoolsRoutes)
 app.use('/api/professionals', professionalsRoutes)
 
 app.use((err, _req, res, _next) => {
-  return res.status(500).json({
-    message: err.message || 'Erro interno do servidor.'
+  const status = Number.isInteger(err?.status) ? err.status : 500
+  const isServerError = status >= 500
+  const safeMessage = (IS_PRODUCTION && isServerError)
+    ? 'Erro interno do servidor.'
+    : (err?.message || 'Erro interno do servidor.')
+
+  return res.status(status).json({
+    message: safeMessage
   })
 })
 

@@ -387,6 +387,8 @@ PORT=4000
 JWT_SECRET=<sua-secret-segura>
 CORS_ORIGIN=http://localhost:3000
 MONGODB_URI=mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/s4s_chamados
+TAILSCALE_API_KEY=tskey-api-xxxx
+TAILSCALE_TAILNET=-
 
 # Frontend (build time)
 VITE_API_URL=http://localhost:4000/api
@@ -400,6 +402,13 @@ VITE_API_URL=http://localhost:4000/api
 - **Frontend**: Vercel (`chamdo-tecmise.vercel.app`)
 - **Backend**: Render (`chamado-tecmise.onrender.com`)
 - **Banco**: MongoDB Atlas
+
+### Variáveis obrigatórias no Render (Backend)
+- `JWT_SECRET` com 32+ caracteres (recomendado: `openssl rand -base64 48`)
+- `MONGODB_URI` apontando para o Atlas
+- `CORS_ORIGIN` incluindo o domínio do frontend (ex: `https://chamdo-tecmise.vercel.app`)
+- `TAILSCALE_API_KEY` para tela Devices Online
+- `TAILSCALE_TAILNET` (`-` ou nome explícito da tailnet)
 
 ---
 

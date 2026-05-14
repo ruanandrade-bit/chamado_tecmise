@@ -5,14 +5,23 @@ import { USERS } from '../data/mockData.js'
 const configuredJwtSecret = String(process.env.JWT_SECRET || '').trim()
 const MIN_JWT_SECRET_LENGTH = 32
 let JWT_SECRET = configuredJwtSecret
+const isStrongJwtSecret = configuredJwtSecret.length >= MIN_JWT_SECRET_LENGTH
 
-if (JWT_SECRET.length < MIN_JWT_SECRET_LENGTH) {
+if (!isStrongJwtSecret) {
   JWT_SECRET = randomBytes(48).toString('hex')
+  const logPrefix = process.env.NODE_ENV === 'production' ? '[auth] ❗' : '[auth] ⚠️'
   console.warn(
-    `[auth] ⚠️ JWT_SECRET ausente ou fraco (< ${MIN_JWT_SECRET_LENGTH} chars). ` +
+    `${logPrefix} JWT_SECRET ausente ou fraco (< ${MIN_JWT_SECRET_LENGTH} chars). ` +
     'Usando segredo efêmero gerado em runtime. ' +
-    'Defina JWT_SECRET no ambiente para manter sessões entre reinícios.'
+    'Defina JWT_SECRET no ambiente para manter sessões entre reinícios e remover este alerta.'
   )
+}
+
+export function getJwtSecretHealth() {
+  return {
+    configured: isStrongJwtSecret,
+    minLength: MIN_JWT_SECRET_LENGTH
+  }
 }
 
 export function signToken(user) {
