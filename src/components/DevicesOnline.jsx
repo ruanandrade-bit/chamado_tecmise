@@ -162,11 +162,6 @@ export default function DevicesOnline() {
                 ? `Atualizado ${formatLastSeen(data.lastFetched)}`
                 : 'Sem dados'}
             </span>
-            {typeof data.matchedDeviceCount === 'number' && (
-              <span className="dvo-match-badge">
-                Relacionados {data.matchedDeviceCount}/{data.totalDevices}
-              </span>
-            )}
             {isWorkingHours() && (
               <span className="dvo-auto-badge">Auto 10min</span>
             )}

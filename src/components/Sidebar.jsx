@@ -51,15 +51,15 @@ export default function Sidebar({ currentPage, onPageChange, isMobileOpen, onMob
                     onMobileClose()
                   }}
                   className={`
-                    w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200
+                    w-full flex items-center justify-start gap-3 px-4 py-3 rounded-lg transition-all duration-200
                     ${currentPage === item.id
                       ? 'bg-primary-light/20 text-primary-light border border-primary-light/30'
                       : 'text-dark-300 hover:bg-dark-700 hover:text-dark-100'
                     }
                   `}
                 >
-                  <Icon size={20} />
-                  <span className="font-medium">{item.label}</span>
+                  <Icon size={20} className="shrink-0" />
+                  <span className="font-medium whitespace-nowrap leading-none">{item.label}</span>
                 </button>
               )
             })}
