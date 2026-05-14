@@ -619,6 +619,26 @@ export const memoryStore = {
     state.professionals = Array.isArray(newList) ? newList : []
     persistState()
     return state.professionals
+  },
+
+  // ─── Get Years with Tickets ────────────────────────────────────────
+  getYearsWithTickets() {
+    const yearsSet = new Set()
+    
+    state.tickets.forEach((ticket) => {
+      const createdAt = ticket.createdAt ? new Date(ticket.createdAt) : null
+      if (createdAt && !Number.isNaN(createdAt.getTime())) {
+        const year = createdAt.getFullYear()
+        yearsSet.add(year)
+      }
+    })
+    
+    // Convert to array and sort descending
+    const years = Array.from(yearsSet)
+      .sort((a, b) => b - a)
+      .map(year => String(year))
+    
+    return years
   }
 }
 

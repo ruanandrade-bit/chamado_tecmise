@@ -100,4 +100,10 @@ router.patch('/monthly/:month/:year/:observationId/pin', authRequired, adminOnly
   res.json(report)
 })
 
+// GET /api/reports/years — returns available years with tickets
+router.get('/years', authRequired, (req, res) => {
+  const years = memoryStore.getYearsWithTickets()
+  res.json({ years })
+})
+
 export default router

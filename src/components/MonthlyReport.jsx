@@ -258,17 +258,7 @@ export default function MonthlyReport() {
   const monthName = MONTH_NAMES[selectedMonth - 1] || MONTH_NAMES[currentMonth - 1]
   const monthOption = MONTH_NAMES[selectedMonth - 1] || ''
   const yearOption = String(selectedYear)
-  const yearOptions = useMemo(() => {
-    const baseStart = currentYear - 5
-    const baseEnd = currentYear + 5
-    const minYear = Math.min(baseStart, selectedYear)
-    const maxYear = Math.max(baseEnd, selectedYear)
-    const items = []
-    for (let y = maxYear; y >= minYear; y -= 1) {
-      items.push(String(y))
-    }
-    return items
-  }, [currentYear, selectedYear])
+  const [yearOptions, setYearOptions] = useState([])
   const isCurrentPeriod = selectedMonth === currentMonth && selectedYear === currentYear
 
   const [ticketsThisMonth, setTicketsThisMonth] = useState(0)
@@ -312,6 +302,31 @@ export default function MonthlyReport() {
       })
       .map(({ obs }) => obs)
   }, [observations])
+
+  // Load available years
+  useEffect(() => {
+    const loadYears = async () => {
+      try {
+        const data = await api.get('/reports/years')
+        if (Array.isArray(data.years) && data.years.length > 0) {
+          setYearOptions(data.years)
+          // If current year not in options but has data, ensure it's included
+          const selectedYearStr = String(currentYear)
+          if (!data.years.includes(selectedYearStr)) {
+            setSelectedYear(Number(data.years[0]))
+          }
+        } else {
+          // Fallback: if no years with tickets, show current year
+          setYearOptions([String(currentYear)])
+        }
+      } catch (err) {
+        console.error('Erro ao carregar anos:', err)
+        // Fallback to current year if error
+        setYearOptions([String(currentYear)])
+      }
+    }
+    loadYears()
+  }, [currentYear])
 
   const loadReport = useCallback(async () => {
     try {

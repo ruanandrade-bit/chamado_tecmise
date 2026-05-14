@@ -1,9 +1,71 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Settings, School, Cpu, BookOpen, Plus, Trash2, Save, Loader2, AlertTriangle, ChevronDown, ChevronRight, ShieldAlert, Pencil, Check, Briefcase, Users } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 
 const PROFESSIONAL_ROLE_OPTIONS = ['Psicóloga', 'Pedagoga']
+
+function PrettySelectRole({ value, onChange, options, placeholder, selectKey, openSelectKey, setOpenSelectKey }) {
+  const containerRef = useRef(null)
+  const isOpen = openSelectKey === selectKey
+  const [didSelect, setDidSelect] = useState(false)
+
+  useEffect(() => {
+    const handleOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setOpenSelectKey(null)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [setOpenSelectKey])
+
+  const handlePick = (nextValue) => {
+    onChange(nextValue)
+    setDidSelect(true)
+    setOpenSelectKey(null)
+  }
+
+  useEffect(() => {
+    if (!didSelect) return
+    const timer = setTimeout(() => setDidSelect(false), 420)
+    return () => clearTimeout(timer)
+  }, [didSelect])
+
+  return (
+    <div className="psr-select" ref={containerRef}>
+      <button
+        type="button"
+        className={`psr-trigger ${didSelect ? 'psr-trigger-picked' : ''}`}
+        onClick={() => setOpenSelectKey(isOpen ? null : selectKey)}
+        aria-expanded={isOpen}
+      >
+        <span className={`psr-label ${value ? 'psr-label-filled' : ''}`}>
+          <Briefcase size={14} />
+          {value || placeholder}
+        </span>
+        <ChevronDown size={15} className={`psr-chevron ${isOpen ? 'psr-chevron-open' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="psr-options">
+          {options.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={`psr-option ${value === item ? 'psr-option-active' : ''}`}
+              onClick={() => handlePick(item)}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              {value === item && <Check size={12} className="psr-option-check" />}
+              {item}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function SchoolConfig() {
   const user = useAuthStore((state) => state.user)
@@ -14,6 +76,7 @@ export default function SchoolConfig() {
   const [hasChanges, setHasChanges] = useState(false)
   const [activeSection, setActiveSection] = useState('schools')
   const [expandedSchool, setExpandedSchool] = useState(null)
+  const [openSelectKey, setOpenSelectKey] = useState(null)
 
   // New school / device inputs
   const [newSchoolName, setNewSchoolName] = useState('')
@@ -478,17 +541,15 @@ export default function SchoolConfig() {
               onChange={(e) => setNewProfessionalName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addProfessional()}
             />
-            <select
-              className="sc-input sc-select"
+            <PrettySelectRole
               value={newProfessionalRole}
-              onChange={(e) => setNewProfessionalRole(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && addProfessional()}
-            >
-              <option value="">Selecione o cargo...</option>
-              {PROFESSIONAL_ROLE_OPTIONS.map((role) => (
-                <option key={role} value={role}>{role}</option>
-              ))}
-            </select>
+              onChange={setNewProfessionalRole}
+              options={PROFESSIONAL_ROLE_OPTIONS}
+              placeholder="Selecione o cargo..."
+              selectKey="new-role"
+              openSelectKey={openSelectKey}
+              setOpenSelectKey={setOpenSelectKey}
+            />
             <button className="sc-add-btn" onClick={addProfessional} disabled={!newProfessionalName.trim() || !newProfessionalRole.trim()}>
               <Plus size={14} /> Adicionar Profissional
             </button>
@@ -511,18 +572,15 @@ export default function SchoolConfig() {
                         onChange={(e) => setEditingProfessionalName(e.target.value)}
                         placeholder="Nome"
                       />
-                      <select
-                        className="sc-input sc-input-sm sc-select"
+                      <PrettySelectRole
                         value={editingProfessionalRole}
-                        onChange={(e) => setEditingProfessionalRole(e.target.value)}
-                      >
-                        {(PROFESSIONAL_ROLE_OPTIONS.includes(editingProfessionalRole)
-                          ? PROFESSIONAL_ROLE_OPTIONS
-                          : [editingProfessionalRole, ...PROFESSIONAL_ROLE_OPTIONS]
-                        ).map((role) => (
-                          <option key={role} value={role}>{role}</option>
-                        ))}
-                      </select>
+                        onChange={setEditingProfessionalRole}
+                        options={PROFESSIONAL_ROLE_OPTIONS}
+                        placeholder="Cargo"
+                        selectKey={`edit-role-${item.id}`}
+                        openSelectKey={openSelectKey}
+                        setOpenSelectKey={setOpenSelectKey}
+                      />
                       <button className="sc-edit-confirm" onClick={confirmEditProfessional} title="Confirmar">
                         <Check size={12} />
                       </button>
@@ -721,6 +779,7 @@ const baseStyles = `
     background: rgba(15, 15, 30, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 14px;
+    flex-wrap: wrap;
   }
 
   .sc-input {
@@ -1235,5 +1294,129 @@ const baseStyles = `
     .sc-prof-edit-row {
       grid-template-columns: 1fr;
     }
+  }
+
+  /* ── PrettySelectRole ── */
+  .psr-select {
+    position: relative;
+    flex: 1;
+    min-width: 180px;
+  }
+
+  .psr-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    color: #e5e7eb;
+    font-size: 0.875rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    outline: none;
+  }
+
+  .psr-trigger:hover {
+    border-color: rgba(34, 197, 94, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .psr-trigger:focus {
+    border-color: rgba(34, 197, 94, 0.4);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08);
+  }
+
+  .psr-trigger-picked {
+    background: rgba(34, 197, 94, 0.1);
+    border-color: rgba(34, 197, 94, 0.3);
+  }
+
+  .psr-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .psr-label-filled {
+    color: #e5e7eb;
+  }
+
+  .psr-chevron {
+    flex-shrink: 0;
+    color: #6b7280;
+    transition: transform 0.2s ease;
+  }
+
+  .psr-chevron-open {
+    transform: rotate(180deg);
+    color: #86efac;
+  }
+
+  .psr-options {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    background: rgba(20, 25, 40, 0.95);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(34, 197, 94, 0.1);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    animation: psrFadeIn 0.15s ease-out;
+  }
+
+  @keyframes psrFadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .psr-option {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: transparent;
+    border: none;
+    color: #d1d5db;
+    font-size: 0.875rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .psr-option:hover {
+    background: rgba(34, 197, 94, 0.08);
+    color: #86efac;
+  }
+
+  .psr-option-active {
+    background: rgba(34, 197, 94, 0.15);
+    color: #86efac;
+    font-weight: 600;
+  }
+
+  .psr-option-check {
+    color: #86efac;
+    flex-shrink: 0;
   }
 `
