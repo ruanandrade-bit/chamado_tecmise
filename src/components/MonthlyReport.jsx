@@ -189,6 +189,8 @@ export default function MonthlyReport() {
 
   const [observations, setObservations] = useState([])
   const [newObservation, setNewObservation] = useState('')
+  const [newSchool, setNewSchool] = useState('')
+  const [newAssignee, setNewAssignee] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isSending, setIsSending] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
@@ -199,6 +201,8 @@ export default function MonthlyReport() {
   // Edit state
   const [editingId, setEditingId] = useState(null)
   const [editText, setEditText] = useState('')
+  const [editSchool, setEditSchool] = useState('')
+  const [editAssignee, setEditAssignee] = useState('')
   const [isSavingEdit, setIsSavingEdit] = useState(false)
   const editTextareaRef = useRef(null)
 
@@ -237,11 +241,15 @@ export default function MonthlyReport() {
       const data = await api.post('/reports/monthly', {
         month: selectedMonth,
         year: selectedYear,
-        observation: newObservation
+        observation: newObservation,
+        school: newSchool,
+        assignee: newAssignee
       })
       setObservations(data.observations || [])
       setTicketsThisMonth(data.ticketCount || 0)
       setNewObservation('')
+      setNewSchool('')
+      setNewAssignee('')
     } catch (err) {
       alert(err.message || 'Erro ao adicionar observação.')
     } finally {
@@ -270,12 +278,16 @@ export default function MonthlyReport() {
   const startEditing = (obs) => {
     setEditingId(obs.id)
     setEditText(obs.text)
+    setEditSchool(obs.school || '')
+    setEditAssignee(obs.assignee || '')
     setTimeout(() => editTextareaRef.current?.focus(), 50)
   }
 
   const cancelEditing = () => {
     setEditingId(null)
     setEditText('')
+    setEditSchool('')
+    setEditAssignee('')
   }
 
   const handleSaveEdit = async () => {
@@ -284,7 +296,11 @@ export default function MonthlyReport() {
     try {
       const data = await api.put(
         `/reports/monthly/${selectedMonth}/${selectedYear}/${editingId}`,
-        { text: editText }
+        {
+          text: editText,
+          school: editSchool,
+          assignee: editAssignee
+        }
       )
       setObservations(data.observations || [])
       setTicketsThisMonth(data.ticketCount || 0)
@@ -301,9 +317,7 @@ export default function MonthlyReport() {
     const d = new Date(dateStr)
     return d.toLocaleDateString('pt-BR', {
       day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit'
+      month: 'short'
     })
   }
 
@@ -404,6 +418,24 @@ export default function MonthlyReport() {
               }
             }}
           />
+          <div className="mr-optional-row">
+            <input
+              type="text"
+              value={newSchool}
+              onChange={(e) => setNewSchool(e.target.value)}
+              placeholder="Colégio (opcional) - ex: Cemma"
+              className="mr-optional-input"
+              maxLength={42}
+            />
+            <input
+              type="text"
+              value={newAssignee}
+              onChange={(e) => setNewAssignee(e.target.value)}
+              placeholder="Pessoa responsável (opcional)"
+              className="mr-optional-input"
+              maxLength={42}
+            />
+          </div>
           <div className="mr-add-footer">
             <span className="mr-add-hint">Ctrl + Enter para enviar</span>
             <button
@@ -450,6 +482,9 @@ export default function MonthlyReport() {
         <div className="mr-obs-list">
           {observations.map((obs, index) => {
             const isEditing = editingId === obs.id
+            const metaParts = [formatDate(obs.createdAt)]
+            if (obs.school) metaParts.push(obs.school)
+            if (obs.assignee) metaParts.push(obs.assignee)
 
             return (
               <div
@@ -467,7 +502,7 @@ export default function MonthlyReport() {
                     <div className="mr-obs-meta">
                       <span className="mr-obs-badge">{index + 1}</span>
                       <span className="mr-obs-meta-text">
-                        por <strong style={{ color: '#d1d5db' }}>{obs.author}</strong> • {formatDate(obs.createdAt)}
+                        {metaParts.join(' • ')}
                         {obs.editedAt && (
                           <span className="mr-obs-edited">
                             <Pencil size={8} />
@@ -480,6 +515,24 @@ export default function MonthlyReport() {
                     {/* Observation text or edit textarea */}
                     {isEditing ? (
                       <div className="mr-obs-edit-area">
+                        <div className="mr-optional-row">
+                          <input
+                            type="text"
+                            value={editSchool}
+                            onChange={(e) => setEditSchool(e.target.value)}
+                            placeholder="Colégio (opcional)"
+                            className="mr-optional-input"
+                            maxLength={42}
+                          />
+                          <input
+                            type="text"
+                            value={editAssignee}
+                            onChange={(e) => setEditAssignee(e.target.value)}
+                            placeholder="Pessoa responsável (opcional)"
+                            className="mr-optional-input"
+                            maxLength={42}
+                          />
+                        </div>
                         <textarea
                           ref={editTextareaRef}
                           value={editText}
@@ -889,6 +942,35 @@ export default function MonthlyReport() {
           box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.08);
         }
 
+        .mr-optional-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+
+        .mr-optional-input {
+          width: 100%;
+          height: 38px;
+          padding: 0 12px;
+          border-radius: 10px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          color: #e5e7eb;
+          font-size: 0.8125rem;
+          outline: none;
+          transition: all 0.25s ease;
+        }
+
+        .mr-optional-input::placeholder {
+          color: #4b5563;
+        }
+
+        .mr-optional-input:focus {
+          border-color: rgba(34, 197, 94, 0.35);
+          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08);
+          background: rgba(255, 255, 255, 0.06);
+        }
+
         .mr-add-footer {
           display: flex;
           align-items: center;
@@ -1157,6 +1239,10 @@ export default function MonthlyReport() {
 
         @media (max-width: 640px) {
           .mr-edit-hint { display: none; }
+
+          .mr-optional-row {
+            grid-template-columns: 1fr;
+          }
         }
 
         /* ── Action buttons ── */

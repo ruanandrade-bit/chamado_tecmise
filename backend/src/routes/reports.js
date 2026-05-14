@@ -26,12 +26,17 @@ router.post('/monthly', authRequired, adminOnly, (req, res) => {
   const month = Number(req.body?.month)
   const year = Number(req.body?.year)
   const observation = req.body?.observation
+  const school = String(req.body?.school || '').trim()
+  const assignee = String(req.body?.assignee || '').trim()
 
   if (!validMonthYear(month, year) || !observation?.trim()) {
     return res.status(400).json({ message: 'Parâmetros month, year e observation são obrigatórios.' })
   }
 
-  const report = memoryStore.addMonthlyObservation(month, year, observation.trim(), req.user)
+  const report = memoryStore.addMonthlyObservation(month, year, observation.trim(), req.user, {
+    school,
+    assignee
+  })
   res.json(report)
 })
 
@@ -57,13 +62,19 @@ router.put('/monthly/:month/:year/:observationId', authRequired, adminOnly, (req
   const month = Number(req.params.month)
   const year = Number(req.params.year)
   const observationId = Number(req.params.observationId)
-  const { text } = req.body
+  const text = req.body?.text
+  const school = String(req.body?.school || '').trim()
+  const assignee = String(req.body?.assignee || '').trim()
 
   if (!validMonthYear(month, year) || !observationId || !text?.trim()) {
     return res.status(400).json({ message: 'Parâmetros inválidos.' })
   }
 
-  const report = memoryStore.editMonthlyObservation(month, year, observationId, text.trim())
+  const report = memoryStore.editMonthlyObservation(month, year, observationId, {
+    text: text.trim(),
+    school,
+    assignee
+  })
   if (!report) {
     return res.status(404).json({ message: 'Observação não encontrada.' })
   }

@@ -407,16 +407,21 @@ export const memoryStore = {
     }
   },
 
-  addMonthlyObservation(month, year, text, user) {
+  addMonthlyObservation(month, year, text, user, metadata = {}) {
     const key = monthlyKey(month, year)
     if (!state.monthlyReports[key]) {
       state.monthlyReports[key] = { month, year, observations: [] }
     }
 
+    const school = String(metadata.school || '').trim()
+    const assignee = String(metadata.assignee || '').trim()
+
     const observation = {
       id: Date.now() + Math.random(),
       text,
       author: user.name,
+      school: school || null,
+      assignee: assignee || null,
       createdAt: new Date().toISOString()
     }
 
@@ -438,7 +443,7 @@ export const memoryStore = {
     return report
   },
 
-  editMonthlyObservation(month, year, observationId, newText) {
+  editMonthlyObservation(month, year, observationId, updates = {}) {
     const key = monthlyKey(month, year)
     const report = state.monthlyReports[key]
     if (!report) return null
@@ -446,7 +451,13 @@ export const memoryStore = {
     const obs = report.observations.find((o) => o.id === observationId)
     if (!obs) return null
 
-    obs.text = newText
+    const nextText = String(updates.text || '').trim()
+    const school = String(updates.school || '').trim()
+    const assignee = String(updates.assignee || '').trim()
+
+    if (nextText) obs.text = nextText
+    obs.school = school || null
+    obs.assignee = assignee || null
     obs.editedAt = new Date().toISOString()
     persistState()
     return report
