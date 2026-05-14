@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { FileText, Plus, Trash2, Send, CalendarDays, ClipboardList, Loader2, Ticket, Pencil, X, Check, AlertTriangle, ShieldAlert, School, UserRound } from 'lucide-react'
+import { FileText, Plus, Trash2, Send, CalendarDays, ClipboardList, Loader2, Ticket, Pencil, X, Check, AlertTriangle, ShieldAlert, School, UserRound, ChevronDown } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api } from '../services/api'
 
@@ -8,6 +8,65 @@ const MONTH_NAMES = [
   'Maio', 'Junho', 'Julho', 'Agosto',
   'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ]
+
+function PrettySelect({ value, onChange, options, placeholder, icon: Icon }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const containerRef = useRef(null)
+
+  useEffect(() => {
+    const handleOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [])
+
+  const handlePick = (nextValue) => {
+    onChange(nextValue)
+    setIsOpen(false)
+  }
+
+  return (
+    <div className={`mr-pretty-select ${isOpen ? 'mr-pretty-select-open' : ''}`} ref={containerRef}>
+      <button
+        type="button"
+        className="mr-pretty-trigger"
+        onClick={() => setIsOpen((prev) => !prev)}
+        aria-expanded={isOpen}
+      >
+        <span className={`mr-pretty-label ${value ? 'mr-pretty-label-filled' : ''}`}>
+          {Icon && <Icon size={14} />}
+          {value || placeholder}
+        </span>
+        <ChevronDown size={15} className={`mr-pretty-chevron ${isOpen ? 'mr-pretty-chevron-open' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="mr-pretty-options">
+          <button
+            type="button"
+            className={`mr-pretty-option ${!value ? 'mr-pretty-option-active' : ''}`}
+            onClick={() => handlePick('')}
+          >
+            {placeholder}
+          </button>
+          {options.map((item) => (
+            <button
+              key={item}
+              type="button"
+              className={`mr-pretty-option ${value === item ? 'mr-pretty-option-active' : ''}`}
+              onClick={() => handlePick(item)}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 /* ─── Confirm‑Delete Modal ────────────────────────────────────────── */
 function ConfirmDeleteModal({ isOpen, onClose, onConfirm, isDeleting, observationText }) {
@@ -444,26 +503,20 @@ export default function MonthlyReport() {
             }}
           />
           <div className="mr-optional-row">
-            <select
+            <PrettySelect
               value={newSchool}
-              onChange={(e) => setNewSchool(e.target.value)}
-              className="mr-optional-input mr-optional-select"
-            >
-              <option value="">Colégio (opcional)</option>
-              {schoolOptions.map((school) => (
-                <option key={school} value={school}>{school}</option>
-              ))}
-            </select>
-            <select
+              onChange={setNewSchool}
+              options={schoolOptions}
+              placeholder="Colégio (opcional)"
+              icon={School}
+            />
+            <PrettySelect
               value={newAssignee}
-              onChange={(e) => setNewAssignee(e.target.value)}
-              className="mr-optional-input mr-optional-select"
-            >
-              <option value="">Pessoa responsável (opcional)</option>
-              {professionalOptions.map((person) => (
-                <option key={person} value={person}>{person}</option>
-              ))}
-            </select>
+              onChange={setNewAssignee}
+              options={professionalOptions}
+              placeholder="Pessoa responsável (opcional)"
+              icon={UserRound}
+            />
           </div>
           <div className="mr-add-footer">
             <span className="mr-add-hint">Ctrl + Enter para enviar</span>
@@ -552,32 +605,24 @@ export default function MonthlyReport() {
                     {isEditing ? (
                       <div className="mr-obs-edit-area">
                         <div className="mr-optional-row">
-                          <select
+                          <PrettySelect
                             value={editSchool}
-                            onChange={(e) => setEditSchool(e.target.value)}
-                            className="mr-optional-input mr-optional-select"
-                          >
-                            <option value="">Colégio (opcional)</option>
-                            {editSchool && !schoolOptions.includes(editSchool) && (
-                              <option value={editSchool}>{editSchool}</option>
-                            )}
-                            {schoolOptions.map((school) => (
-                              <option key={school} value={school}>{school}</option>
-                            ))}
-                          </select>
-                          <select
+                            onChange={setEditSchool}
+                            options={editSchool && !schoolOptions.includes(editSchool)
+                              ? [editSchool, ...schoolOptions]
+                              : schoolOptions}
+                            placeholder="Colégio (opcional)"
+                            icon={School}
+                          />
+                          <PrettySelect
                             value={editAssignee}
-                            onChange={(e) => setEditAssignee(e.target.value)}
-                            className="mr-optional-input mr-optional-select"
-                          >
-                            <option value="">Pessoa responsável (opcional)</option>
-                            {editAssignee && !professionalOptions.includes(editAssignee) && (
-                              <option value={editAssignee}>{editAssignee}</option>
-                            )}
-                            {professionalOptions.map((person) => (
-                              <option key={person} value={person}>{person}</option>
-                            ))}
-                          </select>
+                            onChange={setEditAssignee}
+                            options={editAssignee && !professionalOptions.includes(editAssignee)
+                              ? [editAssignee, ...professionalOptions]
+                              : professionalOptions}
+                            placeholder="Pessoa responsável (opcional)"
+                            icon={UserRound}
+                          />
                         </div>
                         <textarea
                           ref={editTextareaRef}
@@ -994,6 +1039,103 @@ export default function MonthlyReport() {
           gap: 10px;
         }
 
+        .mr-pretty-select {
+          position: relative;
+        }
+
+        .mr-pretty-trigger {
+          width: 100%;
+          height: 38px;
+          border-radius: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.04);
+          color: #e5e7eb;
+          padding: 0 11px 0 12px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .mr-pretty-trigger:hover {
+          border-color: rgba(34, 197, 94, 0.22);
+          background: rgba(255, 255, 255, 0.05);
+        }
+
+        .mr-pretty-select-open .mr-pretty-trigger {
+          border-color: rgba(34, 197, 94, 0.4);
+          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08);
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .mr-pretty-label {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          min-width: 0;
+          font-size: 0.8125rem;
+          color: #6b7280;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .mr-pretty-label-filled {
+          color: #e5e7eb;
+        }
+
+        .mr-pretty-chevron {
+          color: #6b7280;
+          transition: transform 0.18s ease;
+          flex-shrink: 0;
+        }
+
+        .mr-pretty-chevron-open {
+          transform: rotate(180deg);
+        }
+
+        .mr-pretty-options {
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          right: 0;
+          z-index: 40;
+          max-height: 260px;
+          overflow: auto;
+          padding: 8px;
+          border-radius: 12px;
+          border: 1px solid rgba(34, 197, 94, 0.25);
+          background: linear-gradient(165deg, rgba(19, 24, 38, 0.98) 0%, rgba(12, 16, 28, 0.98) 100%);
+          box-shadow: 0 16px 35px rgba(0, 0, 0, 0.45), 0 0 20px rgba(34, 197, 94, 0.07);
+          backdrop-filter: blur(10px);
+          -webkit-backdrop-filter: blur(10px);
+        }
+
+        .mr-pretty-option {
+          width: 100%;
+          text-align: left;
+          border: none;
+          background: transparent;
+          color: #cbd5e1;
+          font-size: 0.8125rem;
+          font-weight: 600;
+          padding: 10px 10px;
+          border-radius: 9px;
+          cursor: pointer;
+          transition: all 0.16s ease;
+        }
+
+        .mr-pretty-option:hover {
+          background: rgba(34, 197, 94, 0.12);
+          color: #dcfce7;
+        }
+
+        .mr-pretty-option-active {
+          background: rgba(34, 197, 94, 0.16);
+          color: #86efac;
+        }
+
         .mr-optional-input {
           width: 100%;
           height: 38px;
@@ -1015,21 +1157,6 @@ export default function MonthlyReport() {
           border-color: rgba(34, 197, 94, 0.35);
           box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08);
           background: rgba(255, 255, 255, 0.06);
-        }
-
-        .mr-optional-select {
-          appearance: none;
-          -webkit-appearance: none;
-          -moz-appearance: none;
-          background-image: linear-gradient(45deg, transparent 50%, #6b7280 50%), linear-gradient(135deg, #6b7280 50%, transparent 50%);
-          background-position: calc(100% - 16px) calc(50% - 3px), calc(100% - 10px) calc(50% - 3px);
-          background-size: 6px 6px, 6px 6px;
-          background-repeat: no-repeat;
-          padding-right: 30px;
-        }
-
-        .mr-optional-select option {
-          color: #0f172a;
         }
 
         .mr-add-footer {
