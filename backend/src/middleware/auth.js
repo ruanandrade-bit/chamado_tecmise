@@ -1,26 +1,54 @@
 import jwt from 'jsonwebtoken'
-import { randomBytes } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { USERS } from '../data/mockData.js'
 
 const configuredJwtSecret = String(process.env.JWT_SECRET || '').trim()
 const MIN_JWT_SECRET_LENGTH = 32
-let JWT_SECRET = configuredJwtSecret
-const isStrongJwtSecret = configuredJwtSecret.length >= MIN_JWT_SECRET_LENGTH
+const isStrongConfiguredSecret = configuredJwtSecret.length >= MIN_JWT_SECRET_LENGTH
 
-if (!isStrongJwtSecret) {
-  JWT_SECRET = randomBytes(48).toString('hex')
-  const logPrefix = process.env.NODE_ENV === 'production' ? '[auth] ❗' : '[auth] ⚠️'
-  console.warn(
-    `${logPrefix} JWT_SECRET ausente ou fraco (< ${MIN_JWT_SECRET_LENGTH} chars). ` +
-    'Usando segredo efêmero gerado em runtime. ' +
-    'Defina JWT_SECRET no ambiente para manter sessões entre reinícios e remover este alerta.'
-  )
+function deriveStableRuntimeSecret() {
+  const entropySources = [
+    process.env.MONGODB_URI,
+    process.env.RENDER_SERVICE_ID,
+    process.env.RENDER_GIT_REPO_SLUG,
+    process.env.RENDER_EXTERNAL_HOSTNAME,
+  ].filter((value) => String(value || '').trim().length > 0)
+
+  if (entropySources.length === 0) return null
+
+  return createHash('sha256')
+    .update(entropySources.join('|'))
+    .digest('hex')
+}
+
+let JWT_SECRET = configuredJwtSecret
+let jwtSecretSource = 'env'
+let isPersistentSecret = true
+
+if (!isStrongConfiguredSecret) {
+  const derivedSecret = deriveStableRuntimeSecret()
+  if (derivedSecret && derivedSecret.length >= MIN_JWT_SECRET_LENGTH) {
+    JWT_SECRET = derivedSecret
+    jwtSecretSource = 'derived'
+    isPersistentSecret = true
+    console.log('[auth] JWT_SECRET não definido; usando segredo determinístico estável para esta infraestrutura.')
+  } else {
+    JWT_SECRET = randomBytes(48).toString('hex')
+    jwtSecretSource = 'ephemeral'
+    isPersistentSecret = false
+    console.warn(
+      `[auth] ⚠️ JWT_SECRET ausente ou fraco (< ${MIN_JWT_SECRET_LENGTH} chars). ` +
+      'Sem fontes estáveis para derivação segura; usando segredo efêmero em runtime.'
+    )
+  }
 }
 
 export function getJwtSecretHealth() {
   return {
-    configured: isStrongJwtSecret,
-    minLength: MIN_JWT_SECRET_LENGTH
+    configured: isStrongConfiguredSecret || jwtSecretSource === 'derived',
+    persistent: isPersistentSecret,
+    source: jwtSecretSource,
+    minLength: MIN_JWT_SECRET_LENGTH,
   }
 }
 

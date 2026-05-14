@@ -105,8 +105,15 @@ export default function DevicesOnline() {
     return { online, total: devices.length }
   }
 
+  const isMissingTailscaleConfig = String(data?.error || '').toLowerCase().includes('chave da api do tailscale não configurada')
+
   const backendStatusMessage = data?.error
-    ? { type: 'error', text: `Falha ao consultar Tailscale: ${data.error}` }
+    ? {
+      type: isMissingTailscaleConfig ? 'warning' : 'error',
+      text: isMissingTailscaleConfig
+        ? `${data.error} Configure no Render e clique em "Atualizar".`
+        : `Falha ao consultar Tailscale: ${data.error}`
+    }
     : data?.warning
       ? { type: 'warning', text: data.warning }
       : data?.stale

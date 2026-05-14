@@ -6,11 +6,13 @@ const router = Router()
 router.get('/', (_req, res) => {
   const jwt = getJwtSecretHealth()
   res.json({
-    status: jwt.configured ? 'ok' : 'degraded',
+    status: jwt.configured && jwt.persistent ? 'ok' : 'degraded',
     service: 's4s-backend',
     security: {
       jwtConfigured: jwt.configured,
-      jwtMinLength: jwt.minLength
+      jwtPersistent: jwt.persistent,
+      jwtSource: jwt.source,
+      jwtMinLength: jwt.minLength,
     },
     timestamp: new Date().toISOString()
   })

@@ -33,6 +33,10 @@ openssl rand -base64 48
 
 Use o valor gerado em `JWT_SECRET`.
 
+Fallback seguro:
+- Se `JWT_SECRET` não estiver definido, o backend tenta derivar um segredo estável a partir de variáveis de infraestrutura (ex.: `MONGODB_URI` + metadados do Render).
+- Isso evita sessão efêmera e reduz alertas em produção, mas o recomendado continua sendo definir `JWT_SECRET` explicitamente.
+
 Se a tela **Devices Online** mostrar tudo offline/“não existe no Tailscale”, valide no Render:
 - `TAILSCALE_API_KEY` configurada
 - `TAILSCALE_TAILNET` correta (ou `-`)

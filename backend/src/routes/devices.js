@@ -28,7 +28,23 @@ let cacheTimestamp = 0
 const CACHE_TTL_MS = 10 * 60 * 1000 // 10 minutes
 
 // ─── Tailscale API ───────────────────────────────────────────────────
-const TAILSCALE_API_KEY = String(process.env.TAILSCALE_API_KEY || '').trim()
+function firstNonEmptyEnv(...keys) {
+  for (const key of keys) {
+    const value = String(process.env[key] || '').trim()
+    if (value) return { key, value }
+  }
+  return { key: null, value: '' }
+}
+
+function getTailscaleApiKey() {
+  return firstNonEmptyEnv(
+    'TAILSCALE_API_KEY',
+    'TAILSCALE_ACCESS_TOKEN',
+    'TAILSCALE_TOKEN',
+    'TS_API_KEY'
+  )
+}
+
 const TAILSCALE_TAILNET = String(process.env.TAILSCALE_TAILNET || '-').trim() || '-'
 
 function parseTimeMs(value) {
@@ -110,16 +126,20 @@ async function fetchTailscaleDevices() {
   const SCHOOL_DEVICES = buildSchoolDeviceMap()
   const ALL_DEVICE_IDS = getAllDeviceIds()
   const configuredAliasMap = buildConfiguredAliasMap(ALL_DEVICE_IDS)
+  const tailscaleAuth = getTailscaleApiKey()
 
   try {
-    if (!TAILSCALE_API_KEY) {
-      throw new Error('TAILSCALE_API_KEY não configurada.')
+    if (!tailscaleAuth.value) {
+      throw new Error(
+        'Chave da API do Tailscale não configurada. Defina uma destas variáveis: ' +
+        'TAILSCALE_API_KEY, TAILSCALE_ACCESS_TOKEN, TAILSCALE_TOKEN ou TS_API_KEY.'
+      )
     }
 
     const apiUrl = `https://api.tailscale.com/api/v2/tailnet/${encodeURIComponent(TAILSCALE_TAILNET)}/devices`
     const response = await fetch(apiUrl, {
       headers: {
-        'Authorization': `Bearer ${TAILSCALE_API_KEY}`,
+        'Authorization': `Bearer ${tailscaleAuth.value}`,
         'Content-Type': 'application/json',
       },
     })
@@ -200,6 +220,7 @@ async function fetchTailscaleDevices() {
       offlineCount: ALL_DEVICE_IDS.size - Object.values(deviceMap).filter(d => d.online).length,
       tailscaleDeviceCount: devices.length,
       matchedDeviceCount: Object.keys(deviceMap).length,
+      authSource: tailscaleAuth.key,
       warning: devices.length > 0 && Object.keys(deviceMap).length === 0
         ? 'Nenhum device configurado foi relacionado aos nomes vindos da API do Tailscale.'
         : null,
@@ -245,6 +266,7 @@ async function fetchTailscaleDevices() {
       error: err.message,
       tailscaleDeviceCount: 0,
       matchedDeviceCount: 0,
+      authSource: tailscaleAuth.key,
       warning: null,
     }
   }
