@@ -9,23 +9,23 @@ const MONTH_NAMES = [
   'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ]
 
-function PrettySelect({ value, onChange, options, placeholder, icon: Icon }) {
-  const [isOpen, setIsOpen] = useState(false)
+function PrettySelect({ value, onChange, options, placeholder, icon: Icon, selectKey, openSelectKey, setOpenSelectKey }) {
   const containerRef = useRef(null)
+  const isOpen = openSelectKey === selectKey
 
   useEffect(() => {
     const handleOutside = (event) => {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
-        setIsOpen(false)
+        setOpenSelectKey(null)
       }
     }
     document.addEventListener('mousedown', handleOutside)
     return () => document.removeEventListener('mousedown', handleOutside)
-  }, [])
+  }, [setOpenSelectKey])
 
   const handlePick = (nextValue) => {
     onChange(nextValue)
-    setIsOpen(false)
+    setOpenSelectKey(null)
   }
 
   return (
@@ -33,7 +33,7 @@ function PrettySelect({ value, onChange, options, placeholder, icon: Icon }) {
       <button
         type="button"
         className="mr-pretty-trigger"
-        onClick={() => setIsOpen((prev) => !prev)}
+        onClick={() => setOpenSelectKey(isOpen ? null : selectKey)}
         aria-expanded={isOpen}
       >
         <span className={`mr-pretty-label ${value ? 'mr-pretty-label-filled' : ''}`}>
@@ -252,6 +252,7 @@ export default function MonthlyReport() {
   const [newAssignee, setNewAssignee] = useState('')
   const [schoolOptions, setSchoolOptions] = useState([])
   const [professionalOptions, setProfessionalOptions] = useState([])
+  const [openSelectKey, setOpenSelectKey] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSending, setIsSending] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
@@ -331,6 +332,7 @@ export default function MonthlyReport() {
       })
       setObservations(data.observations || [])
       setTicketsThisMonth(data.ticketCount || 0)
+      setOpenSelectKey(null)
       setNewObservation('')
       setNewSchool('')
       setNewAssignee('')
@@ -360,6 +362,7 @@ export default function MonthlyReport() {
 
   // Start editing
   const startEditing = (obs) => {
+    setOpenSelectKey(null)
     setEditingId(obs.id)
     setEditText(obs.text)
     setEditSchool(obs.school || '')
@@ -368,6 +371,7 @@ export default function MonthlyReport() {
   }
 
   const cancelEditing = () => {
+    setOpenSelectKey(null)
     setEditingId(null)
     setEditText('')
     setEditSchool('')
@@ -388,6 +392,7 @@ export default function MonthlyReport() {
       )
       setObservations(data.observations || [])
       setTicketsThisMonth(data.ticketCount || 0)
+      setOpenSelectKey(null)
       setEditingId(null)
       setEditText('')
     } catch (err) {
@@ -509,6 +514,9 @@ export default function MonthlyReport() {
               options={schoolOptions}
               placeholder="Colégio (opcional)"
               icon={School}
+              selectKey="new-school"
+              openSelectKey={openSelectKey}
+              setOpenSelectKey={setOpenSelectKey}
             />
             <PrettySelect
               value={newAssignee}
@@ -516,6 +524,9 @@ export default function MonthlyReport() {
               options={professionalOptions}
               placeholder="Pessoa responsável (opcional)"
               icon={UserRound}
+              selectKey="new-assignee"
+              openSelectKey={openSelectKey}
+              setOpenSelectKey={setOpenSelectKey}
             />
           </div>
           <div className="mr-add-footer">
@@ -613,6 +624,9 @@ export default function MonthlyReport() {
                               : schoolOptions}
                             placeholder="Colégio (opcional)"
                             icon={School}
+                            selectKey={`edit-school-${obs.id}`}
+                            openSelectKey={openSelectKey}
+                            setOpenSelectKey={setOpenSelectKey}
                           />
                           <PrettySelect
                             value={editAssignee}
@@ -622,6 +636,9 @@ export default function MonthlyReport() {
                               : professionalOptions}
                             placeholder="Pessoa responsável (opcional)"
                             icon={UserRound}
+                            selectKey={`edit-assignee-${obs.id}`}
+                            openSelectKey={openSelectKey}
+                            setOpenSelectKey={setOpenSelectKey}
                           />
                         </div>
                         <textarea
@@ -966,6 +983,8 @@ export default function MonthlyReport() {
 
         /* ── Add Observation Section ── */
         .mr-add-section {
+          position: relative;
+          z-index: 30;
           display: flex;
           flex-direction: column;
           gap: 14px;
@@ -1041,6 +1060,11 @@ export default function MonthlyReport() {
 
         .mr-pretty-select {
           position: relative;
+          z-index: 1;
+        }
+
+        .mr-pretty-select-open {
+          z-index: 90;
         }
 
         .mr-pretty-trigger {
