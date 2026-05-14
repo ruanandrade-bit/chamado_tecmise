@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { FileText, Plus, Trash2, Send, CalendarDays, ClipboardList, Loader2, Ticket, Pencil, X, Check, AlertTriangle, ShieldAlert, School, UserRound, ChevronDown } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { FileText, Plus, Trash2, Send, CalendarDays, ClipboardList, Loader2, Ticket, Pencil, X, Check, AlertTriangle, ShieldAlert, School, UserRound, ChevronDown, Pin, PinOff } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api } from '../services/api'
 
@@ -270,6 +270,7 @@ export default function MonthlyReport() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSending, setIsSending] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+  const [pinningId, setPinningId] = useState(null)
 
   // Confirm delete modal
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
@@ -286,6 +287,18 @@ export default function MonthlyReport() {
   const deleteTargetText = confirmDeleteId
     ? observations.find((o) => o.id === confirmDeleteId)?.text || ''
     : ''
+
+  const sortedObservations = useMemo(() => {
+    return observations
+      .map((obs, index) => ({ obs, index }))
+      .sort((a, b) => {
+        if (Boolean(a.obs.pinned) === Boolean(b.obs.pinned)) {
+          return a.index - b.index
+        }
+        return a.obs.pinned ? -1 : 1
+      })
+      .map(({ obs }) => obs)
+  }, [observations])
 
   const loadReport = useCallback(async () => {
     try {
@@ -413,6 +426,23 @@ export default function MonthlyReport() {
       alert(err.message || 'Erro ao editar observação.')
     } finally {
       setIsSavingEdit(false)
+    }
+  }
+
+  const handleTogglePin = async (obs) => {
+    if (!obs?.id || pinningId) return
+    setPinningId(obs.id)
+    try {
+      const data = await api.patch(
+        `/reports/monthly/${selectedMonth}/${selectedYear}/${obs.id}/pin`,
+        { pinned: !Boolean(obs.pinned) }
+      )
+      setObservations(data.observations || [])
+      setTicketsThisMonth(data.ticketCount || 0)
+    } catch (err) {
+      alert(err.message || 'Erro ao fixar observação.')
+    } finally {
+      setPinningId(null)
     }
   }
 
@@ -573,7 +603,7 @@ export default function MonthlyReport() {
           <Loader2 size={24} style={{ color: '#86efac', animation: 'spin 1s linear infinite' }} />
           <span>Carregando relatório...</span>
         </div>
-      ) : observations.length === 0 ? (
+      ) : sortedObservations.length === 0 ? (
         <div className="mr-empty">
           <div className="mr-empty-icon">
             <ClipboardList size={28} style={{ color: '#4b5563' }} />
@@ -587,7 +617,7 @@ export default function MonthlyReport() {
         </div>
       ) : (
         <div className="mr-obs-list">
-          {observations.map((obs, index) => {
+          {sortedObservations.map((obs, index) => {
             const isEditing = editingId === obs.id
 
             return (
@@ -622,6 +652,12 @@ export default function MonthlyReport() {
                         <span className="mr-obs-edited">
                           <Pencil size={8} />
                           editado
+                        </span>
+                      )}
+                      {obs.pinned && (
+                        <span className="mr-obs-pinned-chip">
+                          <Pin size={8} />
+                          fixada
                         </span>
                       )}
                     </div>
@@ -704,6 +740,25 @@ export default function MonthlyReport() {
                   {/* Action buttons — admin only */}
                   {isAdmin && !isEditing && (
                     <div className="mr-obs-actions">
+                      <button
+                        onClick={() => handleTogglePin(obs)}
+                        className={`mr-obs-action-btn ${obs.pinned ? 'mr-obs-action-btn-pinned' : ''}`}
+                        title={obs.pinned ? 'Desfixar observação' : 'Fixar observação'}
+                        disabled={pinningId === obs.id}
+                        onMouseEnter={(e) => {
+                          if (obs.pinned) return
+                          e.currentTarget.style.color = '#60a5fa'
+                          e.currentTarget.style.background = 'rgba(96, 165, 250, 0.12)'
+                        }}
+                        onMouseLeave={(e) => {
+                          if (obs.pinned) return
+                          e.currentTarget.style.color = '#64748b'
+                          e.currentTarget.style.background = 'transparent'
+                        }}
+                      >
+                        {obs.pinned ? <PinOff size={14} /> : <Pin size={14} />}
+                      </button>
+
                       {/* Edit button */}
                       <button
                         onClick={() => startEditing(obs)}
@@ -1436,6 +1491,19 @@ export default function MonthlyReport() {
           border: 1px solid rgba(251, 191, 36, 0.12);
         }
 
+        .mr-obs-pinned-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 3px;
+          margin-left: 2px;
+          padding: 2px 6px;
+          border-radius: 6px;
+          font-size: 10px;
+          background: rgba(96, 165, 250, 0.12);
+          color: #93c5fd;
+          border: 1px solid rgba(96, 165, 250, 0.2);
+        }
+
         .mr-obs-text {
           font-size: 0.875rem;
           line-height: 1.6;
@@ -1546,6 +1614,16 @@ export default function MonthlyReport() {
           color: #64748b;
           cursor: pointer;
           transition: all 0.2s ease;
+        }
+
+        .mr-obs-action-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .mr-obs-action-btn-pinned {
+          color: #93c5fd;
+          background: rgba(96, 165, 250, 0.12);
         }
 
         /* ── Info Banner ── */

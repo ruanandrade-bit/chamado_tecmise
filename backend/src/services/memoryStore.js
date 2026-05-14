@@ -421,12 +421,16 @@ export const memoryStore = {
     const existing = state.monthlyReports[key] || { month, year, observations: [], ticketCount: 0 }
     const storedCount = Number(existing.ticketCount || 0)
     const derivedCount = countOpenedTicketsInMonth(month, year)
+    const normalizedObservations = (Array.isArray(existing.observations) ? existing.observations : []).map((obs) => ({
+      ...obs,
+      pinned: Boolean(obs?.pinned)
+    }))
 
     return {
       ...existing,
       month,
       year,
-      observations: Array.isArray(existing.observations) ? existing.observations : [],
+      observations: normalizedObservations,
       ticketCount: Math.max(storedCount, derivedCount)
     }
   },
@@ -446,12 +450,13 @@ export const memoryStore = {
       author: user.name,
       school: school || null,
       assignee: assignee || null,
+      pinned: false,
       createdAt: new Date().toISOString()
     }
 
     state.monthlyReports[key].observations.push(observation)
     persistState()
-    return state.monthlyReports[key]
+    return memoryStore.getMonthlyReport(month, year)
   },
 
   deleteMonthlyObservation(month, year, observationId) {
@@ -464,7 +469,7 @@ export const memoryStore = {
 
     report.observations.splice(idx, 1)
     persistState()
-    return report
+    return memoryStore.getMonthlyReport(month, year)
   },
 
   editMonthlyObservation(month, year, observationId, updates = {}) {
@@ -484,7 +489,20 @@ export const memoryStore = {
     obs.assignee = assignee || null
     obs.editedAt = new Date().toISOString()
     persistState()
-    return report
+    return memoryStore.getMonthlyReport(month, year)
+  },
+
+  setMonthlyObservationPinned(month, year, observationId, pinned) {
+    const key = monthlyKey(month, year)
+    const report = state.monthlyReports[key]
+    if (!report) return null
+
+    const obs = report.observations.find((o) => o.id === observationId)
+    if (!obs) return null
+
+    obs.pinned = Boolean(pinned)
+    persistState()
+    return memoryStore.getMonthlyReport(month, year)
   },
 
   // ─── Inventory ─────────────────────────────────────────────────────

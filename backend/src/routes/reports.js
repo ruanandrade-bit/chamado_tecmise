@@ -81,4 +81,23 @@ router.put('/monthly/:month/:year/:observationId', authRequired, adminOnly, (req
   res.json(report)
 })
 
+// PATCH /api/reports/monthly/:month/:year/:observationId/pin — admin only
+router.patch('/monthly/:month/:year/:observationId/pin', authRequired, adminOnly, (req, res) => {
+  const month = Number(req.params.month)
+  const year = Number(req.params.year)
+  const observationId = Number(req.params.observationId)
+  const pinned = req.body?.pinned
+
+  if (!validMonthYear(month, year) || !observationId || typeof pinned !== 'boolean') {
+    return res.status(400).json({ message: 'Parâmetros inválidos.' })
+  }
+
+  const report = memoryStore.setMonthlyObservationPinned(month, year, observationId, pinned)
+  if (!report) {
+    return res.status(404).json({ message: 'Observação não encontrada.' })
+  }
+
+  res.json(report)
+})
+
 export default router
