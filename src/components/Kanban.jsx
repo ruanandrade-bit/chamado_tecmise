@@ -254,11 +254,9 @@ export default function Kanban() {
         ticket={ticketToArchive}
       />
 
-      {/* Header */}
-      <div className="kb-header">
-        <div>
-          <h1 className="kb-title">Kanban Board</h1>
-        </div>
+      {/* Header with title on left and button on right */}
+      <div className="kb-header-wrapper">
+        <h1 className="kb-title">Kanban Board</h1>
         
         {!isViewOnly && (
           <button
@@ -368,13 +366,13 @@ export default function Kanban() {
           to { opacity: 1; transform: translateY(0); }
         }
 
-        /* ── Header ── */
-        .kb-header {
+        /* ── Header Wrapper ── */
+        .kb-header-wrapper {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          flex-wrap: wrap;
-          gap: 16px;
+          gap: 20px;
+          margin-bottom: 8px;
         }
 
         .kb-title {
@@ -382,6 +380,7 @@ export default function Kanban() {
           font-weight: 700;
           color: #f3f4f6;
           letter-spacing: -0.01em;
+          flex-shrink: 0;
         }
 
         /* ── New Ticket Button ── */
@@ -444,7 +443,7 @@ export default function Kanban() {
         /* ── Column ── */
         .kb-column {
           flex-shrink: 0;
-          width: 288px;
+          width: 270px;
           background: rgba(15, 15, 30, 0.45);
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);

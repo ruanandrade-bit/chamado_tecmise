@@ -7,8 +7,7 @@ const STATUS_ORDER = {
   'em-analise': 2,
   'aguardando-escola': 3,
   'reprocessando': 4,
-  'em-resolucao': 5,
-  'resolvido': 6
+  'resolvido': 5
 }
 
 const FALLBACK_STATUSES = [
@@ -17,7 +16,6 @@ const FALLBACK_STATUSES = [
   { value: 'em-analise', label: 'Em análise', color: 'bg-yellow-500' },
   { value: 'aguardando-escola', label: 'Aguardando escola', color: 'bg-purple-500' },
   { value: 'reprocessando', label: 'Processamento', color: 'bg-indigo-500' },
-  { value: 'em-resolucao', label: 'Em resolução', color: 'bg-orange-500' },
   { value: 'resolvido', label: 'Resolvido', color: 'bg-primary-light' }
 ]
 
