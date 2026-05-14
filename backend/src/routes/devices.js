@@ -42,7 +42,9 @@ function getTailscaleApiKey() {
     'TAILSCALE_API_TOKEN',
     'TAILSCALE_ACCESS_TOKEN',
     'TAILSCALE_TOKEN',
-    'TS_API_KEY'
+    'TS_API_KEY',
+    'TAILSCALE_AUTHKEY',
+    'TS_AUTHKEY'
   )
 }
 
@@ -133,7 +135,7 @@ async function fetchTailscaleDevices() {
     if (!tailscaleAuth.value) {
       throw new Error(
         'Chave da API do Tailscale não configurada. Defina uma destas variáveis: ' +
-        'TAILSCALE_API_KEY, TAILSCALE_API_TOKEN, TAILSCALE_ACCESS_TOKEN, TAILSCALE_TOKEN ou TS_API_KEY.'
+        'TAILSCALE_API_KEY, TAILSCALE_API_TOKEN, TAILSCALE_ACCESS_TOKEN, TAILSCALE_TOKEN, TS_API_KEY, TAILSCALE_AUTHKEY ou TS_AUTHKEY.'
       )
     }
 
