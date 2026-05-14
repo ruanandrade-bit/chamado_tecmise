@@ -435,21 +435,45 @@ export default function MonthlyReport() {
 
   const handleSaveEdit = async () => {
     if (!editText.trim() || isSavingEdit) return
+
+    const currentObs = observations.find((item) => item.id === editingId)
+    if (!currentObs) {
+      cancelEditing()
+      return
+    }
+
+    const nextText = String(editText || '').trim()
+    const nextSchool = String(editSchool || '').trim()
+    const nextAssignee = String(editAssignee || '').trim()
+
+    const currentText = String(currentObs.text || '').trim()
+    const currentSchool = String(currentObs.school || '').trim()
+    const currentAssignee = String(currentObs.assignee || '').trim()
+
+    const hasChanges = (
+      nextText !== currentText
+      || nextSchool !== currentSchool
+      || nextAssignee !== currentAssignee
+    )
+
+    if (!hasChanges) {
+      cancelEditing()
+      return
+    }
+
     setIsSavingEdit(true)
     try {
       const data = await api.put(
         `/reports/monthly/${selectedMonth}/${selectedYear}/${editingId}`,
         {
-          text: editText,
-          school: editSchool,
-          assignee: editAssignee
+          text: nextText,
+          school: nextSchool,
+          assignee: nextAssignee
         }
       )
       setObservations(data.observations || [])
       setTicketsThisMonth(data.ticketCount || 0)
-      setOpenSelectKey(null)
-      setEditingId(null)
-      setEditText('')
+      cancelEditing()
     } catch (err) {
       alert(err.message || 'Erro ao editar observação.')
     } finally {

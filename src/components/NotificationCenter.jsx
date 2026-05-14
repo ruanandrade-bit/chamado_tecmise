@@ -4,16 +4,39 @@ import { useAuthStore } from '../stores/authStore'
 import { api } from '../services/api'
 
 const HISTORY_PREFIX = 's4s_notification_history:'
+const LAST_POLL_PREFIX = 's4s_notification_poll:'
 const BASE_TITLE = 'S4S Chamados'
 
 function getHistoryKey(email) {
   return `${HISTORY_PREFIX}${email || 'guest'}`
 }
 
+function getLastPollKey(email) {
+  return `${LAST_POLL_PREFIX}${email || 'guest'}`
+}
+
+function toTimestamp(value) {
+  const parsed = new Date(value || 0).getTime()
+  return Number.isNaN(parsed) ? 0 : parsed
+}
+
+function dedupeAndSortById(notifications, maxItems) {
+  const byId = new Map()
+
+  notifications.forEach((note) => {
+    if (!note || note.id === undefined || note.id === null) return
+    byId.set(String(note.id), note)
+  })
+
+  return Array.from(byId.values())
+    .sort((a, b) => toTimestamp(a.timestamp) - toTimestamp(b.timestamp))
+    .slice(-maxItems)
+}
+
 function appendHistory(email, notifications) {
   if (!email || notifications.length === 0) return
   const history = JSON.parse(localStorage.getItem(getHistoryKey(email)) || '[]')
-  const updated = [...history, ...notifications].slice(-50)
+  const updated = dedupeAndSortById([...history, ...notifications], 50)
   localStorage.setItem(getHistoryKey(email), JSON.stringify(updated))
 }
 
@@ -110,20 +133,39 @@ export default function NotificationCenter() {
   useEffect(() => {
     if (!isAuthenticated || !user?.email) return
 
+    const lastPollKey = getLastPollKey(user.email)
+    const history = JSON.parse(localStorage.getItem(getHistoryKey(user.email)) || '[]')
+    const historyLatestTs = history.reduce((max, note) => Math.max(max, toTimestamp(note.timestamp)), 0)
+    const storedSince = Number(localStorage.getItem(lastPollKey) || '0')
+    let sinceTimestamp = Math.max(storedSince, historyLatestTs)
+    if (sinceTimestamp <= 0) sinceTimestamp = Date.now()
+
     const checkNotifications = async () => {
       try {
-        const { notifications: notes } = await api.get('/notifications')
+        const query = `?since=${encodeURIComponent(new Date(sinceTimestamp).toISOString())}&limit=20`
+        const { notifications: notes } = await api.get(`/notifications${query}`)
         if (Array.isArray(notes) && notes.length > 0) {
-          setNotifications((prev) => [...prev, ...notes].slice(-5))
-          appendHistory(user.email, notes)
+          const freshNotes = dedupeAndSortById(notes, 20)
+          setNotifications((prev) => dedupeAndSortById([...prev, ...freshNotes], 5))
+          appendHistory(user.email, freshNotes)
 
           // Show browser native notification for each new one
-          notes.forEach((note) => {
+          freshNotes.forEach((note) => {
             showBrowserNotification(
               note.title?.replace(/^[\p{Emoji}\s]+/u, '') || 'S4S Chamados',
               note.message
             )
           })
+
+          const latestTimestamp = freshNotes.reduce(
+            (max, note) => Math.max(max, toTimestamp(note.timestamp)),
+            sinceTimestamp
+          )
+
+          if (latestTimestamp > sinceTimestamp) {
+            sinceTimestamp = latestTimestamp
+            localStorage.setItem(lastPollKey, String(latestTimestamp))
+          }
         }
       } catch {
         // Keep UI running even if backend is unavailable momentarily.

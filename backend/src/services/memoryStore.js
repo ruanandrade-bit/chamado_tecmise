@@ -197,6 +197,17 @@ function countOpenedTicketsInMonth(month, year) {
   }, 0)
 }
 
+function parseTimestamp(value) {
+  if (value === undefined || value === null || value === '') return null
+
+  const numeric = Number(value)
+  if (Number.isFinite(numeric) && numeric > 0) return numeric
+
+  const parsed = new Date(String(value))
+  const parsedMs = parsed.getTime()
+  return Number.isNaN(parsedMs) ? null : parsedMs
+}
+
 /**
  * Find a user's email by their display name.
  * Used as fallback when ticket.createdByEmail is missing (legacy tickets).
@@ -399,27 +410,38 @@ export const memoryStore = {
   },
 
   pushNotification(notification) {
-    state.notifications.push({
+    const entry = {
       id: Date.now() + Math.random(),
       timestamp: new Date().toISOString(),
       ...notification
-    })
+    }
+    state.notifications.push(entry)
+    state.notifications = state.notifications.slice(-500)
     persistState()
+    return entry
   },
 
-  consumeNotifications(userEmail) {
-    const visible = []
-    const remaining = []
+  getNotifications(userEmail, options = {}) {
+    const sinceMs = parseTimestamp(options.since)
+    const limitValue = Number.parseInt(options.limit, 10)
+    const limit = Number.isFinite(limitValue) && limitValue > 0 ? Math.min(limitValue, 200) : 50
 
-    state.notifications.forEach((note) => {
+    const visible = state.notifications.filter((note) => {
       const isForUser = !note.targetUserEmail || note.targetUserEmail === userEmail
-      if (isForUser) visible.push(note)
-      else remaining.push(note)
+      if (!isForUser) return false
+
+      if (sinceMs === null) return true
+      const noteTimestampMs = parseTimestamp(note.timestamp)
+      return noteTimestampMs !== null && noteTimestampMs > sinceMs
     })
 
-    state.notifications = remaining
-    if (visible.length > 0) persistState()
-    return visible
+    visible.sort((a, b) => {
+      const left = parseTimestamp(a.timestamp) || 0
+      const right = parseTimestamp(b.timestamp) || 0
+      return left - right
+    })
+
+    return visible.slice(-limit)
   },
 
   statuses: STATUSES,
@@ -493,9 +515,26 @@ export const memoryStore = {
     const school = String(updates.school || '').trim()
     const assignee = String(updates.assignee || '').trim()
 
+    const normalizedSchool = school || null
+    const normalizedAssignee = assignee || null
+
+    const currentText = String(obs.text || '').trim()
+    const currentSchool = obs.school ? String(obs.school).trim() : null
+    const currentAssignee = obs.assignee ? String(obs.assignee).trim() : null
+
+    const hasChanges = (
+      (nextText ? nextText : currentText) !== currentText
+      || normalizedSchool !== currentSchool
+      || normalizedAssignee !== currentAssignee
+    )
+
+    if (!hasChanges) {
+      return memoryStore.getMonthlyReport(month, year)
+    }
+
     if (nextText) obs.text = nextText
-    obs.school = school || null
-    obs.assignee = assignee || null
+    obs.school = normalizedSchool
+    obs.assignee = normalizedAssignee
     obs.editedAt = new Date().toISOString()
     persistState()
     return memoryStore.getMonthlyReport(month, year)
@@ -633,7 +672,7 @@ export const memoryStore = {
   // ─── Get Years with Tickets ────────────────────────────────────────
   getYearsWithTickets() {
     const yearsSet = new Set()
-    
+
     state.tickets.forEach((ticket) => {
       const createdAt = ticket.createdAt ? new Date(ticket.createdAt) : null
       if (createdAt && !Number.isNaN(createdAt.getTime())) {
@@ -641,12 +680,26 @@ export const memoryStore = {
         yearsSet.add(year)
       }
     })
-    
+
+    Object.entries(state.monthlyReports || {}).forEach(([key, report]) => {
+      const reportYear = Number(report?.year)
+      if (Number.isInteger(reportYear)) {
+        yearsSet.add(reportYear)
+        return
+      }
+
+      const [, parsedYear] = String(key).split('-')
+      const fallbackYear = Number(parsedYear)
+      if (Number.isInteger(fallbackYear)) {
+        yearsSet.add(fallbackYear)
+      }
+    })
+
     // Convert to array and sort descending
     const years = Array.from(yearsSet)
       .sort((a, b) => b - a)
       .map(year => String(year))
-    
+
     return years
   }
 }

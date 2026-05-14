@@ -32,7 +32,7 @@ API disponível em: `http://localhost:4000`
 - `POST /api/tickets/:id/move`
 - `PATCH /api/tickets/:id/checklist/:itemId` (apenas admin)
 - `POST /api/tickets/:id/checklist` (apenas admin)
-- `GET /api/notifications`
+- `GET /api/notifications` (`?since=ISO_DATE|timestamp&limit=50`)
 - `POST /api/notifications`
 
 ## Observação importante

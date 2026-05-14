@@ -7,7 +7,10 @@ const router = Router()
 router.use(authRequired)
 
 router.get('/', (req, res) => {
-  const notifications = memoryStore.consumeNotifications(req.user.email)
+  const notifications = memoryStore.getNotifications(req.user.email, {
+    since: req.query.since,
+    limit: req.query.limit
+  })
   return res.json({ notifications })
 })
 

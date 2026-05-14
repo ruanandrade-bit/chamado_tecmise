@@ -47,18 +47,32 @@ export default function CreateTicketModal({ onClose }) {
     'Criação de acesso S4S'
   ]
 
-  // Build turma list for selected school: { turmaName, device }
+  // Build turma list for selected school: { id, turmaName, device }
   const availableTurmas = useMemo(() => {
     if (!formData.school) return []
     const schoolDevices = schoolData[formData.school] || {}
     const turmas = []
     for (const [device, turmaList] of Object.entries(schoolDevices)) {
-      for (const turma of turmaList) {
-        turmas.push({ name: turma, device })
+      turmaList.forEach((turma, index) => {
+        turmas.push({
+          id: `${device}::${turma}::${index}`,
+          name: turma,
+          device
+        })
+      })
       }
-    }
     return turmas
   }, [formData.school, schoolData])
+
+  const turmaById = useMemo(
+    () => new Map(availableTurmas.map((item) => [item.id, item])),
+    [availableTurmas]
+  )
+
+  const selectedTurmaEntries = useMemo(
+    () => formData.selectedTurmas.map((id) => turmaById.get(id)).filter(Boolean),
+    [formData.selectedTurmas, turmaById]
+  )
 
   // All devices for this school
   const allDevices = useMemo(() => {
@@ -69,12 +83,11 @@ export default function CreateTicketModal({ onClose }) {
   // Devices that are allowed (linked to selected turmas)
   const allowedDevices = useMemo(() => {
     const devices = new Set()
-    for (const turma of formData.selectedTurmas) {
-      const match = availableTurmas.find(t => t.name === turma)
-      if (match) devices.add(match.device)
+    for (const turma of selectedTurmaEntries) {
+      devices.add(turma.device)
     }
     return devices
-  }, [formData.selectedTurmas, availableTurmas])
+  }, [selectedTurmaEntries])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -85,17 +98,17 @@ export default function CreateTicketModal({ onClose }) {
     }
   }
 
-  const toggleTurma = (turmaName) => {
+  const toggleTurma = (turmaId) => {
     setFormData(prev => {
-      const isSelected = prev.selectedTurmas.includes(turmaName)
+      const isSelected = prev.selectedTurmas.includes(turmaId)
       const newTurmas = isSelected
-        ? prev.selectedTurmas.filter(t => t !== turmaName)
-        : [...prev.selectedTurmas, turmaName]
+        ? prev.selectedTurmas.filter(t => t !== turmaId)
+        : [...prev.selectedTurmas, turmaId]
 
       // Recalculate which devices are allowed after turma change
       const newAllowedDevices = new Set()
       for (const t of newTurmas) {
-        const match = availableTurmas.find(at => at.name === t)
+        const match = turmaById.get(t)
         if (match) newAllowedDevices.add(match.device)
       }
       // Remove any selected devices no longer allowed
@@ -178,9 +191,18 @@ export default function CreateTicketModal({ onClose }) {
     setLoading(true)
 
     try {
+      const turmaNameCount = selectedTurmaEntries.reduce((acc, item) => {
+        acc[item.name] = (acc[item.name] || 0) + 1
+        return acc
+      }, {})
+
+      const classroomLabels = selectedTurmaEntries.map((item) => (
+        turmaNameCount[item.name] > 1 ? `${item.name} (${item.device})` : item.name
+      ))
+
       await addTicket({
         school: formData.school.trim(),
-        classroom: formData.selectedTurmas.join(', '),
+        classroom: classroomLabels.join(', '),
         device: formData.selectedDevices.join(', '),
         period: formData.selectedPeriods.join(' • '),
         problemType: formData.problemType,
@@ -249,21 +271,21 @@ export default function CreateTicketModal({ onClose }) {
               ) : (
                 <>
                   <div className="ctm-turma-grid">
-                    {availableTurmas.map(({ name, device }) => (
+                    {availableTurmas.map(({ id, name, device }) => (
                       <label
-                        key={`${device}-${name}`}
-                        className={`ctm-checkbox-item ${formData.selectedTurmas.includes(name) ? 'ctm-checkbox-checked' : ''}`}
+                        key={id}
+                        className={`ctm-checkbox-item ${formData.selectedTurmas.includes(id) ? 'ctm-checkbox-checked' : ''}`}
                         title={`Device ${device}`}
                       >
-                        <span className={`ctm-checkbox-box ${formData.selectedTurmas.includes(name) ? 'ctm-checkbox-box-checked' : ''}`}>
-                          {formData.selectedTurmas.includes(name) && '✓'}
+                        <span className={`ctm-checkbox-box ${formData.selectedTurmas.includes(id) ? 'ctm-checkbox-box-checked' : ''}`}>
+                          {formData.selectedTurmas.includes(id) && '✓'}
                         </span>
                         <span className="ctm-checkbox-label">{name}</span>
                         <span className="ctm-turma-device">{device}</span>
                         <input
                           type="checkbox"
-                          checked={formData.selectedTurmas.includes(name)}
-                          onChange={() => toggleTurma(name)}
+                          checked={formData.selectedTurmas.includes(id)}
+                          onChange={() => toggleTurma(id)}
                           style={{ display: 'none' }}
                         />
                       </label>

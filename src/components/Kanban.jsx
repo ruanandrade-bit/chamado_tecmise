@@ -177,7 +177,7 @@ const STATUS_DOT_STYLES = {
   recebido: { bg: '#22c55e', glow: 'rgba(34,197,94,0.3)' },
   'em-analise': { bg: '#f59e0b', glow: 'rgba(245,158,11,0.3)' },
   'aguardando-escola': { bg: '#f59e0b', glow: 'rgba(245,158,11,0.3)' },
-  'em-andamento': { bg: '#3b82f6', glow: 'rgba(59,130,246,0.3)' },
+  reprocessando: { bg: '#3b82f6', glow: 'rgba(59,130,246,0.3)' },
   resolvido: { bg: '#22c55e', glow: 'rgba(34,197,94,0.3)' },
 }
 

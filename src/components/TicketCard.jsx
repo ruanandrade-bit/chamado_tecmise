@@ -13,7 +13,12 @@ export default function TicketCard({
   showArchiveAction = false,
   onArchive
 }) {
-  const priorityConfig = PRIORITY_CONFIG[ticket.priority] || PRIORITY_CONFIG.medium
+  const priorityConfig = PRIORITY_CONFIG[ticket.priority] || PRIORITY_CONFIG.media
+  const prioritySymbol = ticket.priority === 'alta'
+    ? '⚡'
+    : ticket.priority === 'media'
+      ? '→'
+      : '○'
 
   return (
     <div
@@ -33,7 +38,7 @@ export default function TicketCard({
           <p className="tk-card-school">{ticket.school}</p>
         </div>
         <div className={`badge-status ${priorityConfig.bg} ${priorityConfig.text} ${priorityConfig.border} border flex-shrink-0`}>
-          {ticket.priority === 'high' ? '⚡' : ticket.priority === 'medium' ? '→' : '○'} {priorityConfig.label}
+          {prioritySymbol} {priorityConfig.label}
         </div>
       </div>
 
