@@ -12,9 +12,13 @@ const MONTH_NAMES = [
 function PrettySelect({ value, onChange, options, placeholder, icon: Icon, selectKey, openSelectKey, setOpenSelectKey }) {
   const containerRef = useRef(null)
   const isOpen = openSelectKey === selectKey
+  const [didSelect, setDidSelect] = useState(false)
 
   useEffect(() => {
     const handleOutside = (event) => {
+      if (event.target?.closest?.('.mr-pretty-select')) {
+        return
+      }
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setOpenSelectKey(null)
       }
@@ -25,14 +29,21 @@ function PrettySelect({ value, onChange, options, placeholder, icon: Icon, selec
 
   const handlePick = (nextValue) => {
     onChange(nextValue)
+    setDidSelect(true)
     setOpenSelectKey(null)
   }
+
+  useEffect(() => {
+    if (!didSelect) return
+    const timer = setTimeout(() => setDidSelect(false), 420)
+    return () => clearTimeout(timer)
+  }, [didSelect])
 
   return (
     <div className={`mr-pretty-select ${isOpen ? 'mr-pretty-select-open' : ''}`} ref={containerRef}>
       <button
         type="button"
-        className="mr-pretty-trigger"
+        className={`mr-pretty-trigger ${didSelect ? 'mr-pretty-trigger-picked' : ''}`}
         onClick={() => setOpenSelectKey(isOpen ? null : selectKey)}
         aria-expanded={isOpen}
       >
@@ -49,6 +60,7 @@ function PrettySelect({ value, onChange, options, placeholder, icon: Icon, selec
             type="button"
             className={`mr-pretty-option ${!value ? 'mr-pretty-option-active' : ''}`}
             onClick={() => handlePick('')}
+            onMouseDown={(e) => e.stopPropagation()}
           >
             {placeholder}
           </button>
@@ -58,7 +70,9 @@ function PrettySelect({ value, onChange, options, placeholder, icon: Icon, selec
               type="button"
               className={`mr-pretty-option ${value === item ? 'mr-pretty-option-active' : ''}`}
               onClick={() => handlePick(item)}
+              onMouseDown={(e) => e.stopPropagation()}
             >
+              {value === item && <Check size={12} className="mr-pretty-option-check" />}
               {item}
             </button>
           ))}
@@ -1087,6 +1101,19 @@ export default function MonthlyReport() {
           background: rgba(255, 255, 255, 0.05);
         }
 
+        .mr-pretty-trigger-picked {
+          border-color: rgba(16, 185, 129, 0.55) !important;
+          box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.16), 0 0 18px rgba(16, 185, 129, 0.14) !important;
+          background: rgba(16, 185, 129, 0.08) !important;
+          animation: mrSelectPulse 0.42s ease-out;
+        }
+
+        @keyframes mrSelectPulse {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.01); }
+          100% { transform: scale(1); }
+        }
+
         .mr-pretty-select-open .mr-pretty-trigger {
           border-color: rgba(34, 197, 94, 0.4);
           box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08);
@@ -1139,6 +1166,9 @@ export default function MonthlyReport() {
         .mr-pretty-option {
           width: 100%;
           text-align: left;
+          display: flex;
+          align-items: center;
+          gap: 7px;
           border: none;
           background: transparent;
           color: #cbd5e1;
@@ -1158,6 +1188,11 @@ export default function MonthlyReport() {
         .mr-pretty-option-active {
           background: rgba(34, 197, 94, 0.16);
           color: #86efac;
+        }
+
+        .mr-pretty-option-check {
+          color: #34d399;
+          flex-shrink: 0;
         }
 
         .mr-optional-input {
