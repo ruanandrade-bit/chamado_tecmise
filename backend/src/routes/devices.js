@@ -39,6 +39,7 @@ function firstNonEmptyEnv(...keys) {
 function getTailscaleApiKey() {
   return firstNonEmptyEnv(
     'TAILSCALE_API_KEY',
+    'TAILSCALE_API_TOKEN',
     'TAILSCALE_ACCESS_TOKEN',
     'TAILSCALE_TOKEN',
     'TS_API_KEY'
@@ -132,7 +133,21 @@ async function fetchTailscaleDevices() {
     if (!tailscaleAuth.value) {
       throw new Error(
         'Chave da API do Tailscale não configurada. Defina uma destas variáveis: ' +
-        'TAILSCALE_API_KEY, TAILSCALE_ACCESS_TOKEN, TAILSCALE_TOKEN ou TS_API_KEY.'
+        'TAILSCALE_API_KEY, TAILSCALE_API_TOKEN, TAILSCALE_ACCESS_TOKEN, TAILSCALE_TOKEN ou TS_API_KEY.'
+      )
+    }
+
+    if (tailscaleAuth.value.startsWith('tskey-auth-')) {
+      throw new Error(
+        'A chave informada é Auth Key (tskey-auth), usada para adicionar devices. ' +
+        'Para esta tela, use API Access Token (tskey-api).'
+      )
+    }
+
+    if (tailscaleAuth.value.startsWith('tskey-client-')) {
+      throw new Error(
+        'A chave informada é OAuth Client Secret (tskey-client). ' +
+        'Use um API Access Token (tskey-api) ou obtenha access_token OAuth para chamada da API.'
       )
     }
 

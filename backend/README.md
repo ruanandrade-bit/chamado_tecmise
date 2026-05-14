@@ -19,6 +19,7 @@ API disponível em: `http://localhost:4000`
 - `JWT_SECRET`: segredo do token JWT (mínimo 32 caracteres)
 - `CORS_ORIGIN`: origens permitidas, separadas por vírgula
 - `TAILSCALE_API_KEY`: chave da API do Tailscale (prefixo `tskey-api-...`) para tela Devices Online
+- Alias aceitos: `TAILSCALE_API_TOKEN`, `TAILSCALE_ACCESS_TOKEN`, `TAILSCALE_TOKEN`, `TS_API_KEY`
 - `TAILSCALE_TAILNET`: tailnet para consulta da API (`-` usa a tailnet padrão da chave)
 
 ### Render (produção)
@@ -40,6 +41,7 @@ Fallback seguro:
 Se a tela **Devices Online** mostrar tudo offline/“não existe no Tailscale”, valide no Render:
 - `TAILSCALE_API_KEY` configurada
 - `TAILSCALE_TAILNET` correta (ou `-`)
+- A chave precisa ser **API Access Token** (`tskey-api-...`), não `tskey-auth-...` nem `tskey-client-...`
 
 ## Endpoints principais
 
