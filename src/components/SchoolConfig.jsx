@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Settings, School, Cpu, BookOpen, Plus, Trash2, Save, Loader2, AlertTriangle, ChevronDown, ChevronRight, ShieldAlert, Pencil, Check, Briefcase, Users } from 'lucide-react'
 import { api } from '../services/api'
+import { useAuthStore } from '../stores/authStore'
+
+const PROFESSIONAL_ROLE_OPTIONS = ['Psicóloga', 'Pedagoga']
 
 export default function SchoolConfig() {
+  const user = useAuthStore((state) => state.user)
   const [schoolData, setSchoolData] = useState({})
   const [professionals, setProfessionals] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -64,7 +68,24 @@ export default function SchoolConfig() {
         api.put('/professionals', { professionals })
       ])
       setSchoolData(updatedSchools || {})
-      setProfessionals(updatedProfessionals?.professionals || [])
+      const nextProfessionals = updatedProfessionals?.professionals || []
+      setProfessionals(nextProfessionals)
+
+      if (user?.email) {
+        const updatedSelf = nextProfessionals.find((item) => (
+          String(item?.id || '') === `user-${user.id}`
+          || String(item?.name || '').trim().toLowerCase() === String(user.name || '').trim().toLowerCase()
+        ))
+        if (updatedSelf && (updatedSelf.role !== user.role || updatedSelf.name !== user.name)) {
+          useAuthStore.setState((prev) => ({
+            ...prev,
+            user: prev.user
+              ? { ...prev.user, name: updatedSelf.name, role: updatedSelf.role }
+              : prev.user
+          }))
+        }
+      }
+
       setHasChanges(false)
     } catch (err) {
       alert(err.message || 'Erro ao salvar configuração.')
@@ -177,6 +198,7 @@ export default function SchoolConfig() {
     const name = newProfessionalName.trim()
     const role = newProfessionalRole.trim()
     if (!name || !role) return
+    if (!PROFESSIONAL_ROLE_OPTIONS.includes(role)) return
 
     const duplicated = professionals.some((p) => p.name.toLowerCase() === name.toLowerCase() && p.role.toLowerCase() === role.toLowerCase())
     if (duplicated) return
@@ -206,9 +228,20 @@ export default function SchoolConfig() {
 
   const confirmEditProfessional = () => {
     if (!editingProfessionalId) return
+    const current = professionals.find((item) => item.id === editingProfessionalId)
+    if (!current) return
+
     const name = editingProfessionalName.trim()
     const role = editingProfessionalRole.trim()
     if (!name || !role) return
+
+    const unchanged = current.name.trim() === name && current.role.trim() === role
+    if (unchanged) {
+      setEditingProfessionalId(null)
+      setEditingProfessionalName('')
+      setEditingProfessionalRole('')
+      return
+    }
 
     setProfessionals((prev) => prev.map((p) => (
       p.id === editingProfessionalId ? { ...p, name, role } : p
@@ -445,13 +478,17 @@ export default function SchoolConfig() {
               onChange={(e) => setNewProfessionalName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addProfessional()}
             />
-            <input
-              className="sc-input"
-              placeholder="Cargo..."
+            <select
+              className="sc-input sc-select"
               value={newProfessionalRole}
               onChange={(e) => setNewProfessionalRole(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addProfessional()}
-            />
+            >
+              <option value="">Selecione o cargo...</option>
+              {PROFESSIONAL_ROLE_OPTIONS.map((role) => (
+                <option key={role} value={role}>{role}</option>
+              ))}
+            </select>
             <button className="sc-add-btn" onClick={addProfessional} disabled={!newProfessionalName.trim() || !newProfessionalRole.trim()}>
               <Plus size={14} /> Adicionar Profissional
             </button>
@@ -474,12 +511,18 @@ export default function SchoolConfig() {
                         onChange={(e) => setEditingProfessionalName(e.target.value)}
                         placeholder="Nome"
                       />
-                      <input
-                        className="sc-input sc-input-sm"
+                      <select
+                        className="sc-input sc-input-sm sc-select"
                         value={editingProfessionalRole}
                         onChange={(e) => setEditingProfessionalRole(e.target.value)}
-                        placeholder="Cargo"
-                      />
+                      >
+                        {(PROFESSIONAL_ROLE_OPTIONS.includes(editingProfessionalRole)
+                          ? PROFESSIONAL_ROLE_OPTIONS
+                          : [editingProfessionalRole, ...PROFESSIONAL_ROLE_OPTIONS]
+                        ).map((role) => (
+                          <option key={role} value={role}>{role}</option>
+                        ))}
+                      </select>
                       <button className="sc-edit-confirm" onClick={confirmEditProfessional} title="Confirmar">
                         <Check size={12} />
                       </button>
@@ -700,6 +743,7 @@ const baseStyles = `
 
   .sc-input-sm { padding: 8px 12px; font-size: 0.8125rem; }
   .sc-input-xs { padding: 6px 10px; font-size: 0.75rem; flex: 1; }
+  .sc-select { cursor: pointer; }
 
   .sc-add-btn {
     display: flex;

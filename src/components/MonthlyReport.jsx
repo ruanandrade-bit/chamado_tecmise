@@ -9,7 +9,7 @@ const MONTH_NAMES = [
   'Setembro', 'Outubro', 'Novembro', 'Dezembro'
 ]
 
-function PrettySelect({ value, onChange, options, placeholder, icon: Icon, selectKey, openSelectKey, setOpenSelectKey }) {
+function PrettySelect({ value, onChange, options, placeholder, icon: Icon, selectKey, openSelectKey, setOpenSelectKey, allowClear = true }) {
   const containerRef = useRef(null)
   const isOpen = openSelectKey === selectKey
   const [didSelect, setDidSelect] = useState(false)
@@ -56,14 +56,16 @@ function PrettySelect({ value, onChange, options, placeholder, icon: Icon, selec
 
       {isOpen && (
         <div className="mr-pretty-options">
-          <button
-            type="button"
-            className={`mr-pretty-option ${!value ? 'mr-pretty-option-active' : ''}`}
-            onClick={() => handlePick('')}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            {placeholder}
-          </button>
+          {allowClear && (
+            <button
+              type="button"
+              className={`mr-pretty-option ${!value ? 'mr-pretty-option-active' : ''}`}
+              onClick={() => handlePick('')}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              {placeholder}
+            </button>
+          )}
           {options.map((item) => (
             <button
               key={item}
@@ -251,12 +253,23 @@ export default function MonthlyReport() {
   const now = new Date()
   const currentMonth = now.getMonth() + 1
   const currentYear = now.getFullYear()
-  const currentPeriod = `${currentYear}-${String(currentMonth).padStart(2, '0')}`
-  const [selectedPeriod, setSelectedPeriod] = useState(currentPeriod)
-  const [selectedYearRaw, selectedMonthRaw] = selectedPeriod.split('-')
-  const selectedMonth = Number(selectedMonthRaw) || currentMonth
-  const selectedYear = Number(selectedYearRaw) || currentYear
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth)
+  const [selectedYear, setSelectedYear] = useState(currentYear)
   const monthName = MONTH_NAMES[selectedMonth - 1] || MONTH_NAMES[currentMonth - 1]
+  const monthOption = MONTH_NAMES[selectedMonth - 1] || ''
+  const yearOption = String(selectedYear)
+  const yearOptions = useMemo(() => {
+    const baseStart = currentYear - 5
+    const baseEnd = currentYear + 5
+    const minYear = Math.min(baseStart, selectedYear)
+    const maxYear = Math.max(baseEnd, selectedYear)
+    const items = []
+    for (let y = maxYear; y >= minYear; y -= 1) {
+      items.push(String(y))
+    }
+    return items
+  }, [currentYear, selectedYear])
+  const isCurrentPeriod = selectedMonth === currentMonth && selectedYear === currentYear
 
   const [ticketsThisMonth, setTicketsThisMonth] = useState(0)
 
@@ -482,16 +495,44 @@ export default function MonthlyReport() {
           Mês do relatório
         </div>
         <div className="mr-filter-controls">
-          <input
-            type="month"
-            value={selectedPeriod}
-            onChange={(e) => setSelectedPeriod(e.target.value)}
-            className="mr-month-input"
-          />
+          <div className="mr-filter-picker">
+            <PrettySelect
+              value={monthOption}
+              onChange={(value) => {
+                const monthIndex = MONTH_NAMES.indexOf(value)
+                if (monthIndex >= 0) setSelectedMonth(monthIndex + 1)
+              }}
+              options={MONTH_NAMES}
+              placeholder="Mês"
+              icon={CalendarDays}
+              selectKey="filter-month"
+              openSelectKey={openSelectKey}
+              setOpenSelectKey={setOpenSelectKey}
+              allowClear={false}
+            />
+          </div>
+          <div className="mr-filter-picker mr-filter-picker-year">
+            <PrettySelect
+              value={yearOption}
+              onChange={(value) => {
+                const parsedYear = Number(value)
+                if (Number.isInteger(parsedYear)) setSelectedYear(parsedYear)
+              }}
+              options={yearOptions}
+              placeholder="Ano"
+              selectKey="filter-year"
+              openSelectKey={openSelectKey}
+              setOpenSelectKey={setOpenSelectKey}
+              allowClear={false}
+            />
+          </div>
           <button
-            onClick={() => setSelectedPeriod(currentPeriod)}
+            onClick={() => {
+              setSelectedMonth(currentMonth)
+              setSelectedYear(currentYear)
+            }}
             className="mr-current-month-btn"
-            disabled={selectedPeriod === currentPeriod}
+            disabled={isCurrentPeriod}
             title="Voltar para o mês atual"
           >
             Mês atual
@@ -887,27 +928,12 @@ export default function MonthlyReport() {
           gap: 8px;
         }
 
-        .mr-month-input {
-          height: 38px;
-          border-radius: 10px;
-          border: 1px solid rgba(34, 197, 94, 0.2);
-          background: rgba(255, 255, 255, 0.04);
-          color: #e5e7eb;
-          padding: 0 10px;
-          font-size: 0.8125rem;
-          font-weight: 600;
-          outline: none;
-          transition: all 0.2s ease;
+        .mr-filter-picker {
+          width: 190px;
         }
 
-        .mr-month-input::-webkit-calendar-picker-indicator {
-          filter: invert(0.9);
-          cursor: pointer;
-        }
-
-        .mr-month-input:focus {
-          border-color: rgba(34, 197, 94, 0.4);
-          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08);
+        .mr-filter-picker-year {
+          width: 116px;
         }
 
         .mr-current-month-btn {
@@ -1663,10 +1689,12 @@ export default function MonthlyReport() {
 
           .mr-filter-controls {
             width: 100%;
+            flex-wrap: wrap;
           }
 
-          .mr-month-input {
-            flex: 1;
+          .mr-filter-picker,
+          .mr-filter-picker-year {
+            width: 100%;
           }
         }
       `}</style>
