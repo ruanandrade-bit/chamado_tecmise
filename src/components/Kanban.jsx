@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Plus, Archive, Loader2 } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
@@ -190,6 +190,10 @@ export default function Kanban() {
   const [ticketToArchive, setTicketToArchive] = useState(null)
   const [isArchiving, setIsArchiving] = useState(false)
   const [dragOverCol, setDragOverCol] = useState(null)
+  const [isDraggingTicket, setIsDraggingTicket] = useState(false)
+  const boardScrollRef = useRef(null)
+  const autoScrollRafRef = useRef(null)
+  const dragPointerXRef = useRef(null)
 
   const isViewOnly = user?.viewOnly === true
 
@@ -209,6 +213,7 @@ export default function Kanban() {
 
   const handleDrop = (e, statusValue) => {
     setDragOverCol(null)
+    setIsDraggingTicket(false)
     if (!canDragDrop) {
       e.preventDefault()
       return
@@ -230,6 +235,15 @@ export default function Kanban() {
     setTicketToArchive(ticket)
   }
 
+  const handleTicketDragStart = () => {
+    if (!canDragDrop) return
+    setIsDraggingTicket(true)
+  }
+
+  const handleTicketDragEnd = () => {
+    setIsDraggingTicket(false)
+  }
+
   const handleConfirmArchive = async () => {
     if (!ticketToArchive || isArchiving) return
     setIsArchiving(true)
@@ -242,6 +256,74 @@ export default function Kanban() {
       setTicketToArchive(null)
     }
   }
+
+  useEffect(() => {
+    if (!isDraggingTicket) {
+      if (autoScrollRafRef.current) {
+        cancelAnimationFrame(autoScrollRafRef.current)
+        autoScrollRafRef.current = null
+      }
+      dragPointerXRef.current = null
+      return
+    }
+
+    const EDGE_ZONE = 130
+    const MAX_SPEED = 20
+
+    const tickAutoScroll = () => {
+      const container = boardScrollRef.current
+      if (!container || !isDraggingTicket) {
+        autoScrollRafRef.current = null
+        return
+      }
+
+      const pointerX = dragPointerXRef.current
+      if (typeof pointerX === 'number') {
+        const rect = container.getBoundingClientRect()
+        const leftTrigger = rect.left + EDGE_ZONE
+        const rightTrigger = rect.right - EDGE_ZONE
+        let delta = 0
+
+        if (pointerX < leftTrigger) {
+          const strength = Math.min(1, (leftTrigger - pointerX) / EDGE_ZONE)
+          delta = -Math.ceil(strength * MAX_SPEED)
+        } else if (pointerX > rightTrigger) {
+          const strength = Math.min(1, (pointerX - rightTrigger) / EDGE_ZONE)
+          delta = Math.ceil(strength * MAX_SPEED)
+        }
+
+        if (delta !== 0) {
+          container.scrollLeft += delta
+        }
+      }
+
+      autoScrollRafRef.current = requestAnimationFrame(tickAutoScroll)
+    }
+
+    const handleDragOverWindow = (event) => {
+      dragPointerXRef.current = event.clientX
+    }
+
+    const stopDragging = () => {
+      setIsDraggingTicket(false)
+    }
+
+    window.addEventListener('dragover', handleDragOverWindow)
+    window.addEventListener('drop', stopDragging)
+    window.addEventListener('dragend', stopDragging)
+    autoScrollRafRef.current = requestAnimationFrame(tickAutoScroll)
+
+    return () => {
+      window.removeEventListener('dragover', handleDragOverWindow)
+      window.removeEventListener('drop', stopDragging)
+      window.removeEventListener('dragend', stopDragging)
+      if (autoScrollRafRef.current) {
+        cancelAnimationFrame(autoScrollRafRef.current)
+        autoScrollRafRef.current = null
+      }
+      dragPointerXRef.current = null
+    }
+  }, [isDraggingTicket])
 
   return (
     <div className="kb-container">
@@ -271,7 +353,7 @@ export default function Kanban() {
       </div>
 
       {/* Kanban board */}
-      <div className="kb-board-scroll">
+      <div className="kb-board-scroll" ref={boardScrollRef}>
         <div className="kb-board">
           {STATUSES.map((status, colIndex) => {
             const dotStyle = STATUS_DOT_STYLES[status.value] || STATUS_DOT_STYLES['sem-status']
@@ -322,11 +404,13 @@ export default function Kanban() {
                         key={ticket.id}
                         onClick={() => handleTicketClick(ticket)}
                         draggable={canDragDrop}
+                        onDragStart={handleTicketDragStart}
+                        onDragEnd={handleTicketDragEnd}
                       >
                         <TicketCard
                           ticket={ticket}
                           onClick={() => handleTicketClick(ticket)}
-                          draggable={true}
+                          draggable={canDragDrop}
                           showArchiveAction={status.value === 'resolvido' && canDragDrop}
                           onArchive={handleArchiveRequest}
                         />
@@ -435,7 +519,7 @@ export default function Kanban() {
 
         .kb-board {
           display: flex;
-          gap: 20px;
+          gap: 16px;
           min-width: min-content;
           height: 100%;
         }
@@ -443,7 +527,7 @@ export default function Kanban() {
         /* ── Column ── */
         .kb-column {
           flex-shrink: 0;
-          width: 270px;
+          width: clamp(230px, 18.5vw, 250px);
           background: rgba(15, 15, 30, 0.45);
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);

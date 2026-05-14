@@ -18,6 +18,7 @@ export default function App() {
   const { bootstrap, loadTickets } = useTicketsStore()
   const [currentPage, setCurrentPage] = useState('kanban')
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
+  const isKanbanPage = currentPage === 'kanban'
 
   useEffect(() => {
     initAuth()
@@ -75,7 +76,7 @@ export default function App() {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto">
-          <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+          <div className={isKanbanPage ? 'p-4 sm:p-6 lg:p-8 w-full max-w-none' : 'p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full'}>
             {currentPage === 'dashboard' && <Dashboard />}
             {currentPage === 'kanban' && <Kanban />}
             {currentPage === 'archived' && <ArchivedTickets />}
