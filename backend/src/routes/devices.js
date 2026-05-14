@@ -48,7 +48,30 @@ function getTailscaleApiKey() {
   )
 }
 
+function detectTailscaleKeyType(value) {
+  const token = String(value || '').trim()
+  if (!token) return 'missing'
+  if (token.startsWith('tskey-api-')) return 'api_access_token'
+  if (token.startsWith('tskey-auth-')) return 'auth_key'
+  if (token.startsWith('tskey-client-')) return 'oauth_client_secret'
+  if (token.startsWith('tskey-')) return 'other_tskey'
+  return 'unknown'
+}
+
 const TAILSCALE_TAILNET = String(process.env.TAILSCALE_TAILNET || '-').trim() || '-'
+const BOOT_TAILSCALE_AUTH = getTailscaleApiKey()
+const BOOT_TAILSCALE_KEY_TYPE = detectTailscaleKeyType(BOOT_TAILSCALE_AUTH.value)
+
+if (!BOOT_TAILSCALE_AUTH.value) {
+  console.warn(
+    '[tailscale] variável de token não encontrada. ' +
+    'Esperado: TAILSCALE_API_KEY|TAILSCALE_API_TOKEN|TAILSCALE_ACCESS_TOKEN|TAILSCALE_TOKEN|TS_API_KEY|TAILSCALE_AUTHKEY|TS_AUTHKEY'
+  )
+} else {
+  console.log(
+    `[tailscale] token detectado em ${BOOT_TAILSCALE_AUTH.key} (tipo: ${BOOT_TAILSCALE_KEY_TYPE}, tailnet: ${TAILSCALE_TAILNET}).`
+  )
+}
 
 function parseTimeMs(value) {
   const ms = new Date(value || 0).getTime()
