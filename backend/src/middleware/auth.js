@@ -1,12 +1,17 @@
 import jwt from 'jsonwebtoken'
+import { randomBytes } from 'node:crypto'
 import { USERS } from '../data/mockData.js'
 
-const JWT_SECRET = String(process.env.JWT_SECRET || '')
+const configuredJwtSecret = String(process.env.JWT_SECRET || '').trim()
 const MIN_JWT_SECRET_LENGTH = 32
+let JWT_SECRET = configuredJwtSecret
 
 if (JWT_SECRET.length < MIN_JWT_SECRET_LENGTH) {
-  throw new Error(
-    `JWT_SECRET ausente ou fraco. Defina uma chave com pelo menos ${MIN_JWT_SECRET_LENGTH} caracteres.`
+  JWT_SECRET = randomBytes(48).toString('hex')
+  console.warn(
+    `[auth] ⚠️ JWT_SECRET ausente ou fraco (< ${MIN_JWT_SECRET_LENGTH} chars). ` +
+    'Usando segredo efêmero gerado em runtime. ' +
+    'Defina JWT_SECRET no ambiente para manter sessões entre reinícios.'
   )
 }
 
