@@ -1,8 +1,103 @@
 import { useState, useRef, useMemo, useEffect } from 'react'
-import { X, Upload, Image as ImageIcon, Plus, Loader2, Lock } from 'lucide-react'
+import { X, Upload, Plus, Loader2, Lock, ChevronDown, Check, School, MapPin, Flag } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
 import { api } from '../services/api'
+
+function PrettySelectField({
+  value,
+  onChange,
+  options,
+  placeholder,
+  icon: Icon,
+  selectKey,
+  openSelectKey,
+  setOpenSelectKey,
+  allowClear = false,
+  disabled = false
+}) {
+  const containerRef = useRef(null)
+  const isOpen = openSelectKey === selectKey
+
+  const normalizedOptions = useMemo(
+    () => (options || []).map((item) => (
+      typeof item === 'string'
+        ? { value: item, label: item, tone: null }
+        : {
+          value: item.value,
+          label: item.label ?? item.value,
+          tone: item.tone ?? null
+        }
+    )),
+    [options]
+  )
+
+  const selectedOption = normalizedOptions.find((item) => item.value === value)
+
+  useEffect(() => {
+    const handleOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setOpenSelectKey(null)
+      }
+    }
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [setOpenSelectKey])
+
+  const pick = (nextValue) => {
+    onChange(nextValue)
+    setOpenSelectKey(null)
+  }
+
+  return (
+    <div className={`ctm-pretty-select ${isOpen ? 'ctm-pretty-select-open' : ''}`} ref={containerRef}>
+      <button
+        type="button"
+        className={`ctm-pretty-trigger ${disabled ? 'ctm-pretty-trigger-disabled' : ''}`}
+        onClick={() => {
+          if (disabled) return
+          setOpenSelectKey(isOpen ? null : selectKey)
+        }}
+        aria-expanded={isOpen}
+        disabled={disabled}
+      >
+        <span className={`ctm-pretty-label ${value ? 'ctm-pretty-label-filled' : ''}`}>
+          {Icon && <Icon size={14} />}
+          {selectedOption?.label || placeholder}
+        </span>
+        <ChevronDown size={15} className={`ctm-pretty-chevron ${isOpen ? 'ctm-pretty-chevron-open' : ''}`} />
+      </button>
+
+      {isOpen && !disabled && (
+        <div className="ctm-pretty-options">
+          {allowClear && (
+            <button
+              type="button"
+              className={`ctm-pretty-option ${!value ? 'ctm-pretty-option-active' : ''}`}
+              onClick={() => pick('')}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              {placeholder}
+            </button>
+          )}
+          {normalizedOptions.map((item, index) => (
+            <button
+              key={`${selectKey}-${item.value}`}
+              type="button"
+              className={`ctm-pretty-option ${value === item.value ? 'ctm-pretty-option-active' : ''} ${item.tone ? `ctm-pretty-option-${item.tone}` : ''}`}
+              onClick={() => pick(item.value)}
+              onMouseDown={(e) => e.stopPropagation()}
+              style={{ '--ctm-option-index': index }}
+            >
+              {value === item.value && <Check size={12} className="ctm-pretty-option-check" />}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function CreateTicketModal({ onClose }) {
   const { addTicket } = useTicketsStore()
@@ -36,6 +131,7 @@ export default function CreateTicketModal({ onClose }) {
   const [images, setImages] = useState([])
   const [loading, setLoading] = useState(false)
   const [dragActive, setDragActive] = useState(false)
+  const [openSelectKey, setOpenSelectKey] = useState(null)
 
   const periods = ['Matutino', 'Vespertino', 'Integral']
   const problemLocations = [
@@ -45,6 +141,11 @@ export default function CreateTicketModal({ onClose }) {
     'Cadastro de escola/turmas',
     'Processar imagens',
     'Criação de acesso S4S'
+  ]
+  const priorityOptions = [
+    { value: 'baixa', label: 'Baixa', tone: 'low' },
+    { value: 'media', label: 'Média', tone: 'medium' },
+    { value: 'alta', label: 'Alta', tone: 'high' }
   ]
 
   // Build turma list for selected school: { id, turmaName, device }
@@ -91,11 +192,7 @@ export default function CreateTicketModal({ onClose }) {
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    if (name === 'school') {
-      setFormData(prev => ({ ...prev, school: value, selectedTurmas: [], selectedDevices: [] }))
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }))
-    }
+    setFormData(prev => ({ ...prev, [name]: value }))
   }
 
   const toggleTurma = (turmaId) => {
@@ -249,18 +346,22 @@ export default function CreateTicketModal({ onClose }) {
             {/* School - Dropdown predefinido */}
             <div className="ctm-field ctm-field-full">
               <label className="ctm-label">Escola <span className="ctm-required">*</span></label>
-              <select
-                name="school"
+              <PrettySelectField
                 value={formData.school}
-                onChange={handleChange}
-                className="ctm-select"
-                required
-              >
-                <option value="" disabled>Selecione a escola</option>
-                {SCHOOL_NAMES.map(name => (
-                  <option key={name} value={name}>{name}</option>
-                ))}
-              </select>
+                onChange={(nextSchool) => setFormData((prev) => ({
+                  ...prev,
+                  school: nextSchool,
+                  selectedTurmas: [],
+                  selectedDevices: []
+                }))}
+                options={SCHOOL_NAMES}
+                placeholder={schoolsLoading ? 'Carregando escolas...' : 'Selecione a escola'}
+                icon={School}
+                selectKey="ctm-school"
+                openSelectKey={openSelectKey}
+                setOpenSelectKey={setOpenSelectKey}
+                disabled={schoolsLoading || SCHOOL_NAMES.length === 0}
+              />
             </div>
 
             {/* Turma - Predefined checkboxes */}
@@ -366,17 +467,17 @@ export default function CreateTicketModal({ onClose }) {
             {/* Local do problema */}
             <div className="ctm-field">
               <label className="ctm-label">Local do problema</label>
-              <select
-                name="problemType"
+              <PrettySelectField
                 value={formData.problemType}
-                onChange={handleChange}
-                className="ctm-select"
-              >
-                <option value="" disabled>Escolha o local do problema</option>
-                {problemLocations.map(loc => (
-                  <option key={loc} value={loc}>{loc}</option>
-                ))}
-              </select>
+                onChange={(nextProblemType) => setFormData((prev) => ({ ...prev, problemType: nextProblemType }))}
+                options={problemLocations}
+                placeholder="Escolha o local do problema"
+                icon={MapPin}
+                selectKey="ctm-problem-type"
+                openSelectKey={openSelectKey}
+                setOpenSelectKey={setOpenSelectKey}
+                allowClear
+              />
             </div>
 
             {/* Responsible - Auto-filled, disabled */}
@@ -394,16 +495,16 @@ export default function CreateTicketModal({ onClose }) {
             {/* Priority */}
             <div className="ctm-field">
               <label className="ctm-label">Prioridade</label>
-              <select
-                name="priority"
+              <PrettySelectField
                 value={formData.priority}
-                onChange={handleChange}
-                className="ctm-select"
-              >
-                <option value="baixa">Baixa</option>
-                <option value="media">Média</option>
-                <option value="alta">Alta</option>
-              </select>
+                onChange={(nextPriority) => setFormData((prev) => ({ ...prev, priority: nextPriority }))}
+                options={priorityOptions}
+                placeholder="Selecione a prioridade"
+                icon={Flag}
+                selectKey="ctm-priority"
+                openSelectKey={openSelectKey}
+                setOpenSelectKey={setOpenSelectKey}
+              />
             </div>
           </div>
 
@@ -664,9 +765,8 @@ export default function CreateTicketModal({ onClose }) {
           margin-top: 6px;
         }
 
-        /* ── Inputs & Selects ── */
+        /* ── Inputs & Custom Selects ── */
         .ctm-input,
-        .ctm-select,
         .ctm-textarea {
           width: 100%;
           padding: 12px 16px;
@@ -686,25 +786,185 @@ export default function CreateTicketModal({ onClose }) {
         }
 
         .ctm-input:focus,
-        .ctm-select:focus,
         .ctm-textarea:focus {
           border-color: rgba(34, 197, 94, 0.4);
           box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08), 0 0 16px rgba(34, 197, 94, 0.04);
           background: rgba(255, 255, 255, 0.06);
         }
 
-        .ctm-select {
-          appearance: none;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-          background-repeat: no-repeat;
-          background-position: right 12px center;
-          padding-right: 36px;
+        .ctm-pretty-select {
+          position: relative;
+          width: 100%;
+        }
+
+        .ctm-pretty-trigger {
+          width: 100%;
+          min-height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 11px 14px;
+          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 12px;
+          color: #e5e7eb;
+          font-size: 0.9rem;
+          outline: none;
+          transition: all 0.24s ease;
           cursor: pointer;
         }
 
-        .ctm-select option {
-          background: #1a1a2e;
+        .ctm-pretty-trigger:hover {
+          border-color: rgba(34, 197, 94, 0.22);
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .ctm-pretty-select-open .ctm-pretty-trigger {
+          border-color: rgba(34, 197, 94, 0.42);
+          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08), 0 0 16px rgba(34, 197, 94, 0.06);
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .ctm-pretty-trigger-disabled {
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+
+        .ctm-pretty-label {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          color: #94a3b8;
+          text-align: left;
+          line-height: 1.15;
+          font-weight: 500;
+        }
+
+        .ctm-pretty-label-filled {
           color: #e5e7eb;
+        }
+
+        .ctm-pretty-chevron {
+          color: #64748b;
+          transition: transform 0.2s ease, color 0.2s ease;
+          flex-shrink: 0;
+        }
+
+        .ctm-pretty-chevron-open {
+          transform: rotate(180deg);
+          color: #86efac;
+        }
+
+        .ctm-pretty-options {
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          right: 0;
+          z-index: 80;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          max-height: 260px;
+          overflow-y: auto;
+          padding: 8px;
+          border-radius: 14px;
+          border: 1px solid rgba(34, 197, 94, 0.22);
+          background: linear-gradient(170deg, rgba(17, 22, 36, 0.98) 0%, rgba(10, 14, 26, 0.98) 100%);
+          box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55), 0 0 25px rgba(34, 197, 94, 0.06);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          transform-origin: top center;
+          animation: ctmSelectPanelIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .ctm-pretty-options::-webkit-scrollbar {
+          width: 4px;
+        }
+
+        .ctm-pretty-options::-webkit-scrollbar-thumb {
+          background: rgba(148, 163, 184, 0.3);
+          border-radius: 99px;
+        }
+
+        .ctm-pretty-option {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 11px;
+          border: none;
+          border-radius: 10px;
+          background: transparent;
+          color: #cbd5e1;
+          text-align: left;
+          font-size: 0.88rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.18s ease;
+          opacity: 0;
+          transform: translateY(6px);
+          animation: ctmSelectItemIn 0.24s ease forwards;
+          animation-delay: calc(var(--ctm-option-index, 0) * 28ms);
+        }
+
+        .ctm-pretty-option:hover {
+          background: rgba(34, 197, 94, 0.1);
+          color: #dcfce7;
+        }
+
+        .ctm-pretty-option-active {
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.24), rgba(22, 163, 74, 0.14));
+          color: #ecfdf5;
+          border: 1px solid rgba(134, 239, 172, 0.35);
+        }
+
+        .ctm-pretty-option-check {
+          color: #86efac;
+          flex-shrink: 0;
+        }
+
+        .ctm-pretty-option-low { color: #86efac; }
+        .ctm-pretty-option-medium { color: #fcd34d; }
+        .ctm-pretty-option-high { color: #fca5a5; }
+
+        .ctm-pretty-option-low.ctm-pretty-option-active {
+          color: #dcfce7;
+          border-color: rgba(34, 197, 94, 0.45);
+        }
+
+        .ctm-pretty-option-medium.ctm-pretty-option-active {
+          color: #fef3c7;
+          border-color: rgba(250, 204, 21, 0.45);
+          background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(180, 83, 9, 0.14));
+        }
+
+        .ctm-pretty-option-high.ctm-pretty-option-active {
+          color: #fee2e2;
+          border-color: rgba(248, 113, 113, 0.45);
+          background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(185, 28, 28, 0.14));
+        }
+
+        @keyframes ctmSelectPanelIn {
+          from {
+            opacity: 0;
+            transform: translateY(-6px) scale(0.985);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes ctmSelectItemIn {
+          from {
+            opacity: 0;
+            transform: translateY(6px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
         .ctm-input-disabled {

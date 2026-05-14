@@ -1,9 +1,9 @@
-import { Paperclip, Archive } from 'lucide-react'
+import { Paperclip, Archive, Flame, Gauge, Leaf } from 'lucide-react'
 
 const PRIORITY_CONFIG = {
-  alta: { label: 'Alta', bg: 'bg-red-500/20', text: 'text-red-300', border: 'border-red-500/30' },
-  media: { label: 'Média', bg: 'bg-yellow-500/20', text: 'text-yellow-300', border: 'border-yellow-500/30' },
-  baixa: { label: 'Baixa', bg: 'bg-blue-500/20', text: 'text-blue-300', border: 'border-blue-500/30' }
+  alta: { label: 'Alta', icon: Flame, tone: 'high' },
+  media: { label: 'Média', icon: Gauge, tone: 'medium' },
+  baixa: { label: 'Baixa', icon: Leaf, tone: 'low' }
 }
 
 export default function TicketCard({
@@ -14,11 +14,8 @@ export default function TicketCard({
   onArchive
 }) {
   const priorityConfig = PRIORITY_CONFIG[ticket.priority] || PRIORITY_CONFIG.media
-  const prioritySymbol = ticket.priority === 'alta'
-    ? '⚡'
-    : ticket.priority === 'media'
-      ? '→'
-      : '○'
+  const PriorityIcon = priorityConfig.icon
+  const enterDelay = `${(Number.parseInt(String(ticket.id).replace(/\D/g, ''), 10) || 0) % 8 * 20}ms`
 
   return (
     <div
@@ -29,7 +26,7 @@ export default function TicketCard({
         e.dataTransfer.setData('ticketId', ticket.id)
       }}
       className="tk-card-wrapper"
-      style={{ cursor: draggable ? 'grab' : 'pointer' }}
+      style={{ cursor: draggable ? 'grab' : 'pointer', '--tk-enter-delay': enterDelay }}
     >
       {/* Header with code and priority */}
       <div className="tk-card-header">
@@ -37,8 +34,11 @@ export default function TicketCard({
           <h3 className="tk-card-id">{ticket.id}</h3>
           <p className="tk-card-school">{ticket.school}</p>
         </div>
-        <div className={`badge-status ${priorityConfig.bg} ${priorityConfig.text} ${priorityConfig.border} border flex-shrink-0`}>
-          {prioritySymbol} {priorityConfig.label}
+        <div className={`tk-priority-badge tk-priority-${priorityConfig.tone}`}>
+          <span className="tk-priority-icon-wrap">
+            <PriorityIcon size={12} />
+          </span>
+          <span className="tk-priority-label">{priorityConfig.label}</span>
         </div>
       </div>
 
@@ -116,6 +116,8 @@ export default function TicketCard({
           margin-bottom: 12px;
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+          animation: tkCardIn 0.36s cubic-bezier(0.16, 1, 0.3, 1) both;
+          animation-delay: var(--tk-enter-delay, 0ms);
         }
 
         .tk-card-wrapper:hover {
@@ -126,6 +128,78 @@ export default function TicketCard({
 
         .tk-card-wrapper:active {
           cursor: grabbing;
+        }
+
+        .tk-priority-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 4px 10px 4px 6px;
+          border-radius: 999px;
+          border: 1px solid transparent;
+          font-size: 0.75rem;
+          font-weight: 700;
+          letter-spacing: 0.01em;
+          flex-shrink: 0;
+          transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+
+        .tk-card-wrapper:hover .tk-priority-badge {
+          transform: translateY(-1px);
+        }
+
+        .tk-priority-icon-wrap {
+          width: 18px;
+          height: 18px;
+          border-radius: 999px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid transparent;
+          flex-shrink: 0;
+        }
+
+        .tk-priority-label {
+          line-height: 1;
+        }
+
+        .tk-priority-high {
+          color: #fda4af;
+          background: linear-gradient(135deg, rgba(244, 63, 94, 0.16), rgba(190, 24, 93, 0.12));
+          border-color: rgba(244, 63, 94, 0.35);
+          box-shadow: 0 0 0 1px rgba(244, 63, 94, 0.09) inset;
+        }
+
+        .tk-priority-high .tk-priority-icon-wrap {
+          color: #fda4af;
+          background: rgba(244, 63, 94, 0.14);
+          border-color: rgba(244, 63, 94, 0.35);
+        }
+
+        .tk-priority-medium {
+          color: #fcd34d;
+          background: linear-gradient(135deg, rgba(234, 179, 8, 0.16), rgba(202, 138, 4, 0.12));
+          border-color: rgba(234, 179, 8, 0.35);
+          box-shadow: 0 0 0 1px rgba(234, 179, 8, 0.08) inset;
+        }
+
+        .tk-priority-medium .tk-priority-icon-wrap {
+          color: #fcd34d;
+          background: rgba(234, 179, 8, 0.12);
+          border-color: rgba(234, 179, 8, 0.32);
+        }
+
+        .tk-priority-low {
+          color: #93c5fd;
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.1));
+          border-color: rgba(59, 130, 246, 0.32);
+          box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.08) inset;
+        }
+
+        .tk-priority-low .tk-priority-icon-wrap {
+          color: #93c5fd;
+          background: rgba(59, 130, 246, 0.12);
+          border-color: rgba(59, 130, 246, 0.3);
         }
 
         .tk-card-header {
@@ -264,6 +338,23 @@ export default function TicketCard({
         .tk-card-date {
           font-size: 0.75rem;
           color: #6b7280;
+        }
+
+        @keyframes tkCardIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px) scale(0.985);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .tk-card-wrapper {
+            animation: none;
+          }
         }
       `}</style>
     </div>
