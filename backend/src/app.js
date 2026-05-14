@@ -14,27 +14,103 @@ import professionalsRoutes from './routes/professionals.js'
 
 const app = express()
 
-const allowedOrigins = (process.env.CORS_ORIGIN || '*')
+const DEFAULT_ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+]
+
+const allowedOrigins = (process.env.CORS_ORIGIN || '')
   .split(',')
   .map((origin) => origin.trim())
+  .filter(Boolean)
+
+const effectiveAllowedOrigins = allowedOrigins.length > 0
+  ? allowedOrigins
+  : DEFAULT_ALLOWED_ORIGINS
+
+function matchesOriginRule(origin, rule) {
+  if (rule === '*') {
+    return process.env.NODE_ENV !== 'production'
+  }
+
+  if (!rule.includes('*')) {
+    return origin === rule
+  }
+
+  const escaped = rule
+    .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*/g, '.*')
+
+  const regex = new RegExp(`^${escaped}$`)
+  return regex.test(origin)
+}
+
+function isOriginAllowed(origin) {
+  if (!origin) return true
+  return effectiveAllowedOrigins.some((rule) => matchesOriginRule(origin, rule))
+}
+
+function createRateLimiter({ windowMs, max, keyPrefix, methods = null, ignorePaths = null }) {
+  const hits = new Map()
+  let requestCounter = 0
+
+  return (req, res, next) => {
+    if (methods && !methods.has(req.method)) return next()
+    if (ignorePaths && ignorePaths.has(req.path)) return next()
+
+    const now = Date.now()
+    const key = `${keyPrefix}:${req.ip}`
+    const entry = hits.get(key)
+
+    if (!entry || now - entry.startedAt >= windowMs) {
+      hits.set(key, { count: 1, startedAt: now })
+    } else if (entry.count >= max) {
+      const retryAfterSeconds = Math.ceil((windowMs - (now - entry.startedAt)) / 1000)
+      res.setHeader('Retry-After', String(retryAfterSeconds))
+      return res.status(429).json({
+        message: 'Muitas requisições. Tente novamente em instantes.'
+      })
+    } else {
+      entry.count += 1
+    }
+
+    requestCounter += 1
+    if (requestCounter % 250 === 0) {
+      for (const [entryKey, value] of hits.entries()) {
+        if (now - value.startedAt >= windowMs) {
+          hits.delete(entryKey)
+        }
+      }
+    }
+
+    next()
+  }
+}
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+    if (isOriginAllowed(origin)) {
       return callback(null, true)
     }
-
-    // Accept any Vercel preview/production deployment
-    if (origin && origin.endsWith('.vercel.app')) {
-      return callback(null, true)
-    }
-
     return callback(new Error('Origin não permitida no CORS.'))
   }
 }))
 
 app.use(express.json({ limit: '5mb' }))
 app.use(morgan('dev'))
+app.use('/api/auth/login', createRateLimiter({
+  windowMs: 10 * 60 * 1000,
+  max: 10,
+  keyPrefix: 'login'
+}))
+app.use('/api', createRateLimiter({
+  windowMs: 60 * 1000,
+  max: 180,
+  keyPrefix: 'write',
+  methods: new Set(['POST', 'PUT', 'PATCH', 'DELETE']),
+  ignorePaths: new Set(['/auth/login'])
+}))
 
 app.get('/', (_req, res) => {
   res.json({

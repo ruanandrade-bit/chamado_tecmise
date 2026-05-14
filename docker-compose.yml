@@ -38,7 +38,7 @@ services:
       - "4000:4000"
     environment:
       PORT: 4000
-      JWT_SECRET: ${JWT_SECRET:-s4s-chamados-docker-secret-change-me}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set (min. 32 chars)}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000,http://localhost}
       MONGODB_URI: mongodb://${MONGO_ROOT_USER:-s4s_admin}:${MONGO_ROOT_PASSWORD:-s4s_secret_2026}@mongo:27017/s4s_chamados?authSource=admin
       TAILSCALE_API_KEY: ${TAILSCALE_API_KEY:-}

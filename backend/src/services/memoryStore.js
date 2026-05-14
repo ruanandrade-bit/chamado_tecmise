@@ -352,6 +352,15 @@ export const memoryStore = {
     return ticket
   },
 
+  removeChecklistItem(ticketId, itemId) {
+    const ticket = memoryStore.getTicketById(ticketId)
+    if (!ticket) return null
+
+    ticket.checklist = (ticket.checklist || []).filter((item) => item.id !== itemId)
+    persistState()
+    return ticket
+  },
+
   deleteTicket(id) {
     const index = state.tickets.findIndex((ticket) => ticket.id === id)
     if (index === -1) return false

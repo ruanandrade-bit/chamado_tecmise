@@ -1,7 +1,8 @@
 import { Router } from 'express'
 import { USERS } from '../data/mockData.js'
-import { authRequired, sanitizeUser, signToken } from '../middleware/auth.js'
+import { adminOnly, authRequired, sanitizeUser, signToken } from '../middleware/auth.js'
 import { memoryStore } from '../services/memoryStore.js'
+import { verifyPassword } from '../utils/password.js'
 
 const router = Router()
 
@@ -25,7 +26,7 @@ router.post('/login', (req, res) => {
   const { email, password } = req.body || {}
   const user = USERS[email]
 
-  if (!user || user.password !== password) {
+  if (!user || !verifyPassword(password, user.passwordHash)) {
     return res.status(401).json({ message: 'Email ou senha inválidos.' })
   }
 
@@ -43,7 +44,7 @@ router.get('/me', authRequired, (req, res) => {
   return res.json({ user })
 })
 
-router.get('/users', (_req, res) => {
+router.get('/users', authRequired, adminOnly, (_req, res) => {
   const users = Object.entries(USERS).map(([email, user]) => ({
     email,
     name: user.name,

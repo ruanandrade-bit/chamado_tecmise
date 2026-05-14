@@ -177,6 +177,15 @@ export const useTicketsStore = create((set, get) => ({
     return ticket
   },
 
+  removeChecklistItem: async (ticketId, itemId) => {
+    const { ticket } = await api.delete(`/tickets/${ticketId}/checklist/${itemId}`)
+    set((state) => ({
+      tickets: state.tickets.map((item) => (item.id === ticketId ? ticket : item)),
+      selectedTicket: state.selectedTicket?.id === ticketId ? ticket : state.selectedTicket
+    }))
+    return ticket
+  },
+
   getTicketProgress: (ticket) => {
     if (!ticket?.checklist || ticket.checklist.length === 0) return 0
     const completed = ticket.checklist.filter((item) => item.completed).length

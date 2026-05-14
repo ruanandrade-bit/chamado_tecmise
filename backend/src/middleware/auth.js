@@ -1,7 +1,14 @@
 import jwt from 'jsonwebtoken'
 import { USERS } from '../data/mockData.js'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me'
+const JWT_SECRET = String(process.env.JWT_SECRET || '')
+const MIN_JWT_SECRET_LENGTH = 32
+
+if (JWT_SECRET.length < MIN_JWT_SECRET_LENGTH) {
+  throw new Error(
+    `JWT_SECRET ausente ou fraco. Defina uma chave com pelo menos ${MIN_JWT_SECRET_LENGTH} caracteres.`
+  )
+}
 
 export function signToken(user) {
   return jwt.sign(
@@ -28,7 +35,18 @@ export function authRequired(req, res, next) {
 
   try {
     const payload = jwt.verify(token, JWT_SECRET)
-    req.user = payload
+    const freshUser = payload?.email ? USERS[payload.email] : null
+    if (!freshUser) {
+      return res.status(401).json({ message: 'Usuário inválido.' })
+    }
+
+    req.user = {
+      ...payload,
+      name: freshUser.name,
+      role: freshUser.role,
+      canDragDrop: Boolean(freshUser.canDragDrop),
+      viewOnly: Boolean(freshUser.viewOnly)
+    }
     next()
   } catch {
     return res.status(401).json({ message: 'Token inválido ou expirado.' })
@@ -36,10 +54,8 @@ export function authRequired(req, res, next) {
 }
 
 export function adminOnly(req, res, next) {
-  // Check token claim first; fall back to current USERS data (handles stale tokens)
-  const tokenClaim = req.user?.canDragDrop
   const freshUser = req.user?.email ? USERS[req.user.email] : null
-  const isAdmin = tokenClaim || freshUser?.canDragDrop
+  const isAdmin = Boolean(freshUser?.canDragDrop)
 
   if (!isAdmin) {
     return res.status(403).json({ message: 'Apenas admin pode executar esta ação.' })
@@ -49,9 +65,8 @@ export function adminOnly(req, res, next) {
 }
 
 export function viewOnlyBlock(req, res, next) {
-  const tokenClaim = req.user?.viewOnly
   const freshUser = req.user?.email ? USERS[req.user.email] : null
-  const isViewOnly = tokenClaim || freshUser?.viewOnly
+  const isViewOnly = Boolean(freshUser?.viewOnly)
 
   if (isViewOnly) {
     return res.status(403).json({ message: 'Usuário de visualização não pode executar esta ação.' })

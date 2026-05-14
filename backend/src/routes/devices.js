@@ -28,7 +28,7 @@ let cacheTimestamp = 0
 const CACHE_TTL_MS = 10 * 60 * 1000 // 10 minutes
 
 // ─── Tailscale API ───────────────────────────────────────────────────
-const TAILSCALE_API_KEY = process.env.TAILSCALE_API_KEY || 'tskey-api-kMZfnBBNHG11CNTRL-hH4VJjWbUKKi3ysGZZTYKK3b5jh23ruaU'
+const TAILSCALE_API_KEY = String(process.env.TAILSCALE_API_KEY || '').trim()
 
 async function fetchTailscaleDevices() {
   const now = Date.now()
@@ -42,6 +42,10 @@ async function fetchTailscaleDevices() {
   const ALL_DEVICE_IDS = getAllDeviceIds()
 
   try {
+    if (!TAILSCALE_API_KEY) {
+      throw new Error('TAILSCALE_API_KEY não configurada.')
+    }
+
     const response = await fetch('https://api.tailscale.com/api/v2/tailnet/-/devices', {
       headers: {
         'Authorization': `Bearer ${TAILSCALE_API_KEY}`,

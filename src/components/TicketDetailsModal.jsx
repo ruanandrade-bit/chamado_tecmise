@@ -5,7 +5,7 @@ import { useAuthStore } from '../stores/authStore'
 import ChecklistSelectorModal from './ChecklistSelectorModal'
 
 export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
-  const { updateTicket, STATUSES } = useTicketsStore()
+  const { updateTicket, addChecklistItem, removeChecklistItem, STATUSES } = useTicketsStore()
   const { user } = useAuthStore()
   const [isChecklistSelectorOpen, setIsChecklistSelectorOpen] = useState(false)
   const [selectedImage, setSelectedImage] = useState(null)
@@ -54,15 +54,9 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
 
   const handleApplyChecklist = async (newItems) => {
     if (!canManageChecklist || newItems.length === 0) return
-    const currentChecklist = ticket.checklist || []
-    const maxId = currentChecklist.reduce((max, item) => Math.max(max, item.id || 0), 0)
-    const newChecklistItems = newItems.map((title, index) => ({
-      id: maxId + index + 1,
-      title,
-      completed: false
-    }))
-    const updatedChecklist = [...currentChecklist, ...newChecklistItems]
-    await updateTicket(ticket.id, { checklist: updatedChecklist })
+    for (const title of newItems) {
+      await addChecklistItem(ticket.id, title)
+    }
   }
 
   const handleSendComment = async () => {
@@ -258,8 +252,10 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
                     onClick={async () => {
                       if (confirmUndoChecklist) {
                         const updated = [...ticket.checklist]
-                        updated.pop()
-                        await updateTicket(ticket.id, { checklist: updated })
+                        const lastItem = updated.pop()
+                        if (lastItem) {
+                          await removeChecklistItem(ticket.id, lastItem.id)
+                        }
                         setConfirmUndoChecklist(false)
                       } else {
                         setConfirmUndoChecklist(true)
@@ -490,4 +486,3 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
     </div>
   )
 }
-
