@@ -128,6 +128,89 @@ const state = {
   professionals: null   // [{ id, name, role }], managed via admin panel
 }
 
+const CORE_USER_EMAILS = new Set(Object.keys(USERS))
+
+function hydrateProfessionalsFromUsers() {
+  if (!Array.isArray(state.professionals)) {
+    state.professionals = []
+    return
+  }
+
+  const usedEmails = new Set()
+  const usersByName = Object.entries(USERS).reduce((acc, [email, user]) => {
+    const key = String(user?.name || '').trim().toLowerCase()
+    if (key && !acc.has(key)) acc.set(key, { email, user })
+    return acc
+  }, new Map())
+
+  state.professionals = state.professionals
+    .map((item, index) => {
+      const id = String(item?.id || `manual-${Date.now()}-${index}`)
+      const name = String(item?.name || '').trim()
+      const role = String(item?.role || '').trim()
+      if (!name || !role) return null
+
+      const byName = usersByName.get(name.toLowerCase())
+      let email = String(item?.email || byName?.email || '').trim().toLowerCase()
+      if (email && usedEmails.has(email)) email = ''
+      if (email) usedEmails.add(email)
+
+      const fromEmailUser = email ? USERS[email] : null
+      const passwordHash = String(item?.passwordHash || fromEmailUser?.passwordHash || byName?.user?.passwordHash || '')
+
+      return {
+        id,
+        name,
+        role,
+        email,
+        passwordHash
+      }
+    })
+    .filter(Boolean)
+}
+
+function syncUsersFromProfessionals() {
+  if (!Array.isArray(state.professionals)) return
+
+  const managedEmails = new Set()
+  let nextUserId = Object.values(USERS).reduce((max, user) => (
+    Number.isInteger(user?.id) ? Math.max(max, user.id) : max
+  ), 0)
+
+  for (const item of state.professionals) {
+    const name = String(item?.name || '').trim()
+    const role = String(item?.role || '').trim()
+    const email = String(item?.email || '').trim().toLowerCase()
+    if (!name || !role || !email) continue
+
+    const existing = USERS[email]
+    const passwordHash = String(item?.passwordHash || existing?.passwordHash || '')
+    if (!passwordHash) continue
+
+    const isCoreUser = CORE_USER_EMAILS.has(email)
+    const id = Number.isInteger(existing?.id) ? existing.id : ++nextUserId
+
+    USERS[email] = {
+      id,
+      name,
+      role,
+      passwordHash,
+      canDragDrop: Boolean(existing?.canDragDrop || false),
+      viewOnly: Boolean(existing?.viewOnly || false),
+      managedByProfessionals: !isCoreUser
+    }
+
+    item.passwordHash = passwordHash
+    managedEmails.add(email)
+  }
+
+  for (const [email, user] of Object.entries(USERS)) {
+    if (user?.managedByProfessionals && !managedEmails.has(email)) {
+      delete USERS[email]
+    }
+  }
+}
+
 /**
  * Must be called once before the server starts listening.
  * Connects to MongoDB (if configured) and loads persisted data.
@@ -165,8 +248,12 @@ export async function initStore() {
 
   if (!Array.isArray(state.professionals) || state.professionals.length === 0) {
     state.professionals = DEFAULT_PROFESSIONALS
-    persistState()
+  } else {
+    hydrateProfessionalsFromUsers()
   }
+
+  syncUsersFromProfessionals()
+  persistState()
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -658,6 +745,8 @@ export const memoryStore = {
   getProfessionals() {
     if (!Array.isArray(state.professionals) || state.professionals.length === 0) {
       state.professionals = DEFAULT_PROFESSIONALS
+      hydrateProfessionalsFromUsers()
+      syncUsersFromProfessionals()
       persistState()
     }
     return state.professionals
@@ -665,6 +754,8 @@ export const memoryStore = {
 
   setProfessionals(newList) {
     state.professionals = Array.isArray(newList) ? newList : []
+    hydrateProfessionalsFromUsers()
+    syncUsersFromProfessionals()
     persistState()
     return state.professionals
   },
@@ -754,10 +845,12 @@ const DEFAULT_SCHOOL_DATA = {
   },
 }
 
-const DEFAULT_PROFESSIONALS = Object.values(USERS)
-  .filter((user) => !user.viewOnly)
-  .map((user) => ({
+const DEFAULT_PROFESSIONALS = Object.entries(USERS)
+  .filter(([, user]) => !user.viewOnly)
+  .map(([email, user]) => ({
     id: `user-${user.id}`,
     name: user.name,
-    role: user.role
+    role: user.role,
+    email,
+    passwordHash: user.passwordHash
   }))

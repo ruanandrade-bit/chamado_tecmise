@@ -7,13 +7,18 @@ import { verifyPassword } from '../utils/password.js'
 const router = Router()
 
 function buildFreshUser(email) {
-  const baseUser = sanitizeUser(email)
+  const normalizedEmail = String(email || '').trim().toLowerCase()
+  const baseUser = sanitizeUser(normalizedEmail)
   if (!baseUser) return null
 
   const professionals = memoryStore.getProfessionals()
-  const match = professionals.find((item) => (
+  const matchByEmail = professionals.find((item) => (
+    String(item?.email || '').trim().toLowerCase() === normalizedEmail
+  ))
+  const matchByName = professionals.find((item) => (
     String(item?.name || '').trim().toLowerCase() === String(baseUser.name || '').trim().toLowerCase()
   ))
+  const match = matchByEmail || matchByName
 
   if (match?.role) {
     return { ...baseUser, role: match.role }
@@ -24,13 +29,14 @@ function buildFreshUser(email) {
 
 router.post('/login', (req, res) => {
   const { email, password } = req.body || {}
-  const user = USERS[email]
+  const normalizedEmail = String(email || '').trim().toLowerCase()
+  const user = USERS[normalizedEmail]
 
   if (!user || !verifyPassword(password, user.passwordHash)) {
     return res.status(401).json({ message: 'Email ou senha inválidos.' })
   }
 
-  const safeUser = buildFreshUser(email)
+  const safeUser = buildFreshUser(normalizedEmail)
   const token = signToken(safeUser)
 
   return res.json({ token, user: safeUser })

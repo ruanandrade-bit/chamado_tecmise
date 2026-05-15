@@ -1,6 +1,17 @@
-import { scryptSync, timingSafeEqual } from 'node:crypto'
+import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto'
 
 const KEY_LENGTH = 64
+
+export function hashPassword(rawPassword) {
+  const password = String(rawPassword || '')
+  if (!password) {
+    throw new Error('Senha inválida.')
+  }
+
+  const salt = randomBytes(16).toString('hex')
+  const derived = scryptSync(password, salt, KEY_LENGTH)
+  return `${salt}:${derived.toString('hex')}`
+}
 
 export function verifyPassword(rawPassword, storedValue) {
   const password = String(rawPassword || '')
@@ -21,4 +32,3 @@ export function verifyPassword(rawPassword, storedValue) {
     return false
   }
 }
-

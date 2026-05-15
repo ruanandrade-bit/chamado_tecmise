@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Settings, School, Cpu, BookOpen, Plus, Trash2, Save, Loader2, AlertTriangle, ChevronDown, ChevronRight, ShieldAlert, Pencil, Check, Briefcase, Users } from 'lucide-react'
+import { Settings, School, Cpu, BookOpen, Plus, Trash2, Save, Loader2, AlertTriangle, ChevronDown, ChevronRight, ShieldAlert, Pencil, Check, Briefcase, Users, KeyRound } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 
@@ -89,6 +89,7 @@ export default function SchoolConfig() {
   // Professionals
   const [newProfessionalName, setNewProfessionalName] = useState('')
   const [newProfessionalRole, setNewProfessionalRole] = useState('')
+  const [newProfessionalPassword, setNewProfessionalPassword] = useState('')
   const [editingProfessionalId, setEditingProfessionalId] = useState(null)
   const [editingProfessionalName, setEditingProfessionalName] = useState('')
   const [editingProfessionalRole, setEditingProfessionalRole] = useState('')
@@ -260,16 +261,22 @@ export default function SchoolConfig() {
   const addProfessional = () => {
     const name = newProfessionalName.trim()
     const role = newProfessionalRole.trim()
-    if (!name || !role) return
+    const password = String(newProfessionalPassword || '').trim()
+    if (!name || !role || !password) return
+    if (password.length < 6) {
+      alert('A senha precisa ter pelo menos 6 caracteres.')
+      return
+    }
     if (!PROFESSIONAL_ROLE_OPTIONS.includes(role)) return
 
     const duplicated = professionals.some((p) => p.name.toLowerCase() === name.toLowerCase() && p.role.toLowerCase() === role.toLowerCase())
     if (duplicated) return
 
     const id = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-    setProfessionals((prev) => [...prev, { id, name, role }])
+    setProfessionals((prev) => [...prev, { id, name, role, password }])
     setNewProfessionalName('')
     setNewProfessionalRole('')
+    setNewProfessionalPassword('')
     setHasChanges(true)
   }
 
@@ -550,7 +557,18 @@ export default function SchoolConfig() {
               openSelectKey={openSelectKey}
               setOpenSelectKey={setOpenSelectKey}
             />
-            <button className="sc-add-btn" onClick={addProfessional} disabled={!newProfessionalName.trim() || !newProfessionalRole.trim()}>
+            <div className="sc-password-wrap">
+              <KeyRound size={14} style={{ color: '#64748b' }} />
+              <input
+                type="password"
+                className="sc-input sc-input-password"
+                placeholder="Senha (mín. 6)"
+                value={newProfessionalPassword}
+                onChange={(e) => setNewProfessionalPassword(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addProfessional()}
+              />
+            </div>
+            <button className="sc-add-btn" onClick={addProfessional} disabled={!newProfessionalName.trim() || !newProfessionalRole.trim() || String(newProfessionalPassword || '').trim().length < 6}>
               <Plus size={14} /> Adicionar Profissional
             </button>
           </div>
@@ -591,6 +609,7 @@ export default function SchoolConfig() {
                       <div className="sc-prof-info">
                         <h4 className="sc-prof-name">{item.name}</h4>
                         <p className="sc-prof-role">{item.role}</p>
+                        {item.email && <p className="sc-prof-email">{item.email}</p>}
                       </div>
                       <div className="sc-prof-actions">
                         <button className="sc-remove-btn sc-remove-btn-sm" onClick={() => startEditProfessional(item)} title="Editar profissional">
@@ -804,6 +823,36 @@ const baseStyles = `
   .sc-input-xs { padding: 6px 10px; font-size: 0.75rem; flex: 1; }
   .sc-select { cursor: pointer; }
 
+  .sc-password-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 210px;
+    flex: 1;
+    padding: 0 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+  }
+
+  .sc-password-wrap:focus-within {
+    border-color: rgba(34, 197, 94, 0.4);
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08);
+  }
+
+  .sc-input-password {
+    border: none;
+    background: transparent;
+    padding: 10px 0;
+    min-width: 120px;
+    box-shadow: none !important;
+  }
+
+  .sc-input-password:focus {
+    border: none;
+    box-shadow: none;
+  }
+
   .sc-add-btn {
     display: flex;
     align-items: center;
@@ -877,6 +926,14 @@ const baseStyles = `
     color: #9ca3af;
     font-size: 0.8rem;
     margin-top: 2px;
+  }
+
+  .sc-prof-email {
+    color: #60a5fa;
+    font-size: 0.72rem;
+    margin-top: 3px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    opacity: 0.85;
   }
 
   .sc-prof-actions {
