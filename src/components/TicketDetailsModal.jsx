@@ -124,11 +124,23 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div
+      className="fixed inset-0 flex items-center justify-center z-50 p-4"
+      style={{
+        background: 'rgba(2, 6, 23, 0.68)',
+        backdropFilter: 'blur(10px) saturate(115%)',
+        WebkitBackdropFilter: 'blur(10px) saturate(115%)'
+      }}
+    >
       {/* Confirm delete dialog */}
       {confirmDeleteIndex !== null && (
         <div
-          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[80] p-4"
+          className="fixed inset-0 flex items-center justify-center z-[80] p-4"
+          style={{
+            background: 'rgba(2, 6, 23, 0.72)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)'
+          }}
           onClick={() => setConfirmDeleteIndex(null)}
         >
           <div
@@ -158,7 +170,12 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
       {/* Image zoom modal */}
       {selectedImage && (
         <div
-          className="fixed inset-0 bg-black/85 flex items-center justify-center z-[70] p-4"
+          className="fixed inset-0 flex items-center justify-center z-[70] p-4"
+          style={{
+            background: 'rgba(2, 6, 23, 0.82)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)'
+          }}
           onClick={() => setSelectedImage(null)}
         >
           <div className="max-w-3xl max-h-[80vh] relative">
