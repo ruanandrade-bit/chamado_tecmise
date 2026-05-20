@@ -422,34 +422,35 @@ export default function CameraObstruction() {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    const options = []
-    for (let offset = 7; offset >= -365; offset -= 1) {
-      const d = new Date(today)
-      d.setDate(today.getDate() + offset)
+    const day = today.getDay()
+    const mondayOffset = day === 0 ? -6 : 1 - day
+    const monday = new Date(today)
+    monday.setDate(today.getDate() + mondayOffset)
+
+    const weekLabels = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta']
+    return weekLabels.map((weekdayLabel, index) => {
+      const d = new Date(monday)
+      d.setDate(monday.getDate() + index)
       const value = d.toISOString().slice(0, 10)
-
-      let prefix = ''
-      if (offset === 0) prefix = 'Hoje'
-      else if (offset === 1) prefix = 'Amanhã'
-      else if (offset === -1) prefix = 'Ontem'
-
-      const labelDate = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-      const labelWeek = d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')
-      const label = prefix ? `${prefix} · ${labelDate}` : `${labelDate} · ${labelWeek}`
-
-      options.push({ value, label })
-    }
-    return options
+      const isToday = d.toDateString() === today.toDateString()
+      const dateLabel = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+      return {
+        value,
+        label: `${isToday ? 'Hoje · ' : ''}${weekdayLabel} · ${dateLabel}`
+      }
+    })
   }, [])
   const timeFieldOptions = useMemo(() => {
     const options = []
-    for (let h = 0; h < 24; h += 1) {
-      for (let m = 0; m < 60; m += 15) {
-        const hour = String(h).padStart(2, '0')
-        const minute = String(m).padStart(2, '0')
-        const value = `${hour}:${minute}`
-        options.push({ value, label: `${value}h` })
-      }
+    const startMinutes = 7 * 60
+    const endMinutes = 18 * 60
+    for (let total = startMinutes; total <= endMinutes; total += 15) {
+      const h = Math.floor(total / 60)
+      const m = total % 60
+      const hour = String(h).padStart(2, '0')
+      const minute = String(m).padStart(2, '0')
+      const value = `${hour}:${minute}`
+      options.push({ value, label: `${value}h` })
     }
     return options
   }, [])
@@ -669,7 +670,7 @@ export default function CameraObstruction() {
                           }
                         }}
                         options={dateFieldOptions}
-                        placeholder="Data"
+                        placeholder="Dia da semana"
                         icon={CalendarDays}
                         selectKey="form-start-date"
                         openSelectKey={openSelectKey}
@@ -709,7 +710,7 @@ export default function CameraObstruction() {
                         value={endDate}
                         onChange={(nextDate) => setEndDate(nextDate)}
                         options={dateFieldOptions}
-                        placeholder="Data"
+                        placeholder="Dia da semana"
                         icon={CalendarDays}
                         selectKey="form-end-date"
                         openSelectKey={openSelectKey}
