@@ -54,9 +54,10 @@ function CobPrettySelect({
       <button
         type="button"
         className={`cob-pretty-trigger ${disabled ? 'cob-pretty-trigger-disabled' : ''}`}
+        onMouseDown={(e) => e.stopPropagation()}
         onClick={() => {
           if (disabled) return
-          setOpenSelectKey(isOpen ? null : selectKey)
+          setOpenSelectKey((prev) => (prev === selectKey ? null : selectKey))
         }}
         aria-expanded={isOpen}
         disabled={disabled}
@@ -69,7 +70,7 @@ function CobPrettySelect({
       </button>
 
       {isOpen && !disabled && (
-        <div className="cob-pretty-options">
+        <div className="cob-pretty-options" onMouseDown={(e) => e.stopPropagation()}>
           {allowClear && (
             <button
               type="button"
@@ -229,7 +230,6 @@ export default function CameraObstruction() {
   const ALL_SCHOOLS_FILTER = '__all_schools__'
   const ALL_PERCENTS_FILTER = '__all_percents__'
   const ALL_DATE_FILTER = '__all_dates__'
-  const ALL_TIME_FILTER = '__all_times__'
 
   const [schools, setSchools] = useState({})
   const [records, setRecords] = useState([])
@@ -251,7 +251,6 @@ export default function CameraObstruction() {
   const [filterSchool, setFilterSchool] = useState(ALL_SCHOOLS_FILTER)
   const [filterMinPercent, setFilterMinPercent] = useState(ALL_PERCENTS_FILTER)
   const [filterDateRange, setFilterDateRange] = useState(ALL_DATE_FILTER)
-  const [filterTimeRange, setFilterTimeRange] = useState(ALL_TIME_FILTER)
   const [openSelectKey, setOpenSelectKey] = useState(null)
 
   // Delete confirmation
@@ -408,14 +407,6 @@ export default function CameraObstruction() {
     ],
     [ALL_DATE_FILTER]
   )
-  const filterTimeOptions = useMemo(
-    () => [
-      { value: ALL_TIME_FILTER, label: 'Qualquer horário' },
-      { value: 'morning', label: 'Manhã (06h-12h)' },
-      { value: 'afternoon', label: 'Tarde (12h-18h)' },
-    ],
-    [ALL_TIME_FILTER]
-  )
   const dateFieldOptions = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -438,21 +429,6 @@ export default function CameraObstruction() {
       }
     })
   }, [])
-  const timeFieldOptions = useMemo(() => {
-    const options = []
-    const startMinutes = 7 * 60
-    const endMinutes = 18 * 60
-    for (let total = startMinutes; total <= endMinutes; total += 15) {
-      const h = Math.floor(total / 60)
-      const m = total % 60
-      const hour = String(h).padStart(2, '0')
-      const minute = String(m).padStart(2, '0')
-      const value = `${hour}:${minute}`
-      options.push({ value, label: `${value}h` })
-    }
-    return options
-  }, [])
-
   const startTime = startDate && startClock ? `${startDate}T${startClock}` : ''
   const endTime = endDate && endClock ? `${endDate}T${endClock}` : ''
 
@@ -478,15 +454,7 @@ export default function CameraObstruction() {
       matchDate = baseDate.getMonth() === now.getMonth() && baseDate.getFullYear() === now.getFullYear()
     }
 
-    const hour = baseDate.getHours()
-    let matchTime = true
-    if (filterTimeRange === 'morning') {
-      matchTime = hour >= 6 && hour < 12
-    } else if (filterTimeRange === 'afternoon') {
-      matchTime = hour >= 12 && hour < 18
-    }
-
-    return matchSchool && matchPercent && matchDate && matchTime
+    return matchSchool && matchPercent && matchDate
   })
 
   // Compute simple stats
@@ -671,27 +639,27 @@ export default function CameraObstruction() {
                         setOpenSelectKey={setOpenSelectKey}
                         compact
                       />
-                      <CobPrettySelect
-                        value={startClock}
-                        onChange={(nextClock) => {
-                          setStartClock(nextClock)
-                          if (endDate && endClock && startDate) {
-                            const nextStart = `${startDate}T${nextClock}`
-                            const currentEnd = `${endDate}T${endClock}`
-                            if (currentEnd < nextStart) {
-                              setEndDate(startDate)
-                              setEndClock(nextClock)
+                      <label className="cob-time-input-wrap" aria-label="Hora de início">
+                        <Clock size={14} className="cob-time-input-icon" />
+                        <input
+                          type="time"
+                          className="cob-time-input"
+                          value={startClock}
+                          onChange={(e) => {
+                            const nextClock = e.target.value
+                            setStartClock(nextClock)
+                            if (endDate && endClock && startDate) {
+                              const nextStart = `${startDate}T${nextClock}`
+                              const currentEnd = `${endDate}T${endClock}`
+                              if (currentEnd < nextStart) {
+                                setEndDate(startDate)
+                                setEndClock(nextClock)
+                              }
                             }
-                          }
-                        }}
-                        options={timeFieldOptions}
-                        placeholder="Hora"
-                        icon={Clock}
-                        selectKey="form-start-time"
-                        openSelectKey={openSelectKey}
-                        setOpenSelectKey={setOpenSelectKey}
-                        compact
-                      />
+                          }}
+                          step="60"
+                        />
+                      </label>
                     </div>
                   </div>
 
@@ -711,17 +679,16 @@ export default function CameraObstruction() {
                         setOpenSelectKey={setOpenSelectKey}
                         compact
                       />
-                      <CobPrettySelect
-                        value={endClock}
-                        onChange={(nextClock) => setEndClock(nextClock)}
-                        options={timeFieldOptions}
-                        placeholder="Hora"
-                        icon={Clock}
-                        selectKey="form-end-time"
-                        openSelectKey={openSelectKey}
-                        setOpenSelectKey={setOpenSelectKey}
-                        compact
-                      />
+                      <label className="cob-time-input-wrap" aria-label="Hora de término">
+                        <Clock size={14} className="cob-time-input-icon" />
+                        <input
+                          type="time"
+                          className="cob-time-input"
+                          value={endClock}
+                          onChange={(e) => setEndClock(e.target.value)}
+                          step="60"
+                        />
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -819,19 +786,6 @@ export default function CameraObstruction() {
                   />
                 </div>
 
-                <div className="cob-filter-item">
-                  <CobPrettySelect
-                    value={filterTimeRange}
-                    onChange={setFilterTimeRange}
-                    options={filterTimeOptions}
-                    placeholder="Filtro de horário"
-                    icon={Clock}
-                    selectKey="filter-time"
-                    openSelectKey={openSelectKey}
-                    setOpenSelectKey={setOpenSelectKey}
-                    compact
-                  />
-                </div>
               </div>
             </div>
 
@@ -1127,6 +1081,52 @@ export default function CameraObstruction() {
           display: grid;
           grid-template-columns: 1fr;
           gap: 10px;
+        }
+
+        .cob-time-input-wrap {
+          width: 100%;
+          min-height: 44px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 11px 12px;
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.03);
+          transition: all 0.24s ease;
+        }
+
+        .cob-time-input-wrap:hover {
+          border-color: rgba(34, 197, 94, 0.24);
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .cob-time-input-wrap:focus-within {
+          border-color: rgba(34, 197, 94, 0.42);
+          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08), 0 0 16px rgba(34, 197, 94, 0.06);
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .cob-time-input-icon {
+          color: #94a3b8;
+          flex-shrink: 0;
+        }
+
+        .cob-time-input {
+          width: 100%;
+          background: transparent;
+          border: none;
+          outline: none;
+          color: #e5e7eb;
+          font-size: 0.9rem;
+          font-weight: 500;
+          letter-spacing: 0.01em;
+          color-scheme: dark;
+        }
+
+        .cob-time-input::-webkit-calendar-picker-indicator {
+          opacity: 0.7;
+          cursor: pointer;
         }
 
         .cob-label {
