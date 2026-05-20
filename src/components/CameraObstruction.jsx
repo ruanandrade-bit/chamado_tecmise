@@ -930,7 +930,7 @@ export default function CameraObstruction() {
         .cob-container {
           display: flex;
           flex-direction: column;
-          gap: 24px;
+          gap: 28px;
           animation: cobFadeIn 0.5s ease-out;
         }
 
@@ -1060,7 +1060,7 @@ export default function CameraObstruction() {
         .cob-layout-grid {
           display: grid;
           grid-template-columns: 1fr;
-          gap: 24px;
+          gap: 28px;
           align-items: start;
         }
 
@@ -1079,7 +1079,7 @@ export default function CameraObstruction() {
           background: rgba(15, 15, 30, 0.5);
           border: 1px solid rgba(255, 255, 255, 0.07);
           border-radius: 20px;
-          padding: 24px;
+          padding: 28px;
           box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
           backdrop-filter: blur(12px);
         }
@@ -1091,7 +1091,7 @@ export default function CameraObstruction() {
           display: flex;
           align-items: center;
           gap: 10px;
-          margin-bottom: 20px;
+          margin-bottom: 24px;
         }
 
         .cob-section-accent {
@@ -1106,13 +1106,13 @@ export default function CameraObstruction() {
         .cob-form {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 22px;
         }
 
         .cob-form-row {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 12px;
+          gap: 20px;
         }
 
         @media (max-width: 560px) {
@@ -1124,20 +1124,14 @@ export default function CameraObstruction() {
         .cob-form-group {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 10px;
           min-width: 0;
         }
 
         .cob-date-time-grid {
           display: grid;
-          grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-          gap: 8px;
-        }
-
-        @media (max-width: 640px) {
-          .cob-date-time-grid {
-            grid-template-columns: 1fr;
-          }
+          grid-template-columns: 1fr;
+          gap: 10px;
         }
 
         .cob-label {
@@ -1158,6 +1152,7 @@ export default function CameraObstruction() {
         .cob-helper-text {
           font-size: 0.75rem;
           color: #6b7280;
+          margin-top: -2px;
         }
 
         .cob-percent-indicator {
@@ -1457,32 +1452,35 @@ export default function CameraObstruction() {
 
         .cob-filters {
           display: flex;
-          gap: 10px;
+          gap: 14px;
           flex-wrap: wrap;
+          align-items: center;
         }
 
         .cob-filter-item {
-          min-width: 180px;
-          flex: 1 1 180px;
-          max-width: 240px;
+          min-width: 220px;
+          flex: 1 1 220px;
+          max-width: 280px;
         }
 
         @media (max-width: 1024px) {
           .cob-filter-item {
             max-width: none;
+            min-width: 180px;
+            flex-basis: 180px;
           }
         }
 
         .cob-pretty-select-compact .cob-pretty-trigger {
-          min-height: 38px;
-          padding: 9px 11px;
+          min-height: 44px;
+          padding: 11px 13px;
           border-radius: 10px;
           border-color: rgba(255, 255, 255, 0.12);
           background: rgba(255, 255, 255, 0.03);
         }
 
         .cob-pretty-select-compact .cob-pretty-label {
-          font-size: 0.8rem;
+          font-size: 0.86rem;
           color: #d1d5db;
         }
 
