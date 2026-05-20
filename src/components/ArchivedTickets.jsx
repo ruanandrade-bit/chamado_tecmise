@@ -32,9 +32,6 @@ function ArcPrettySelect({
 
   useEffect(() => {
     const handleOutside = (event) => {
-      if (event.target?.closest?.('.arc-pretty-select')) {
-        return
-      }
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setOpenSelectKey(null)
       }
@@ -52,7 +49,8 @@ function ArcPrettySelect({
       <button
         type="button"
         className="arc-pretty-trigger"
-        onClick={() => setOpenSelectKey(isOpen ? null : selectKey)}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={() => setOpenSelectKey((prev) => (prev === selectKey ? null : selectKey))}
         aria-expanded={isOpen}
       >
         <span className={`arc-pretty-label ${value ? 'arc-pretty-label-filled' : ''}`}>
@@ -63,7 +61,7 @@ function ArcPrettySelect({
       </button>
 
       {isOpen && (
-        <div className="arc-pretty-options">
+        <div className="arc-pretty-options" onMouseDown={(e) => e.stopPropagation()}>
           {normalizedOptions.map((item, index) => (
             <button
               key={`${selectKey}-${item.value}`}
@@ -456,6 +454,9 @@ export default function ArchivedTickets() {
 
         /* ── Filter Bar ── */
         .arc-filter-bar {
+          position: relative;
+          z-index: 60;
+          isolation: isolate;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -480,6 +481,10 @@ export default function ArchivedTickets() {
         .arc-pretty-select {
           position: relative;
           min-width: 130px;
+        }
+
+        .arc-pretty-select-open {
+          z-index: 80;
         }
 
         .arc-pretty-trigger {
@@ -541,7 +546,7 @@ export default function ArchivedTickets() {
           top: calc(100% + 8px);
           left: 0;
           right: 0;
-          z-index: 30;
+          z-index: 120;
           display: flex;
           flex-direction: column;
           gap: 4px;
