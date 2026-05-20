@@ -240,9 +240,8 @@ export default function CameraObstruction() {
   // Form states
   const [selectedSchool, setSelectedSchool] = useState('')
   const [selectedDevices, setSelectedDevices] = useState([])
-  const [startDate, setStartDate] = useState('')
+  const [selectedDate, setSelectedDate] = useState('')
   const [startClock, setStartClock] = useState('')
-  const [endDate, setEndDate] = useState('')
   const [endClock, setEndClock] = useState('')
   const [percentage, setPercentage] = useState(50)
   const [errorMsg, setErrorMsg] = useState('')
@@ -325,8 +324,9 @@ export default function CameraObstruction() {
     setErrorMsg('')
     if (!selectedSchool) return setErrorMsg('Selecione um colégio.')
     if (selectedDevices.length === 0) return setErrorMsg('Selecione pelo menos um device.')
-    if (!startDate || !startClock) return setErrorMsg('Preencha data e hora de início.')
-    if (!endDate || !endClock) return setErrorMsg('Preencha data e hora de término.')
+    if (!selectedDate) return setErrorMsg('Preencha a data da ocorrência.')
+    if (!startClock) return setErrorMsg('Preencha a hora de início.')
+    if (!endClock) return setErrorMsg('Preencha a hora de término.')
 
     const startMs = new Date(startTime).getTime()
     const endMs = new Date(endTime).getTime()
@@ -349,9 +349,8 @@ export default function CameraObstruction() {
       // Reset form
       setSelectedSchool('')
       setSelectedDevices([])
-      setStartDate('')
+      setSelectedDate('')
       setStartClock('')
-      setEndDate('')
       setEndClock('')
       setPercentage(50)
     } catch (err) {
@@ -429,8 +428,8 @@ export default function CameraObstruction() {
       }
     })
   }, [])
-  const startTime = startDate && startClock ? `${startDate}T${startClock}` : ''
-  const endTime = endDate && endClock ? `${endDate}T${endClock}` : ''
+  const startTime = selectedDate && startClock ? `${selectedDate}T${startClock}` : ''
+  const endTime = selectedDate && endClock ? `${selectedDate}T${endClock}` : ''
 
   // Filter records
   const filteredRecords = records.filter(r => {
@@ -611,85 +610,65 @@ export default function CameraObstruction() {
                   </div>
                 )}
 
-                {/* Horarios */}
+                {/* Data + Horarios */}
+                <div className="cob-form-group">
+                  <label className="cob-label">
+                    <CalendarDays size={14} /> Data da ocorrência
+                  </label>
+                  <CobPrettySelect
+                    value={selectedDate}
+                    onChange={setSelectedDate}
+                    options={dateFieldOptions}
+                    placeholder="Dia da semana"
+                    icon={CalendarDays}
+                    selectKey="form-date"
+                    openSelectKey={openSelectKey}
+                    setOpenSelectKey={setOpenSelectKey}
+                    compact
+                  />
+                </div>
+
                 <div className="cob-form-row">
                   <div className="cob-form-group">
                     <label className="cob-label">
                       <Clock size={14} /> Horário Início
                     </label>
-                    <div className="cob-date-time-grid">
-                      <CobPrettySelect
-                        value={startDate}
-                        onChange={(nextDate) => {
-                          setStartDate(nextDate)
-                          if (endDate && endClock && startClock) {
-                            const nextStart = `${nextDate}T${startClock}`
-                            const currentEnd = `${endDate}T${endClock}`
+                    <label className="cob-time-input-wrap" aria-label="Hora de início">
+                      <Clock size={14} className="cob-time-input-icon" />
+                      <input
+                        type="time"
+                        className="cob-time-input"
+                        value={startClock}
+                        onChange={(e) => {
+                          const nextClock = e.target.value
+                          setStartClock(nextClock)
+                          if (endClock && selectedDate && nextClock) {
+                            const nextStart = `${selectedDate}T${nextClock}`
+                            const currentEnd = `${selectedDate}T${endClock}`
                             if (currentEnd < nextStart) {
-                              setEndDate(nextDate)
-                              setEndClock(startClock)
+                              setEndClock(nextClock)
                             }
                           }
                         }}
-                        options={dateFieldOptions}
-                        placeholder="Dia da semana"
-                        icon={CalendarDays}
-                        selectKey="form-start-date"
-                        openSelectKey={openSelectKey}
-                        setOpenSelectKey={setOpenSelectKey}
-                        compact
+                        step="60"
                       />
-                      <label className="cob-time-input-wrap" aria-label="Hora de início">
-                        <Clock size={14} className="cob-time-input-icon" />
-                        <input
-                          type="time"
-                          className="cob-time-input"
-                          value={startClock}
-                          onChange={(e) => {
-                            const nextClock = e.target.value
-                            setStartClock(nextClock)
-                            if (endDate && endClock && startDate) {
-                              const nextStart = `${startDate}T${nextClock}`
-                              const currentEnd = `${endDate}T${endClock}`
-                              if (currentEnd < nextStart) {
-                                setEndDate(startDate)
-                                setEndClock(nextClock)
-                              }
-                            }
-                          }}
-                          step="60"
-                        />
-                      </label>
-                    </div>
+                    </label>
                   </div>
 
                   <div className="cob-form-group">
                     <label className="cob-label">
                       <Clock size={14} /> Horário Fim
                     </label>
-                    <div className="cob-date-time-grid">
-                      <CobPrettySelect
-                        value={endDate}
-                        onChange={(nextDate) => setEndDate(nextDate)}
-                        options={dateFieldOptions}
-                        placeholder="Dia da semana"
-                        icon={CalendarDays}
-                        selectKey="form-end-date"
-                        openSelectKey={openSelectKey}
-                        setOpenSelectKey={setOpenSelectKey}
-                        compact
+                    <label className="cob-time-input-wrap" aria-label="Hora de término">
+                      <Clock size={14} className="cob-time-input-icon" />
+                      <input
+                        type="time"
+                        className="cob-time-input"
+                        value={endClock}
+                        onChange={(e) => setEndClock(e.target.value)}
+                        step="60"
                       />
-                      <label className="cob-time-input-wrap" aria-label="Hora de término">
-                        <Clock size={14} className="cob-time-input-icon" />
-                        <input
-                          type="time"
-                          className="cob-time-input"
-                          value={endClock}
-                          onChange={(e) => setEndClock(e.target.value)}
-                          step="60"
-                        />
-                      </label>
-                    </div>
+                    </label>
                   </div>
                 </div>
 
