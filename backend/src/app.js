@@ -11,6 +11,7 @@ import devicesRoutes from './routes/devices.js'
 import inventoryRoutes from './routes/inventory.js'
 import schoolsRoutes from './routes/schools.js'
 import professionalsRoutes from './routes/professionals.js'
+import cameraObstructionRoutes from './routes/cameraObstruction.js'
 
 const app = express()
 const IS_PRODUCTION = process.env.NODE_ENV === 'production'
@@ -169,6 +170,7 @@ app.use('/api/devices', devicesRoutes)
 app.use('/api/inventory', inventoryRoutes)
 app.use('/api/schools', schoolsRoutes)
 app.use('/api/professionals', professionalsRoutes)
+app.use('/api/camera-obstructions', cameraObstructionRoutes)
 
 app.use((err, _req, res, _next) => {
   const status = Number.isInteger(err?.status) ? err.status : 500

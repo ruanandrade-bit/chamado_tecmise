@@ -1,4 +1,4 @@
-import { LayoutDashboard, Kanban, Archive, FileText, Wifi, Package, Settings, X } from 'lucide-react'
+import { LayoutDashboard, Kanban, Archive, FileText, Wifi, Package, Settings, X, EyeOff } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
 
@@ -14,6 +14,7 @@ export default function Sidebar({ currentPage, onPageChange, isMobileOpen, onMob
     { id: 'kanban', label: 'Kanban', icon: Kanban },
     { id: 'archived', label: 'Chamados Resolvidos', icon: Archive },
     { id: 'monthly-report', label: 'Relatório Mensal', icon: FileText },
+    { id: 'camera-obstruction', label: 'Obstrução de Câmeras', icon: EyeOff },
     ...(isAdmin ? [{ id: 'devices-online', label: 'Devices Online', icon: Wifi }] : []),
     ...(isAdmin ? [{ id: 'inventory', label: 'Estoque', icon: Package }] : []),
     ...(isAdmin ? [{ id: 'school-config', label: 'Configurações', icon: Settings }] : []),
