@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { EyeOff, Plus, Trash2, ShieldAlert, Clock, Percent, School, Monitor, Loader2, AlertCircle, Sparkles, Filter, ShieldCheck, ChevronDown, Check } from 'lucide-react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { EyeOff, Plus, Trash2, ShieldAlert, Clock, Percent, School, Monitor, Loader2, AlertCircle, Sparkles, Filter, ShieldCheck, ChevronDown, Check, CalendarDays } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 
@@ -228,6 +228,8 @@ export default function CameraObstruction() {
   const isAdmin = user?.canDragDrop === true
   const ALL_SCHOOLS_FILTER = '__all_schools__'
   const ALL_PERCENTS_FILTER = '__all_percents__'
+  const ALL_DATE_FILTER = '__all_dates__'
+  const ALL_TIME_FILTER = '__all_times__'
 
   const [schools, setSchools] = useState({})
   const [records, setRecords] = useState([])
@@ -246,14 +248,33 @@ export default function CameraObstruction() {
   // Filter states
   const [filterSchool, setFilterSchool] = useState(ALL_SCHOOLS_FILTER)
   const [filterMinPercent, setFilterMinPercent] = useState(ALL_PERCENTS_FILTER)
+  const [filterDateRange, setFilterDateRange] = useState(ALL_DATE_FILTER)
+  const [filterTimeRange, setFilterTimeRange] = useState(ALL_TIME_FILTER)
   const [openSelectKey, setOpenSelectKey] = useState(null)
 
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState(null)
 
+  const fetchRecordsOnly = useCallback(async () => {
+    try {
+      const recordsData = await api.get('/camera-obstructions')
+      setRecords(recordsData || [])
+    } catch {
+      // Silent fail to keep UI stable while polling.
+    }
+  }, [])
+
   useEffect(() => {
     fetchInitialData()
   }, [])
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      fetchRecordsOnly()
+    }, 1500)
+
+    return () => clearInterval(intervalId)
+  }, [fetchRecordsOnly])
 
   const fetchInitialData = async () => {
     setIsLoading(true)
@@ -358,12 +379,63 @@ export default function CameraObstruction() {
     ],
     [ALL_PERCENTS_FILTER]
   )
+  const filterDateOptions = useMemo(
+    () => [
+      { value: ALL_DATE_FILTER, label: 'Qualquer data' },
+      { value: 'today', label: 'Hoje' },
+      { value: '24h', label: 'Últimas 24h' },
+      { value: '3d', label: 'Últimos 3 dias' },
+      { value: '7d', label: 'Últimos 7 dias' },
+      { value: 'month', label: 'Este mês' },
+    ],
+    [ALL_DATE_FILTER]
+  )
+  const filterTimeOptions = useMemo(
+    () => [
+      { value: ALL_TIME_FILTER, label: 'Qualquer horário' },
+      { value: 'morning', label: 'Manhã (06h-12h)' },
+      { value: 'afternoon', label: 'Tarde (12h-18h)' },
+      { value: 'night', label: 'Noite (18h-00h)' },
+      { value: 'dawn', label: 'Madrugada (00h-06h)' },
+    ],
+    [ALL_TIME_FILTER]
+  )
 
   // Filter records
   const filteredRecords = records.filter(r => {
+    const baseDate = new Date(r.startTime || r.createdAt || r.endTime)
+    if (Number.isNaN(baseDate.getTime())) return false
+
+    const now = new Date()
     const matchSchool = filterSchool === ALL_SCHOOLS_FILTER || r.school === filterSchool
     const matchPercent = filterMinPercent === ALL_PERCENTS_FILTER || r.percentage >= Number(filterMinPercent)
-    return matchSchool && matchPercent
+
+    let matchDate = true
+    if (filterDateRange === 'today') {
+      matchDate = baseDate.toDateString() === now.toDateString()
+    } else if (filterDateRange === '24h') {
+      matchDate = baseDate.getTime() >= (now.getTime() - (24 * 60 * 60 * 1000))
+    } else if (filterDateRange === '3d') {
+      matchDate = baseDate.getTime() >= (now.getTime() - (3 * 24 * 60 * 60 * 1000))
+    } else if (filterDateRange === '7d') {
+      matchDate = baseDate.getTime() >= (now.getTime() - (7 * 24 * 60 * 60 * 1000))
+    } else if (filterDateRange === 'month') {
+      matchDate = baseDate.getMonth() === now.getMonth() && baseDate.getFullYear() === now.getFullYear()
+    }
+
+    const hour = baseDate.getHours()
+    let matchTime = true
+    if (filterTimeRange === 'morning') {
+      matchTime = hour >= 6 && hour < 12
+    } else if (filterTimeRange === 'afternoon') {
+      matchTime = hour >= 12 && hour < 18
+    } else if (filterTimeRange === 'night') {
+      matchTime = hour >= 18 && hour <= 23
+    } else if (filterTimeRange === 'dawn') {
+      matchTime = hour >= 0 && hour < 6
+    }
+
+    return matchSchool && matchPercent && matchDate && matchTime
   })
 
   // Compute simple stats
@@ -630,6 +702,34 @@ export default function CameraObstruction() {
                     placeholder="Filtro de obstrução"
                     icon={Percent}
                     selectKey="filter-percent"
+                    openSelectKey={openSelectKey}
+                    setOpenSelectKey={setOpenSelectKey}
+                    compact
+                  />
+                </div>
+
+                <div className="cob-filter-item">
+                  <CobPrettySelect
+                    value={filterDateRange}
+                    onChange={setFilterDateRange}
+                    options={filterDateOptions}
+                    placeholder="Filtro de data"
+                    icon={CalendarDays}
+                    selectKey="filter-date"
+                    openSelectKey={openSelectKey}
+                    setOpenSelectKey={setOpenSelectKey}
+                    compact
+                  />
+                </div>
+
+                <div className="cob-filter-item">
+                  <CobPrettySelect
+                    value={filterTimeRange}
+                    onChange={setFilterTimeRange}
+                    options={filterTimeOptions}
+                    placeholder="Filtro de horário"
+                    icon={Clock}
+                    selectKey="filter-time"
                     openSelectKey={openSelectKey}
                     setOpenSelectKey={setOpenSelectKey}
                     compact
@@ -962,6 +1062,7 @@ export default function CameraObstruction() {
           color: #e5e7eb;
           transition: all 0.2s ease;
           outline: none;
+          color-scheme: dark;
         }
 
         .cob-input:focus {
@@ -1247,7 +1348,15 @@ export default function CameraObstruction() {
         }
 
         .cob-filter-item {
-          min-width: 190px;
+          min-width: 180px;
+          flex: 1 1 180px;
+          max-width: 240px;
+        }
+
+        @media (max-width: 1024px) {
+          .cob-filter-item {
+            max-width: none;
+          }
         }
 
         .cob-pretty-select-compact .cob-pretty-trigger {
