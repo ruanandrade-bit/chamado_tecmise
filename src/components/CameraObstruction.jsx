@@ -802,8 +802,12 @@ export default function CameraObstruction() {
               </div>
             ) : (
               <div className="cob-records-list">
-                {filteredRecords.map((record) => (
-                  <div key={record.id} className="cob-record-card">
+                {filteredRecords.map((record, index) => (
+                  <div
+                    key={record.id}
+                    className="cob-record-card"
+                    style={{ '--cob-item-index': Math.min(index, 10) }}
+                  >
                     <div className="cob-record-main">
                       <div className="cob-record-details">
                         <div className="cob-record-school-row">
@@ -879,13 +883,64 @@ export default function CameraObstruction() {
         .cob-container {
           display: flex;
           flex-direction: column;
-          gap: 28px;
-          animation: cobFadeIn 0.5s ease-out;
+          gap: 34px;
+          width: 100%;
+          max-width: 1700px;
+          margin: 0 auto;
+          position: relative;
+          isolation: isolate;
+          animation: cobFadeIn 0.55s ease-out;
+        }
+
+        .cob-container::before,
+        .cob-container::after {
+          content: '';
+          position: absolute;
+          border-radius: 999px;
+          pointer-events: none;
+          z-index: -1;
+          filter: blur(42px);
+          opacity: 0.28;
+        }
+
+        .cob-container::before {
+          width: 320px;
+          height: 320px;
+          top: -70px;
+          right: 10%;
+          background: radial-gradient(circle, rgba(37, 99, 235, 0.36), rgba(37, 99, 235, 0));
+          animation: cobGlowMove 9s ease-in-out infinite;
+        }
+
+        .cob-container::after {
+          width: 280px;
+          height: 280px;
+          bottom: 8%;
+          left: 4%;
+          background: radial-gradient(circle, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0));
+          animation: cobGlowMove 11s ease-in-out infinite reverse;
         }
 
         @keyframes cobFadeIn {
           from { opacity: 0; transform: translateY(12px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes cobRiseIn {
+          from { opacity: 0; transform: translateY(14px) scale(0.992); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes cobFloat {
+          0% { transform: translateY(0); }
+          50% { transform: translateY(-3px); }
+          100% { transform: translateY(0); }
+        }
+
+        @keyframes cobGlowMove {
+          0% { transform: translate3d(0, 0, 0); }
+          50% { transform: translate3d(8px, -10px, 0); }
+          100% { transform: translate3d(0, 0, 0); }
         }
 
         /* Header */
@@ -894,9 +949,10 @@ export default function CameraObstruction() {
           align-items: center;
           justify-content: space-between;
           flex-wrap: wrap;
-          gap: 16px;
+          gap: 18px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-          padding-bottom: 20px;
+          padding-bottom: 24px;
+          animation: cobRiseIn 0.45s ease both;
         }
 
         .cob-header-left {
@@ -906,8 +962,8 @@ export default function CameraObstruction() {
         }
 
         .cob-header-icon {
-          width: 48px;
-          height: 48px;
+          width: 50px;
+          height: 50px;
           border-radius: 14px;
           background: linear-gradient(135deg, rgba(96, 165, 250, 0.15), rgba(37, 99, 235, 0.08));
           border: 1px solid rgba(96, 165, 250, 0.25);
@@ -916,6 +972,7 @@ export default function CameraObstruction() {
           justify-content: center;
           color: #60a5fa;
           box-shadow: 0 0 16px rgba(96, 165, 250, 0.1);
+          animation: cobFloat 5.6s ease-in-out infinite;
         }
 
         .cob-page-title {
@@ -942,6 +999,7 @@ export default function CameraObstruction() {
           background: rgba(34, 197, 94, 0.1);
           color: #86efac;
           border: 1px solid rgba(34, 197, 94, 0.2);
+          box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.09), 0 10px 24px rgba(34, 197, 94, 0.09);
         }
 
         .cob-badge-viewonly {
@@ -955,30 +1013,44 @@ export default function CameraObstruction() {
           background: rgba(96, 165, 250, 0.1);
           color: #60a5fa;
           border: 1px solid rgba(96, 165, 250, 0.2);
+          box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.09), 0 10px 24px rgba(96, 165, 250, 0.09);
         }
 
         /* Stats Grid */
         .cob-stats-grid {
           display: grid;
-          grid-template-columns: repeat(1, 1fr);
-          gap: 16px;
+          grid-template-columns: repeat(1, minmax(0, 1fr));
+          gap: 18px;
         }
 
-        @media (min-width: 640px) {
+        @media (min-width: 840px) {
           .cob-stats-grid {
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(3, minmax(0, 1fr));
           }
         }
 
         .cob-stat-card {
-          background: rgba(30, 30, 40, 0.4);
-          backdrop-filter: blur(8px);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          border-radius: 16px;
-          padding: 16px 20px;
+          background: linear-gradient(155deg, rgba(30, 30, 40, 0.52) 0%, rgba(16, 20, 34, 0.5) 100%);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 18px;
+          padding: 18px 22px;
           display: flex;
           align-items: center;
           gap: 16px;
+          box-shadow: 0 16px 28px rgba(0, 0, 0, 0.2);
+          transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+          animation: cobRiseIn 0.4s ease both;
+        }
+
+        .cob-stat-card:nth-child(1) { animation-delay: 0.04s; }
+        .cob-stat-card:nth-child(2) { animation-delay: 0.1s; }
+        .cob-stat-card:nth-child(3) { animation-delay: 0.16s; }
+
+        .cob-stat-card:hover {
+          transform: translateY(-3px);
+          border-color: rgba(96, 165, 250, 0.24);
+          box-shadow: 0 24px 36px rgba(2, 8, 23, 0.38), 0 0 22px rgba(59, 130, 246, 0.08);
         }
 
         .cob-stat-icon-wrapper {
@@ -1009,13 +1081,19 @@ export default function CameraObstruction() {
         .cob-layout-grid {
           display: grid;
           grid-template-columns: 1fr;
-          gap: 28px;
+          gap: 30px;
           align-items: start;
         }
 
-        @media (min-width: 1024px) {
+        @media (min-width: 1120px) {
           .cob-layout-grid {
-            grid-template-columns: 380px 1fr;
+            grid-template-columns: 430px minmax(0, 1fr);
+          }
+        }
+
+        @media (min-width: 1600px) {
+          .cob-layout-grid {
+            grid-template-columns: 470px minmax(0, 1fr);
           }
         }
 
@@ -1025,12 +1103,23 @@ export default function CameraObstruction() {
 
         /* Cards */
         .cob-section-card {
-          background: rgba(15, 15, 30, 0.5);
-          border: 1px solid rgba(255, 255, 255, 0.07);
-          border-radius: 20px;
-          padding: 28px;
-          box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+          background: linear-gradient(158deg, rgba(15, 15, 30, 0.62) 0%, rgba(10, 13, 26, 0.68) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 22px;
+          padding: 30px;
+          box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.03);
           backdrop-filter: blur(12px);
+          transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+          animation: cobRiseIn 0.45s ease both;
+        }
+
+        .cob-form-section .cob-section-card { animation-delay: 0.08s; }
+        .cob-list-section .cob-section-card { animation-delay: 0.14s; }
+
+        .cob-section-card:hover {
+          transform: translateY(-2px);
+          border-color: rgba(96, 165, 250, 0.22);
+          box-shadow: 0 24px 46px rgba(0, 0, 0, 0.35), 0 0 24px rgba(59, 130, 246, 0.05);
         }
 
         .cob-section-title {
@@ -1040,7 +1129,7 @@ export default function CameraObstruction() {
           display: flex;
           align-items: center;
           gap: 10px;
-          margin-bottom: 24px;
+          margin-bottom: 26px;
         }
 
         .cob-section-accent {
@@ -1055,7 +1144,7 @@ export default function CameraObstruction() {
         .cob-form {
           display: flex;
           flex-direction: column;
-          gap: 22px;
+          gap: 24px;
         }
 
         .cob-form-row {
@@ -1447,22 +1536,22 @@ export default function CameraObstruction() {
 
         .cob-filters {
           display: flex;
-          gap: 14px;
+          gap: 16px;
           flex-wrap: wrap;
           align-items: center;
         }
 
         .cob-filter-item {
-          min-width: 220px;
-          flex: 1 1 220px;
-          max-width: 280px;
+          min-width: 240px;
+          flex: 1 1 240px;
+          max-width: 320px;
         }
 
         @media (max-width: 1024px) {
           .cob-filter-item {
             max-width: none;
-            min-width: 180px;
-            flex-basis: 180px;
+            min-width: 190px;
+            flex-basis: 190px;
           }
         }
 
@@ -1496,24 +1585,36 @@ export default function CameraObstruction() {
         .cob-records-list {
           display: flex;
           flex-direction: column;
-          gap: 12px;
-          max-height: 560px;
+          gap: 14px;
+          max-height: 620px;
           overflow-y: auto;
-          padding-right: 4px;
+          padding-right: 6px;
         }
 
         .cob-record-card {
-          background: rgba(255, 255, 255, 0.02);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          border-radius: 14px;
-          padding: 16px;
-          transition: all 0.2s ease;
+          background: linear-gradient(150deg, rgba(255, 255, 255, 0.028) 0%, rgba(255, 255, 255, 0.018) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 16px;
+          padding: 18px;
+          transition: all 0.24s ease;
+          opacity: 0;
+          transform: translateY(10px);
+          animation: cobRecordIn 0.35s ease forwards;
+          animation-delay: calc(var(--cob-item-index, 0) * 36ms);
         }
 
         .cob-record-card:hover {
-          background: rgba(255, 255, 255, 0.03);
-          border-color: rgba(255, 255, 255, 0.08);
-          transform: translateX(2px);
+          background: linear-gradient(150deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.026) 100%);
+          border-color: rgba(147, 197, 253, 0.22);
+          transform: translateX(2px) translateY(-1px);
+          box-shadow: 0 16px 26px rgba(0, 0, 0, 0.24);
+        }
+
+        @keyframes cobRecordIn {
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
         .cob-record-main {
@@ -1632,6 +1733,14 @@ export default function CameraObstruction() {
           border-top: 1px solid rgba(255, 255, 255, 0.04);
           font-size: 0.6875rem;
           color: #4b5563;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .cob-container,
+          .cob-container * {
+            animation: none !important;
+            transition: none !important;
+          }
         }
 
         /* Loading / Empty States */
