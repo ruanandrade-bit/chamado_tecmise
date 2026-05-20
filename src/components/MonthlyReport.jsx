@@ -16,9 +16,6 @@ function PrettySelect({ value, onChange, options, placeholder, icon: Icon, selec
 
   useEffect(() => {
     const handleOutside = (event) => {
-      if (event.target?.closest?.('.mr-pretty-select')) {
-        return
-      }
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setOpenSelectKey(null)
       }
@@ -44,7 +41,8 @@ function PrettySelect({ value, onChange, options, placeholder, icon: Icon, selec
       <button
         type="button"
         className={`mr-pretty-trigger ${didSelect ? 'mr-pretty-trigger-picked' : ''}`}
-        onClick={() => setOpenSelectKey(isOpen ? null : selectKey)}
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={() => setOpenSelectKey((prev) => (prev === selectKey ? null : selectKey))}
         aria-expanded={isOpen}
       >
         <span className={`mr-pretty-label ${value ? 'mr-pretty-label-filled' : ''}`}>
@@ -55,7 +53,7 @@ function PrettySelect({ value, onChange, options, placeholder, icon: Icon, selec
       </button>
 
       {isOpen && (
-        <div className="mr-pretty-options">
+        <div className="mr-pretty-options" onMouseDown={(e) => e.stopPropagation()}>
           {allowClear && (
             <button
               type="button"
@@ -997,6 +995,9 @@ export default function MonthlyReport() {
 
         /* ── Month Filter ── */
         .mr-filter-row {
+          position: relative;
+          z-index: 60;
+          isolation: isolate;
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -1282,7 +1283,7 @@ export default function MonthlyReport() {
         }
 
         .mr-pretty-select-open {
-          z-index: 90;
+          z-index: 120;
         }
 
         .mr-pretty-trigger {
@@ -1355,7 +1356,7 @@ export default function MonthlyReport() {
           top: calc(100% + 8px);
           left: 0;
           right: 0;
-          z-index: 40;
+          z-index: 140;
           max-height: 260px;
           overflow: auto;
           padding: 8px;
