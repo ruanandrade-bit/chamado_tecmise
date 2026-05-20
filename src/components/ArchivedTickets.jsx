@@ -32,6 +32,9 @@ function ArcPrettySelect({
 
   useEffect(() => {
     const handleOutside = (event) => {
+      if (event.target?.closest?.('.arc-pretty-select')) {
+        return
+      }
       if (containerRef.current && !containerRef.current.contains(event.target)) {
         setOpenSelectKey(null)
       }

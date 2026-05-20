@@ -413,8 +413,6 @@ export default function CameraObstruction() {
       { value: ALL_TIME_FILTER, label: 'Qualquer horário' },
       { value: 'morning', label: 'Manhã (06h-12h)' },
       { value: 'afternoon', label: 'Tarde (12h-18h)' },
-      { value: 'night', label: 'Noite (18h-00h)' },
-      { value: 'dawn', label: 'Madrugada (00h-06h)' },
     ],
     [ALL_TIME_FILTER]
   )
@@ -486,10 +484,6 @@ export default function CameraObstruction() {
       matchTime = hour >= 6 && hour < 12
     } else if (filterTimeRange === 'afternoon') {
       matchTime = hour >= 12 && hour < 18
-    } else if (filterTimeRange === 'night') {
-      matchTime = hour >= 18 && hour <= 23
-    } else if (filterTimeRange === 'dawn') {
-      matchTime = hour >= 0 && hour < 6
     }
 
     return matchSchool && matchPercent && matchDate && matchTime
