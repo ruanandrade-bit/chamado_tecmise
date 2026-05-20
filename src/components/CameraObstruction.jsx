@@ -1211,11 +1211,22 @@ export default function CameraObstruction() {
           font-weight: 500;
           letter-spacing: 0.01em;
           color-scheme: dark;
+          -webkit-appearance: none;
+          appearance: none;
+          -moz-appearance: textfield;
         }
 
         .cob-time-input::-webkit-calendar-picker-indicator {
-          opacity: 0.7;
-          cursor: pointer;
+          display: none;
+          -webkit-appearance: none;
+        }
+
+        .cob-time-input::-webkit-clear-button,
+        .cob-time-input::-webkit-inner-spin-button,
+        .cob-time-input::-webkit-outer-spin-button {
+          display: none;
+          -webkit-appearance: none;
+          margin: 0;
         }
 
         .cob-label {

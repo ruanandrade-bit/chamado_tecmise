@@ -231,6 +231,9 @@ export async function initStore() {
     state.tickets = mongoData.tickets
     state.notifications = mongoData.notifications
     state.monthlyReports = mongoData.monthlyReports
+    state.cameraObstructions = Array.isArray(mongoData.cameraObstructions)
+      ? mongoData.cameraObstructions
+      : []
     if (mongoData.inventory) state.inventory = mongoData.inventory
     if (mongoData.schoolData) state.schoolData = mongoData.schoolData
     if (mongoData.professionals) state.professionals = mongoData.professionals
@@ -238,6 +241,9 @@ export async function initStore() {
     state.tickets = diskData.tickets
     state.notifications = diskData.notifications
     state.monthlyReports = diskData.monthlyReports
+    state.cameraObstructions = Array.isArray(diskData.cameraObstructions)
+      ? diskData.cameraObstructions
+      : []
     if (diskData.inventory) state.inventory = diskData.inventory
     if (diskData.schoolData) state.schoolData = diskData.schoolData
     if (diskData.professionals) state.professionals = diskData.professionals

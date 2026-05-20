@@ -20,7 +20,12 @@ export default function App() {
   const [currentPage, setCurrentPage] = useState('kanban')
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const isKanbanPage = currentPage === 'kanban'
-  const isWidePage = isKanbanPage || currentPage === 'camera-obstruction'
+  const isWidePage = (
+    isKanbanPage
+    || currentPage === 'camera-obstruction'
+    || currentPage === 'archived'
+    || currentPage === 'monthly-report'
+  )
 
   useEffect(() => {
     initAuth()

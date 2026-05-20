@@ -899,8 +899,42 @@ export default function MonthlyReport() {
         .mr-container {
           display: flex;
           flex-direction: column;
-          gap: 24px;
-          animation: mrFadeIn 0.5s ease-out;
+          gap: 34px;
+          width: 100%;
+          max-width: 1700px;
+          margin: 0 auto;
+          position: relative;
+          isolation: isolate;
+          animation: mrFadeIn 0.55s ease-out;
+        }
+
+        .mr-container::before,
+        .mr-container::after {
+          content: '';
+          position: absolute;
+          border-radius: 999px;
+          pointer-events: none;
+          z-index: -1;
+          filter: blur(42px);
+          opacity: 0.28;
+        }
+
+        .mr-container::before {
+          width: 320px;
+          height: 320px;
+          top: -72px;
+          right: 10%;
+          background: radial-gradient(circle, rgba(34, 197, 94, 0.24), rgba(34, 197, 94, 0));
+          animation: mrGlowMove 9s ease-in-out infinite;
+        }
+
+        .mr-container::after {
+          width: 300px;
+          height: 300px;
+          bottom: 8%;
+          left: 4%;
+          background: radial-gradient(circle, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0));
+          animation: mrGlowMove 11s ease-in-out infinite reverse;
         }
 
         @keyframes mrFadeIn {
@@ -908,16 +942,36 @@ export default function MonthlyReport() {
           to { opacity: 1; transform: translateY(0); }
         }
 
+        @keyframes mrRiseIn {
+          from { opacity: 0; transform: translateY(14px) scale(0.992); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes mrFloat {
+          0% { transform: translateY(0); }
+          50% { transform: translateY(-3px); }
+          100% { transform: translateY(0); }
+        }
+
+        @keyframes mrGlowMove {
+          0% { transform: translate3d(0, 0, 0); }
+          50% { transform: translate3d(8px, -10px, 0); }
+          100% { transform: translate3d(0, 0, 0); }
+        }
+
         /* ── Page Header ── */
         .mr-page-header {
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 18px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          padding-bottom: 24px;
+          animation: mrRiseIn 0.45s ease both;
         }
 
         .mr-header-icon {
-          width: 48px;
-          height: 48px;
+          width: 50px;
+          height: 50px;
           border-radius: 14px;
           display: flex;
           align-items: center;
@@ -925,6 +979,7 @@ export default function MonthlyReport() {
           background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(22,163,74,0.08));
           border: 1px solid rgba(34,197,94,0.2);
           box-shadow: 0 0 20px rgba(34,197,94,0.06);
+          animation: mrFloat 5.6s ease-in-out infinite;
         }
 
         .mr-page-title {
@@ -945,11 +1000,21 @@ export default function MonthlyReport() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          gap: 12px;
-          padding: 14px 16px;
-          background: rgba(15, 15, 30, 0.45);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 14px;
+          gap: 16px;
+          padding: 16px 22px;
+          background: linear-gradient(155deg, rgba(15, 15, 30, 0.55) 0%, rgba(11, 15, 28, 0.6) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 18px;
+          box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
+          animation: mrRiseIn 0.45s ease both;
+          animation-delay: 0.08s;
+          transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+        }
+
+        .mr-filter-row:hover {
+          transform: translateY(-1px);
+          border-color: rgba(134, 239, 172, 0.2);
+          box-shadow: 0 20px 34px rgba(2, 8, 23, 0.3), 0 0 18px rgba(34, 197, 94, 0.06);
         }
 
         .mr-filter-label {
@@ -964,28 +1029,28 @@ export default function MonthlyReport() {
         .mr-filter-controls {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
         }
 
         .mr-filter-picker {
-          width: 190px;
+          width: 210px;
         }
 
         .mr-filter-picker-year {
-          width: 116px;
+          width: 130px;
         }
 
         .mr-current-month-btn {
-          height: 38px;
-          padding: 0 12px;
-          border-radius: 10px;
+          height: 40px;
+          padding: 0 14px;
+          border-radius: 11px;
           border: 1px solid rgba(99, 102, 241, 0.22);
           background: rgba(99, 102, 241, 0.08);
           color: #a5b4fc;
-          font-size: 0.75rem;
+          font-size: 0.78rem;
           font-weight: 700;
           cursor: pointer;
-          transition: all 0.2s ease;
+          transition: all 0.24s ease;
           white-space: nowrap;
         }
 
@@ -1003,13 +1068,22 @@ export default function MonthlyReport() {
         .mr-month-banner {
           position: relative;
           overflow: hidden;
-          padding: 24px 28px;
-          background: rgba(15, 15, 30, 0.5);
+          padding: 26px 30px;
+          background: linear-gradient(158deg, rgba(15, 15, 30, 0.62) 0%, rgba(10, 13, 26, 0.68) 100%);
           backdrop-filter: blur(16px);
           -webkit-backdrop-filter: blur(16px);
-          border: 1px solid rgba(34, 197, 94, 0.15);
-          border-radius: 20px;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+          border: 1px solid rgba(34, 197, 94, 0.18);
+          border-radius: 22px;
+          box-shadow: 0 18px 36px rgba(0,0,0,0.26), inset 0 1px 0 rgba(255,255,255,0.03);
+          animation: mrRiseIn 0.45s ease both;
+          animation-delay: 0.14s;
+          transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+        }
+
+        .mr-month-banner:hover {
+          transform: translateY(-2px);
+          border-color: rgba(34, 197, 94, 0.24);
+          box-shadow: 0 24px 46px rgba(0, 0, 0, 0.35), 0 0 24px rgba(59, 130, 246, 0.05);
         }
 
         .mr-banner-glow {
@@ -1039,7 +1113,7 @@ export default function MonthlyReport() {
           position: relative;
           display: flex;
           align-items: center;
-          gap: 18px;
+          gap: 20px;
           flex-wrap: wrap;
         }
 
@@ -1050,8 +1124,8 @@ export default function MonthlyReport() {
 
         .mr-banner-icon {
           flex-shrink: 0;
-          width: 56px;
-          height: 56px;
+          width: 60px;
+          height: 60px;
           border-radius: 16px;
           display: flex;
           align-items: center;
@@ -1059,10 +1133,11 @@ export default function MonthlyReport() {
           background: linear-gradient(135deg, rgba(34,197,94,0.15), rgba(16,185,129,0.1));
           border: 1px solid rgba(34,197,94,0.25);
           box-shadow: 0 0 16px rgba(34,197,94,0.08);
+          animation: mrFloat 5.8s ease-in-out infinite;
         }
 
         .mr-banner-title {
-          font-size: 1.25rem;
+          font-size: 1.34rem;
           font-weight: 700;
           color: #f3f4f6;
         }
@@ -1121,13 +1196,22 @@ export default function MonthlyReport() {
           z-index: 30;
           display: flex;
           flex-direction: column;
-          gap: 14px;
-          padding: 24px;
-          background: rgba(15, 15, 30, 0.4);
+          gap: 16px;
+          padding: 26px;
+          background: linear-gradient(158deg, rgba(15, 15, 30, 0.62) 0%, rgba(10, 13, 26, 0.68) 100%);
           backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 18px;
-          box-shadow: 0 4px 16px rgba(0,0,0,0.1), inset 0 1px 0 rgba(255,255,255,0.03);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 22px;
+          box-shadow: 0 18px 36px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.03);
+          animation: mrRiseIn 0.45s ease both;
+          animation-delay: 0.2s;
+          transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+        }
+
+        .mr-add-section:hover {
+          transform: translateY(-2px);
+          border-color: rgba(134, 239, 172, 0.2);
+          box-shadow: 0 24px 46px rgba(0, 0, 0, 0.35), 0 0 24px rgba(59, 130, 246, 0.05);
         }
 
         .mr-add-header {
@@ -1399,12 +1483,14 @@ export default function MonthlyReport() {
           align-items: center;
           justify-content: center;
           gap: 12px;
-          padding: 64px 20px;
-          background: rgba(15, 15, 30, 0.4);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          border-radius: 20px;
+          padding: 76px 20px;
+          background: linear-gradient(160deg, rgba(15, 15, 30, 0.52) 0%, rgba(10, 13, 24, 0.58) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 22px;
           color: #6b7280;
-          font-size: 0.9375rem;
+          font-size: 0.95rem;
+          box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
+          animation: mrRiseIn 0.45s ease both;
         }
 
         /* ── Empty ── */
@@ -1413,24 +1499,26 @@ export default function MonthlyReport() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 64px 20px;
-          background: rgba(15, 15, 30, 0.4);
+          padding: 76px 20px;
+          background: linear-gradient(160deg, rgba(15, 15, 30, 0.52) 0%, rgba(10, 13, 24, 0.58) 100%);
           backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          border-radius: 20px;
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 22px;
           text-align: center;
+          box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
+          animation: mrRiseIn 0.45s ease both;
         }
 
         .mr-empty-icon {
-          width: 64px;
-          height: 64px;
+          width: 68px;
+          height: 68px;
           border-radius: 18px;
           display: flex;
           align-items: center;
           justify-content: center;
           background: rgba(255, 255, 255, 0.03);
           border: 1px solid rgba(255, 255, 255, 0.05);
-          margin-bottom: 16px;
+          margin-bottom: 18px;
         }
 
         .mr-empty-title {
@@ -1449,30 +1537,37 @@ export default function MonthlyReport() {
         .mr-obs-list {
           display: grid;
           grid-template-columns: 1fr;
-          gap: 12px;
+          gap: 14px;
         }
 
-        @media (min-width: 768px) {
+        @media (min-width: 860px) {
           .mr-obs-list {
             grid-template-columns: repeat(2, 1fr);
           }
         }
 
+        @media (min-width: 1520px) {
+          .mr-obs-list {
+            grid-template-columns: repeat(3, 1fr);
+          }
+        }
+
         .mr-obs-card {
-          padding: 20px 24px;
-          background: rgba(15, 15, 30, 0.45);
+          padding: 22px 24px;
+          background: linear-gradient(150deg, rgba(15, 15, 30, 0.56) 0%, rgba(12, 16, 28, 0.58) 100%);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 18px;
           transition: all 0.3s ease;
-          animation: mrObsIn 0.4s ease-out both;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+          animation: mrObsIn 0.44s ease-out both;
+          box-shadow: 0 12px 24px rgba(0,0,0,0.18);
         }
 
         .mr-obs-card:hover {
-          border-color: rgba(255, 255, 255, 0.1);
-          box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+          transform: translateY(-2px);
+          border-color: rgba(134, 239, 172, 0.2);
+          box-shadow: 0 20px 34px rgba(2, 8, 23, 0.34), 0 0 18px rgba(34, 197, 94, 0.05);
         }
 
         @keyframes mrObsIn {
@@ -1696,11 +1791,13 @@ export default function MonthlyReport() {
           display: flex;
           align-items: center;
           gap: 14px;
-          padding: 16px 20px;
-          background: rgba(15, 15, 30, 0.5);
+          padding: 18px 22px;
+          background: linear-gradient(155deg, rgba(15, 15, 30, 0.56) 0%, rgba(11, 15, 28, 0.62) 100%);
           backdrop-filter: blur(12px);
-          border: 1px solid rgba(99, 102, 241, 0.12);
-          border-radius: 16px;
+          border: 1px solid rgba(99, 102, 241, 0.16);
+          border-radius: 18px;
+          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+          animation: mrRiseIn 0.45s ease both;
         }
 
         .mr-info-icon {
@@ -1718,6 +1815,14 @@ export default function MonthlyReport() {
         .mr-info-text {
           font-size: 0.875rem;
           color: #a5b4fc;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .mr-container,
+          .mr-container * {
+            animation: none !important;
+            transition: none !important;
+          }
         }
 
         @media (max-width: 640px) {
