@@ -240,8 +240,10 @@ export default function CameraObstruction() {
   // Form states
   const [selectedSchool, setSelectedSchool] = useState('')
   const [selectedDevices, setSelectedDevices] = useState([])
-  const [startTime, setStartTime] = useState('')
-  const [endTime, setEndTime] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [startClock, setStartClock] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [endClock, setEndClock] = useState('')
   const [percentage, setPercentage] = useState(50)
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -271,9 +273,21 @@ export default function CameraObstruction() {
   useEffect(() => {
     const intervalId = setInterval(() => {
       fetchRecordsOnly()
-    }, 1500)
+    }, 1000)
 
-    return () => clearInterval(intervalId)
+    const handleFocus = () => fetchRecordsOnly()
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') fetchRecordsOnly()
+    }
+
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      clearInterval(intervalId)
+      window.removeEventListener('focus', handleFocus)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
   }, [fetchRecordsOnly])
 
   const fetchInitialData = async () => {
@@ -312,8 +326,8 @@ export default function CameraObstruction() {
     setErrorMsg('')
     if (!selectedSchool) return setErrorMsg('Selecione um colégio.')
     if (selectedDevices.length === 0) return setErrorMsg('Selecione pelo menos um device.')
-    if (!startTime) return setErrorMsg('Preencha o horário de início.')
-    if (!endTime) return setErrorMsg('Preencha o horário de término.')
+    if (!startDate || !startClock) return setErrorMsg('Preencha data e hora de início.')
+    if (!endDate || !endClock) return setErrorMsg('Preencha data e hora de término.')
 
     const startMs = new Date(startTime).getTime()
     const endMs = new Date(endTime).getTime()
@@ -332,11 +346,14 @@ export default function CameraObstruction() {
         percentage: Number(percentage)
       })
       setRecords(prev => [newRecord, ...prev])
+      fetchRecordsOnly()
       // Reset form
       setSelectedSchool('')
       setSelectedDevices([])
-      setStartTime('')
-      setEndTime('')
+      setStartDate('')
+      setStartClock('')
+      setEndDate('')
+      setEndClock('')
       setPercentage(50)
     } catch (err) {
       setErrorMsg(err.message || 'Falha ao salvar registro.')
@@ -351,6 +368,7 @@ export default function CameraObstruction() {
     try {
       await api.delete(`/camera-obstructions/${id}`)
       setRecords(prev => prev.filter(r => r.id !== id))
+      fetchRecordsOnly()
       setDeleteTarget(null)
     } catch (err) {
       alert(err.message || 'Falha ao deletar registro.')
@@ -400,6 +418,44 @@ export default function CameraObstruction() {
     ],
     [ALL_TIME_FILTER]
   )
+  const dateFieldOptions = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const options = []
+    for (let offset = 7; offset >= -365; offset -= 1) {
+      const d = new Date(today)
+      d.setDate(today.getDate() + offset)
+      const value = d.toISOString().slice(0, 10)
+
+      let prefix = ''
+      if (offset === 0) prefix = 'Hoje'
+      else if (offset === 1) prefix = 'Amanhã'
+      else if (offset === -1) prefix = 'Ontem'
+
+      const labelDate = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      const labelWeek = d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', '')
+      const label = prefix ? `${prefix} · ${labelDate}` : `${labelDate} · ${labelWeek}`
+
+      options.push({ value, label })
+    }
+    return options
+  }, [])
+  const timeFieldOptions = useMemo(() => {
+    const options = []
+    for (let h = 0; h < 24; h += 1) {
+      for (let m = 0; m < 60; m += 15) {
+        const hour = String(h).padStart(2, '0')
+        const minute = String(m).padStart(2, '0')
+        const value = `${hour}:${minute}`
+        options.push({ value, label: `${value}h` })
+      }
+    }
+    return options
+  }, [])
+
+  const startTime = startDate && startClock ? `${startDate}T${startClock}` : ''
+  const endTime = endDate && endClock ? `${endDate}T${endClock}` : ''
 
   // Filter records
   const filteredRecords = records.filter(r => {
@@ -598,34 +654,80 @@ export default function CameraObstruction() {
                     <label className="cob-label">
                       <Clock size={14} /> Horário Início
                     </label>
-                    <input 
-                      type="datetime-local"
-                      className="cob-input"
-                      value={startTime}
-                      onChange={(e) => {
-                        const nextStart = e.target.value
-                        setStartTime(nextStart)
-                        if (endTime && nextStart && endTime < nextStart) {
-                          setEndTime(nextStart)
-                        }
-                      }}
-                      max={endTime || undefined}
-                      step="60"
-                    />
+                    <div className="cob-date-time-grid">
+                      <CobPrettySelect
+                        value={startDate}
+                        onChange={(nextDate) => {
+                          setStartDate(nextDate)
+                          if (endDate && endClock && startClock) {
+                            const nextStart = `${nextDate}T${startClock}`
+                            const currentEnd = `${endDate}T${endClock}`
+                            if (currentEnd < nextStart) {
+                              setEndDate(nextDate)
+                              setEndClock(startClock)
+                            }
+                          }
+                        }}
+                        options={dateFieldOptions}
+                        placeholder="Data"
+                        icon={CalendarDays}
+                        selectKey="form-start-date"
+                        openSelectKey={openSelectKey}
+                        setOpenSelectKey={setOpenSelectKey}
+                        compact
+                      />
+                      <CobPrettySelect
+                        value={startClock}
+                        onChange={(nextClock) => {
+                          setStartClock(nextClock)
+                          if (endDate && endClock && startDate) {
+                            const nextStart = `${startDate}T${nextClock}`
+                            const currentEnd = `${endDate}T${endClock}`
+                            if (currentEnd < nextStart) {
+                              setEndDate(startDate)
+                              setEndClock(nextClock)
+                            }
+                          }
+                        }}
+                        options={timeFieldOptions}
+                        placeholder="Hora"
+                        icon={Clock}
+                        selectKey="form-start-time"
+                        openSelectKey={openSelectKey}
+                        setOpenSelectKey={setOpenSelectKey}
+                        compact
+                      />
+                    </div>
                   </div>
 
                   <div className="cob-form-group">
                     <label className="cob-label">
                       <Clock size={14} /> Horário Fim
                     </label>
-                    <input 
-                      type="datetime-local"
-                      className="cob-input"
-                      value={endTime}
-                      onChange={(e) => setEndTime(e.target.value)}
-                      min={startTime || undefined}
-                      step="60"
-                    />
+                    <div className="cob-date-time-grid">
+                      <CobPrettySelect
+                        value={endDate}
+                        onChange={(nextDate) => setEndDate(nextDate)}
+                        options={dateFieldOptions}
+                        placeholder="Data"
+                        icon={CalendarDays}
+                        selectKey="form-end-date"
+                        openSelectKey={openSelectKey}
+                        setOpenSelectKey={setOpenSelectKey}
+                        compact
+                      />
+                      <CobPrettySelect
+                        value={endClock}
+                        onChange={(nextClock) => setEndClock(nextClock)}
+                        options={timeFieldOptions}
+                        placeholder="Hora"
+                        icon={Clock}
+                        selectKey="form-end-time"
+                        openSelectKey={openSelectKey}
+                        setOpenSelectKey={setOpenSelectKey}
+                        compact
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1024,6 +1126,18 @@ export default function CameraObstruction() {
           flex-direction: column;
           gap: 6px;
           min-width: 0;
+        }
+
+        .cob-date-time-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+          gap: 8px;
+        }
+
+        @media (max-width: 640px) {
+          .cob-date-time-grid {
+            grid-template-columns: 1fr;
+          }
         }
 
         .cob-label {
