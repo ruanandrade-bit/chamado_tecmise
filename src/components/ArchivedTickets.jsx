@@ -1,9 +1,87 @@
-import { useState } from 'react'
-import { Archive, Trash2, CalendarDays, Filter, Loader2, ShieldAlert } from 'lucide-react'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { Archive, Trash2, CalendarDays, Filter, Loader2, ShieldAlert, ChevronDown, Check } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
 import TicketCard from './TicketCard'
 import TicketDetailsModal from './TicketDetailsModal'
+
+function ArcPrettySelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+  icon: Icon,
+  selectKey,
+  openSelectKey,
+  setOpenSelectKey,
+  compact = false
+}) {
+  const containerRef = useRef(null)
+  const isOpen = openSelectKey === selectKey
+
+  const normalizedOptions = useMemo(
+    () => (options || []).map((item) => (
+      typeof item === 'string'
+        ? { value: item, label: item }
+        : { value: item.value, label: item.label ?? item.value }
+    )),
+    [options]
+  )
+
+  const selectedOption = normalizedOptions.find((item) => item.value === value)
+
+  useEffect(() => {
+    const handleOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setOpenSelectKey(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [setOpenSelectKey])
+
+  return (
+    <div
+      className={`arc-pretty-select ${isOpen ? 'arc-pretty-select-open' : ''} ${compact ? 'arc-pretty-select-compact' : ''}`}
+      ref={containerRef}
+    >
+      <button
+        type="button"
+        className="arc-pretty-trigger"
+        onClick={() => setOpenSelectKey(isOpen ? null : selectKey)}
+        aria-expanded={isOpen}
+      >
+        <span className={`arc-pretty-label ${value ? 'arc-pretty-label-filled' : ''}`}>
+          {Icon && <Icon size={14} />}
+          {selectedOption?.label || placeholder}
+        </span>
+        <ChevronDown size={15} className={`arc-pretty-chevron ${isOpen ? 'arc-pretty-chevron-open' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="arc-pretty-options">
+          {normalizedOptions.map((item, index) => (
+            <button
+              key={`${selectKey}-${item.value}`}
+              type="button"
+              className={`arc-pretty-option ${value === item.value ? 'arc-pretty-option-active' : ''}`}
+              onClick={() => {
+                onChange(item.value)
+                setOpenSelectKey(null)
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              style={{ '--arc-option-index': index }}
+            >
+              {value === item.value && <Check size={12} className="arc-pretty-option-check" />}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 /* ─── Confirm‑Delete Modal (premium glassmorphism) ─────────────────── */
 function ConfirmDeleteModal({ isOpen, onClose, onConfirm, isDeleting, ticket }) {
@@ -177,6 +255,7 @@ export default function ArchivedTickets() {
   const [selectedTicketId, setSelectedTicketId] = useState(null)
   const [ticketToDelete, setTicketToDelete] = useState(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [openSelectKey, setOpenSelectKey] = useState(null)
 
   // ── Date filters ──
   const currentYear = new Date().getFullYear()
@@ -211,6 +290,7 @@ export default function ArchivedTickets() {
     { value: '11', label: 'Novembro' },
     { value: '12', label: 'Dezembro' },
   ]
+  const yearOptions = availableYears.map((year) => ({ value: String(year), label: String(year) }))
 
   // Filter by year and month
   const filteredTickets = archivedTickets.filter(ticket => {
@@ -271,24 +351,26 @@ export default function ArchivedTickets() {
       <div className="arc-filter-bar">
         <div className="arc-filter-group">
           <CalendarDays size={16} style={{ color: '#86efac', flexShrink: 0 }} />
-          <select
-            className="arc-filter-select"
+          <ArcPrettySelect
             value={filterYear}
-            onChange={(e) => setFilterYear(e.target.value)}
-          >
-            {availableYears.map(year => (
-              <option key={year} value={String(year)}>{year}</option>
-            ))}
-          </select>
-          <select
-            className="arc-filter-select"
+            onChange={setFilterYear}
+            options={yearOptions}
+            placeholder="Ano"
+            selectKey="arc-filter-year"
+            openSelectKey={openSelectKey}
+            setOpenSelectKey={setOpenSelectKey}
+            compact
+          />
+          <ArcPrettySelect
             value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)}
-          >
-            {months.map(m => (
-              <option key={m.value} value={m.value}>{m.label}</option>
-            ))}
-          </select>
+            onChange={setFilterMonth}
+            options={months}
+            placeholder="Mês"
+            selectKey="arc-filter-month"
+            openSelectKey={openSelectKey}
+            setOpenSelectKey={setOpenSelectKey}
+            compact
+          />
         </div>
         <div className="arc-filter-count">
           <Filter size={13} style={{ color: '#6b7280' }} />
@@ -392,32 +474,139 @@ export default function ArchivedTickets() {
           flex-wrap: wrap;
         }
 
-        .arc-filter-select {
-          padding: 8px 32px 8px 14px;
-          background: rgba(255, 255, 255, 0.04);
-          border: 1px solid rgba(255, 255, 255, 0.08);
+        .arc-pretty-select {
+          position: relative;
+          min-width: 130px;
+        }
+
+        .arc-pretty-trigger {
+          width: 100%;
+          min-height: 38px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 9px 11px;
           border-radius: 10px;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.03);
           color: #e5e7eb;
-          font-size: 0.85rem;
-          font-weight: 500;
-          outline: none;
           cursor: pointer;
-          transition: all 0.2s ease;
-          font-family: inherit;
-          appearance: none;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-          background-repeat: no-repeat;
-          background-position: right 10px center;
+          transition: all 0.24s ease;
         }
 
-        .arc-filter-select:focus {
-          border-color: rgba(34, 197, 94, 0.4);
-          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08);
+        .arc-pretty-trigger:hover {
+          border-color: rgba(34, 197, 94, 0.24);
+          background: rgba(255, 255, 255, 0.06);
         }
 
-        .arc-filter-select option {
-          background: #1a1a2e;
+        .arc-pretty-select-open .arc-pretty-trigger {
+          border-color: rgba(34, 197, 94, 0.42);
+          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08), 0 0 16px rgba(34, 197, 94, 0.06);
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .arc-pretty-label {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          color: #d1d5db;
+          text-align: left;
+          font-size: 0.8rem;
+          line-height: 1.15;
+          font-weight: 500;
+          white-space: nowrap;
+        }
+
+        .arc-pretty-label-filled {
           color: #e5e7eb;
+        }
+
+        .arc-pretty-chevron {
+          color: #64748b;
+          transition: transform 0.2s ease, color 0.2s ease;
+          flex-shrink: 0;
+        }
+
+        .arc-pretty-chevron-open {
+          transform: rotate(180deg);
+          color: #86efac;
+        }
+
+        .arc-pretty-options {
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          right: 0;
+          z-index: 30;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          max-height: 240px;
+          overflow-y: auto;
+          padding: 8px;
+          border-radius: 12px;
+          border: 1px solid rgba(34, 197, 94, 0.22);
+          background: linear-gradient(170deg, rgba(17, 22, 36, 0.98) 0%, rgba(10, 14, 26, 0.98) 100%);
+          box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55), 0 0 25px rgba(34, 197, 94, 0.06);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          animation: arcSelectPanelIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .arc-pretty-options::-webkit-scrollbar {
+          width: 4px;
+        }
+
+        .arc-pretty-options::-webkit-scrollbar-thumb {
+          background: rgba(148, 163, 184, 0.3);
+          border-radius: 99px;
+        }
+
+        .arc-pretty-option {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 9px 10px;
+          border: none;
+          border-radius: 10px;
+          background: transparent;
+          color: #cbd5e1;
+          text-align: left;
+          font-size: 0.8rem;
+          font-weight: 500;
+          cursor: pointer;
+          opacity: 1;
+          transform: none;
+          animation: none;
+        }
+
+        .arc-pretty-option:hover {
+          background: rgba(34, 197, 94, 0.1);
+          color: #dcfce7;
+        }
+
+        .arc-pretty-option-active {
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.24), rgba(22, 163, 74, 0.14));
+          color: #ecfdf5;
+          border: 1px solid rgba(134, 239, 172, 0.35);
+        }
+
+        .arc-pretty-option-check {
+          color: #86efac;
+          flex-shrink: 0;
+        }
+
+        @keyframes arcSelectPanelIn {
+          from {
+            opacity: 0;
+            transform: translateY(-6px) scale(0.985);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
         }
 
         .arc-filter-count {

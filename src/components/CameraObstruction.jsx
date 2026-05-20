@@ -1,16 +1,239 @@
-import { useState, useEffect } from 'react'
-import { EyeOff, Plus, Trash2, ShieldAlert, Calendar, Clock, Percent, School, Monitor, Loader2, AlertCircle, Sparkles, Filter, ShieldCheck } from 'lucide-react'
+import { useState, useEffect, useMemo, useRef } from 'react'
+import { EyeOff, Plus, Trash2, ShieldAlert, Clock, Percent, School, Monitor, Loader2, AlertCircle, Sparkles, Filter, ShieldCheck, ChevronDown, Check } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
+
+function CobPrettySelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+  icon: Icon,
+  selectKey,
+  openSelectKey,
+  setOpenSelectKey,
+  allowClear = false,
+  disabled = false,
+  compact = false
+}) {
+  const containerRef = useRef(null)
+  const isOpen = openSelectKey === selectKey
+
+  const normalizedOptions = useMemo(
+    () => (options || []).map((item) => (
+      typeof item === 'string'
+        ? { value: item, label: item }
+        : { value: item.value, label: item.label ?? item.value }
+    )),
+    [options]
+  )
+
+  const selectedOption = normalizedOptions.find((item) => item.value === value)
+
+  useEffect(() => {
+    const handleOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setOpenSelectKey(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [setOpenSelectKey])
+
+  const pick = (nextValue) => {
+    onChange(nextValue)
+    setOpenSelectKey(null)
+  }
+
+  return (
+    <div
+      className={`cob-pretty-select ${isOpen ? 'cob-pretty-select-open' : ''} ${compact ? 'cob-pretty-select-compact' : ''}`}
+      ref={containerRef}
+    >
+      <button
+        type="button"
+        className={`cob-pretty-trigger ${disabled ? 'cob-pretty-trigger-disabled' : ''}`}
+        onClick={() => {
+          if (disabled) return
+          setOpenSelectKey(isOpen ? null : selectKey)
+        }}
+        aria-expanded={isOpen}
+        disabled={disabled}
+      >
+        <span className={`cob-pretty-label ${value ? 'cob-pretty-label-filled' : ''}`}>
+          {Icon && <Icon size={14} />}
+          {selectedOption?.label || placeholder}
+        </span>
+        <ChevronDown size={15} className={`cob-pretty-chevron ${isOpen ? 'cob-pretty-chevron-open' : ''}`} />
+      </button>
+
+      {isOpen && !disabled && (
+        <div className="cob-pretty-options">
+          {allowClear && (
+            <button
+              type="button"
+              className={`cob-pretty-option ${!value ? 'cob-pretty-option-active' : ''}`}
+              onClick={() => pick('')}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              {placeholder}
+            </button>
+          )}
+          {normalizedOptions.map((item, index) => (
+            <button
+              key={`${selectKey}-${item.value}`}
+              type="button"
+              className={`cob-pretty-option ${value === item.value ? 'cob-pretty-option-active' : ''}`}
+              onClick={() => pick(item.value)}
+              onMouseDown={(e) => e.stopPropagation()}
+              style={{ '--cob-option-index': index }}
+            >
+              {value === item.value && <Check size={12} className="cob-pretty-option-check" />}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ConfirmDeleteModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  isDeleting,
+  schoolName,
+  previewText
+}) {
+  if (!isOpen) return null
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+      style={{ animation: 'fadeIn 0.2s ease-out' }}
+    >
+      <div
+        className="absolute inset-0"
+        style={{
+          background: 'rgba(0, 0, 0, 0.68)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
+        onClick={!isDeleting ? onClose : undefined}
+      />
+
+      <div
+        className="relative w-full max-w-[470px] rounded-2xl border overflow-hidden"
+        style={{
+          background: 'linear-gradient(145deg, rgba(30, 35, 50, 0.97) 0%, rgba(18, 22, 34, 0.99) 100%)',
+          borderColor: 'rgba(239, 68, 68, 0.26)',
+          boxShadow: '0 25px 80px rgba(0,0,0,0.6), 0 0 60px rgba(239, 68, 68, 0.08), inset 0 1px 0 rgba(255,255,255,0.03)',
+          animation: 'slideInUp 0.28s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+      >
+        <div
+          style={{
+            height: '3px',
+            background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.6), rgba(239,68,68,0.8), rgba(239,68,68,0.6), transparent)',
+          }}
+        />
+
+        <div className="relative p-6 flex flex-col items-center text-center gap-5">
+          <div
+            className="rounded-2xl flex items-center justify-center"
+            style={{
+              width: '72px',
+              height: '72px',
+              background: 'linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(220,38,38,0.08) 100%)',
+              border: '1px solid rgba(239,68,68,0.2)',
+              boxShadow: '0 0 30px rgba(239,68,68,0.08)',
+            }}
+          >
+            <ShieldAlert size={32} style={{ color: '#f87171' }} />
+          </div>
+
+          <div className="space-y-2">
+            <h3 className="text-[2rem] font-bold" style={{ color: '#f1f5f9', lineHeight: 1.05 }}>
+              Excluir Observação?
+            </h3>
+            <p className="text-sm leading-relaxed" style={{ color: '#94a3b8' }}>
+              Tem certeza que deseja excluir o registro de <strong>{schoolName}</strong>? Essa ação <strong style={{ color: '#f87171' }}>não poderá ser desfeita</strong>.
+            </p>
+          </div>
+
+          <div
+            className="w-full rounded-xl p-3 text-left"
+            style={{
+              background: 'rgba(239, 68, 68, 0.04)',
+              border: '1px solid rgba(239, 68, 68, 0.1)',
+            }}
+          >
+            <p className="text-xs font-medium mb-1" style={{ color: '#64748b' }}>Observação a ser excluída:</p>
+            <p className="text-sm line-clamp-3" style={{ color: '#cbd5e1' }}>
+              {previewText}
+            </p>
+          </div>
+
+          <div className="flex gap-3 w-full pt-1">
+            <button
+              onClick={onClose}
+              disabled={isDeleting}
+              className="flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all"
+              style={{
+                background: 'rgba(100, 116, 139, 0.1)',
+                color: '#94a3b8',
+                border: '1px solid rgba(100, 116, 139, 0.15)',
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={isDeleting}
+              className="flex-1 px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+              style={{
+                background: isDeleting
+                  ? 'rgba(239, 68, 68, 0.2)'
+                  : 'linear-gradient(135deg, rgba(239,68,68,0.8) 0%, rgba(185,28,28,0.9) 100%)',
+                color: '#fff',
+                border: '1px solid rgba(239,68,68,0.35)',
+                boxShadow: isDeleting ? 'none' : '0 4px 20px rgba(239,68,68,0.2)',
+                cursor: isDeleting ? 'not-allowed' : 'pointer',
+                opacity: isDeleting ? 0.7 : 1,
+              }}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 size={15} className="cob-spinner" />
+                  Excluindo...
+                </>
+              ) : (
+                <>
+                  <Trash2 size={15} />
+                  Sim, excluir
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function CameraObstruction() {
   const { user } = useAuthStore()
   const isAdmin = user?.canDragDrop === true
+  const ALL_SCHOOLS_FILTER = '__all_schools__'
+  const ALL_PERCENTS_FILTER = '__all_percents__'
 
   const [schools, setSchools] = useState({})
   const [records, setRecords] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Form states
   const [selectedSchool, setSelectedSchool] = useState('')
@@ -21,8 +244,9 @@ export default function CameraObstruction() {
   const [errorMsg, setErrorMsg] = useState('')
 
   // Filter states
-  const [filterSchool, setFilterSchool] = useState('')
-  const [filterMinPercent, setFilterMinPercent] = useState('')
+  const [filterSchool, setFilterSchool] = useState(ALL_SCHOOLS_FILTER)
+  const [filterMinPercent, setFilterMinPercent] = useState(ALL_PERCENTS_FILTER)
+  const [openSelectKey, setOpenSelectKey] = useState(null)
 
   // Delete confirmation
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -69,7 +293,13 @@ export default function CameraObstruction() {
     if (selectedDevices.length === 0) return setErrorMsg('Selecione pelo menos um device.')
     if (!startTime) return setErrorMsg('Preencha o horário de início.')
     if (!endTime) return setErrorMsg('Preencha o horário de término.')
-    if (startTime >= endTime) return setErrorMsg('O horário de término deve ser após o de início.')
+
+    const startMs = new Date(startTime).getTime()
+    const endMs = new Date(endTime).getTime()
+    if (Number.isNaN(startMs) || Number.isNaN(endMs)) {
+      return setErrorMsg('Data/hora inválida. Revise os campos de início e término.')
+    }
+    if (endMs <= startMs) return setErrorMsg('O horário de término deve ser após o de início.')
 
     setIsSaving(true)
     try {
@@ -95,19 +325,44 @@ export default function CameraObstruction() {
   };
 
   const handleDelete = async (id) => {
+    if (isDeleting) return
+    setIsDeleting(true)
     try {
       await api.delete(`/camera-obstructions/${id}`)
       setRecords(prev => prev.filter(r => r.id !== id))
       setDeleteTarget(null)
     } catch (err) {
-      alert('Falha ao deletar registro.')
+      alert(err.message || 'Falha ao deletar registro.')
+    } finally {
+      setIsDeleting(false)
     }
   };
 
+  const schoolOptions = useMemo(
+    () => Object.keys(schools || {}).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    [schools]
+  )
+  const filterSchoolOptions = useMemo(
+    () => [
+      { value: ALL_SCHOOLS_FILTER, label: 'Todos colégios' },
+      ...schoolOptions.map((name) => ({ value: name, label: name }))
+    ],
+    [schoolOptions, ALL_SCHOOLS_FILTER]
+  )
+  const filterPercentOptions = useMemo(
+    () => [
+      { value: ALL_PERCENTS_FILTER, label: 'Todas obstruções' },
+      { value: '30', label: 'A partir de 30%' },
+      { value: '50', label: 'A partir de 50%' },
+      { value: '80', label: 'A partir de 80%' }
+    ],
+    [ALL_PERCENTS_FILTER]
+  )
+
   // Filter records
   const filteredRecords = records.filter(r => {
-    const matchSchool = !filterSchool || r.school === filterSchool
-    const matchPercent = !filterMinPercent || r.percentage >= Number(filterMinPercent)
+    const matchSchool = filterSchool === ALL_SCHOOLS_FILTER || r.school === filterSchool
+    const matchPercent = filterMinPercent === ALL_PERCENTS_FILTER || r.percentage >= Number(filterMinPercent)
     return matchSchool && matchPercent
   })
 
@@ -123,17 +378,28 @@ export default function CameraObstruction() {
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   }
 
-  // Format time display
-  const formatTime = (timeStr) => {
-    if (!timeStr) return ''
-    return timeStr
-  }
-
   const getPercentColor = (pct) => {
     if (pct >= 80) return '#f87171' // high red
     if (pct >= 50) return '#fbbf24' // medium yellow
     return '#34d399' // low green
   }
+
+  const deletePreviewText = useMemo(() => {
+    if (!deleteTarget) return ''
+
+    const devices = Array.isArray(deleteTarget.devices)
+      ? deleteTarget.devices.map((item) => `Device ${item}`).join(', ')
+      : 'Sem devices'
+
+    const start = deleteTarget.startTime
+      ? new Date(deleteTarget.startTime).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+      : 'sem início'
+    const end = deleteTarget.endTime
+      ? new Date(deleteTarget.endTime).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+      : 'sem término'
+
+    return `${deleteTarget.school} · ${devices} · Início ${start} · Final ${end} · ${deleteTarget.percentage}% obstruída.`
+  }, [deleteTarget])
 
   return (
     <div className="cob-container">
@@ -217,16 +483,16 @@ export default function CameraObstruction() {
                   <label className="cob-label">
                     <School size={14} /> Colégio
                   </label>
-                  <select 
-                    className="cob-select"
+                  <CobPrettySelect
                     value={selectedSchool}
-                    onChange={(e) => handleSchoolChange(e.target.value)}
-                  >
-                    <option value="">Selecione um colégio...</option>
-                    {Object.keys(schools).map(name => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </select>
+                    onChange={handleSchoolChange}
+                    options={schoolOptions}
+                    placeholder="Selecione um colégio..."
+                    icon={School}
+                    selectKey="form-school"
+                    openSelectKey={openSelectKey}
+                    setOpenSelectKey={setOpenSelectKey}
+                  />
                 </div>
 
                 {/* Devices */}
@@ -256,7 +522,7 @@ export default function CameraObstruction() {
 
                 {/* Horarios */}
                 <div className="cob-form-row">
-                  <div className="cob-form-group flex-1">
+                  <div className="cob-form-group">
                     <label className="cob-label">
                       <Clock size={14} /> Horário Início
                     </label>
@@ -264,11 +530,19 @@ export default function CameraObstruction() {
                       type="datetime-local"
                       className="cob-input"
                       value={startTime}
-                      onChange={(e) => setStartTime(e.target.value)}
+                      onChange={(e) => {
+                        const nextStart = e.target.value
+                        setStartTime(nextStart)
+                        if (endTime && nextStart && endTime < nextStart) {
+                          setEndTime(nextStart)
+                        }
+                      }}
+                      max={endTime || undefined}
+                      step="60"
                     />
                   </div>
 
-                  <div className="cob-form-group flex-1">
+                  <div className="cob-form-group">
                     <label className="cob-label">
                       <Clock size={14} /> Horário Fim
                     </label>
@@ -277,6 +551,8 @@ export default function CameraObstruction() {
                       className="cob-input"
                       value={endTime}
                       onChange={(e) => setEndTime(e.target.value)}
+                      min={startTime || undefined}
+                      step="60"
                     />
                   </div>
                 </div>
@@ -333,31 +609,31 @@ export default function CameraObstruction() {
               {/* Simple filter bar */}
               <div className="cob-filters">
                 <div className="cob-filter-item">
-                  <Filter size={12} />
-                  <select
-                    className="cob-filter-select"
+                  <CobPrettySelect
                     value={filterSchool}
-                    onChange={(e) => setFilterSchool(e.target.value)}
-                  >
-                    <option value="">Todos colégios</option>
-                    {Object.keys(schools).map(name => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </select>
+                    onChange={setFilterSchool}
+                    options={filterSchoolOptions}
+                    placeholder="Filtro de colégio"
+                    icon={Filter}
+                    selectKey="filter-school"
+                    openSelectKey={openSelectKey}
+                    setOpenSelectKey={setOpenSelectKey}
+                    compact
+                  />
                 </div>
 
                 <div className="cob-filter-item">
-                  <Percent size={12} />
-                  <select
-                    className="cob-filter-select"
+                  <CobPrettySelect
                     value={filterMinPercent}
-                    onChange={(e) => setFilterMinPercent(e.target.value)}
-                  >
-                    <option value="">Todas obstruções</option>
-                    <option value="30">A partir de 30%</option>
-                    <option value="50">A partir de 50%</option>
-                    <option value="80">A partir de 80%</option>
-                  </select>
+                    onChange={setFilterMinPercent}
+                    options={filterPercentOptions}
+                    placeholder="Filtro de obstrução"
+                    icon={Percent}
+                    selectKey="filter-percent"
+                    openSelectKey={openSelectKey}
+                    setOpenSelectKey={setOpenSelectKey}
+                    compact
+                  />
                 </div>
               </div>
             </div>
@@ -435,29 +711,17 @@ export default function CameraObstruction() {
         </div>
       </div>
 
-      {/* Confirmation Modal */}
-      {deleteTarget && (
-        <div className="cob-modal-overlay" onClick={() => setDeleteTarget(null)}>
-          <div className="cob-modal-card" onClick={e => e.stopPropagation()}>
-            <div className="cob-modal-header">
-              <AlertTriangle size={24} style={{ color: '#ef4444' }} />
-              <h3>Confirmar Exclusão</h3>
-            </div>
-            <div className="cob-modal-body">
-              <p>Tem certeza que deseja excluir o registro de obstrução de câmera do <strong>{deleteTarget.school}</strong>?</p>
-              <p className="cob-modal-warning">Esta ação é irreversível.</p>
-            </div>
-            <div className="cob-modal-footer">
-              <button className="cob-modal-btn cob-modal-btn-cancel" onClick={() => setDeleteTarget(null)}>
-                Cancelar
-              </button>
-              <button className="cob-modal-btn cob-modal-btn-confirm" onClick={() => handleDelete(deleteTarget.id)}>
-                Excluir
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDeleteModal
+        isOpen={!!deleteTarget}
+        onClose={() => {
+          if (isDeleting) return
+          setDeleteTarget(null)
+        }}
+        onConfirm={() => deleteTarget?.id && handleDelete(deleteTarget.id)}
+        isDeleting={isDeleting}
+        schoolName={deleteTarget?.school || 'registro selecionado'}
+        previewText={deletePreviewText}
+      />
 
       {/* Modern styles matching custom premium dark UI guidelines */}
       <style>{`
@@ -644,14 +908,22 @@ export default function CameraObstruction() {
         }
 
         .cob-form-row {
-          display: flex;
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 12px;
+        }
+
+        @media (max-width: 560px) {
+          .cob-form-row {
+            grid-template-columns: 1fr;
+          }
         }
 
         .cob-form-group {
           display: flex;
           flex-direction: column;
           gap: 6px;
+          min-width: 0;
         }
 
         .cob-label {
@@ -679,7 +951,9 @@ export default function CameraObstruction() {
           font-weight: 700;
         }
 
-        .cob-select, .cob-input {
+        .cob-input {
+          width: 100%;
+          min-width: 0;
           background: rgba(255, 255, 255, 0.03);
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 10px;
@@ -690,10 +964,162 @@ export default function CameraObstruction() {
           outline: none;
         }
 
-        .cob-select:focus, .cob-input:focus {
+        .cob-input:focus {
           border-color: rgba(96, 165, 250, 0.4);
           box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.1);
           background: rgba(255, 255, 255, 0.05);
+        }
+
+        .cob-pretty-select {
+          position: relative;
+          width: 100%;
+          min-width: 0;
+        }
+
+        .cob-pretty-trigger {
+          width: 100%;
+          min-height: 44px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 11px 14px;
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          background: rgba(255, 255, 255, 0.04);
+          color: #e5e7eb;
+          cursor: pointer;
+          transition: all 0.24s ease;
+        }
+
+        .cob-pretty-trigger:hover {
+          border-color: rgba(34, 197, 94, 0.24);
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .cob-pretty-select-open .cob-pretty-trigger {
+          border-color: rgba(34, 197, 94, 0.42);
+          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08), 0 0 16px rgba(34, 197, 94, 0.06);
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .cob-pretty-trigger-disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .cob-pretty-label {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          color: #94a3b8;
+          text-align: left;
+          font-size: 0.9rem;
+          line-height: 1.15;
+          font-weight: 500;
+        }
+
+        .cob-pretty-label-filled {
+          color: #e5e7eb;
+        }
+
+        .cob-pretty-chevron {
+          color: #64748b;
+          transition: transform 0.2s ease, color 0.2s ease;
+          flex-shrink: 0;
+        }
+
+        .cob-pretty-chevron-open {
+          transform: rotate(180deg);
+          color: #86efac;
+        }
+
+        .cob-pretty-options {
+          position: absolute;
+          top: calc(100% + 8px);
+          left: 0;
+          right: 0;
+          z-index: 30;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          max-height: 260px;
+          overflow-y: auto;
+          padding: 8px;
+          border-radius: 14px;
+          border: 1px solid rgba(34, 197, 94, 0.22);
+          background: linear-gradient(170deg, rgba(17, 22, 36, 0.98) 0%, rgba(10, 14, 26, 0.98) 100%);
+          box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55), 0 0 25px rgba(34, 197, 94, 0.06);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          animation: cobSelectPanelIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .cob-pretty-options::-webkit-scrollbar {
+          width: 4px;
+        }
+
+        .cob-pretty-options::-webkit-scrollbar-thumb {
+          background: rgba(148, 163, 184, 0.3);
+          border-radius: 99px;
+        }
+
+        .cob-pretty-option {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 11px;
+          border: none;
+          border-radius: 10px;
+          background: transparent;
+          color: #cbd5e1;
+          text-align: left;
+          font-size: 0.88rem;
+          font-weight: 500;
+          cursor: pointer;
+          opacity: 0;
+          transform: translateY(6px);
+          animation: cobSelectItemIn 0.24s ease forwards;
+          animation-delay: calc(var(--cob-option-index, 0) * 28ms);
+        }
+
+        .cob-pretty-option:hover {
+          background: rgba(34, 197, 94, 0.1);
+          color: #dcfce7;
+        }
+
+        .cob-pretty-option-active {
+          background: linear-gradient(135deg, rgba(34, 197, 94, 0.24), rgba(22, 163, 74, 0.14));
+          color: #ecfdf5;
+          border: 1px solid rgba(134, 239, 172, 0.35);
+        }
+
+        .cob-pretty-option-check {
+          color: #86efac;
+          flex-shrink: 0;
+        }
+
+        @keyframes cobSelectPanelIn {
+          from {
+            opacity: 0;
+            transform: translateY(-6px) scale(0.985);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes cobSelectItemIn {
+          from {
+            opacity: 0;
+            transform: translateY(6px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
         .cob-device-tags {
@@ -816,28 +1242,38 @@ export default function CameraObstruction() {
 
         .cob-filters {
           display: flex;
-          gap: 8px;
+          gap: 10px;
+          flex-wrap: wrap;
         }
 
         .cob-filter-item {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 8px;
-          padding: 4px 8px;
-          font-size: 0.75rem;
-          color: #9ca3af;
+          min-width: 190px;
         }
 
-        .cob-filter-select {
-          background: transparent;
-          border: none;
-          color: #f3f4f6;
-          outline: none;
-          cursor: pointer;
-          font-size: 0.75rem;
+        .cob-pretty-select-compact .cob-pretty-trigger {
+          min-height: 38px;
+          padding: 9px 11px;
+          border-radius: 10px;
+          border-color: rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.03);
+        }
+
+        .cob-pretty-select-compact .cob-pretty-label {
+          font-size: 0.8rem;
+          color: #d1d5db;
+        }
+
+        .cob-pretty-select-compact .cob-pretty-options {
+          border-radius: 12px;
+          max-height: 240px;
+        }
+
+        .cob-pretty-select-compact .cob-pretty-option {
+          font-size: 0.8rem;
+          padding: 9px 10px;
+          opacity: 1;
+          transform: none;
+          animation: none;
         }
 
         /* Records List */
@@ -1003,96 +1439,6 @@ export default function CameraObstruction() {
           to { transform: rotate(360deg); }
         }
 
-        /* Modals */
-        .cob-modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(0, 0, 0, 0.6);
-          backdrop-filter: blur(4px);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 999;
-          animation: cobFadeIn 0.2s ease-out;
-        }
-
-        .cob-modal-card {
-          background: linear-gradient(135deg, #1e1e2d, #151525);
-          border: 1px solid rgba(239, 68, 68, 0.2);
-          border-radius: 16px;
-          padding: 24px;
-          width: 90%;
-          max-width: 420px;
-          box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-          animation: cobModalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        @keyframes cobModalIn {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
-        }
-
-        .cob-modal-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          margin-bottom: 16px;
-        }
-
-        .cob-modal-header h3 {
-          font-size: 1.125rem;
-          font-weight: 700;
-          color: #f3f4f6;
-        }
-
-        .cob-modal-body {
-          color: #d1d5db;
-          font-size: 0.875rem;
-          line-height: 1.5;
-          margin-bottom: 24px;
-        }
-
-        .cob-modal-warning {
-          color: #f87171;
-          font-size: 0.75rem;
-          margin-top: 8px;
-          font-weight: 600;
-        }
-
-        .cob-modal-footer {
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-        }
-
-        .cob-modal-btn {
-          padding: 10px 16px;
-          border-radius: 8px;
-          font-size: 0.8125rem;
-          font-weight: 600;
-          cursor: pointer;
-          border: none;
-          transition: all 0.2s ease;
-        }
-
-        .cob-modal-btn-cancel {
-          background: rgba(255, 255, 255, 0.05);
-          color: #9ca3af;
-        }
-
-        .cob-modal-btn-cancel:hover {
-          background: rgba(255, 255, 255, 0.08);
-          color: #f3f4f6;
-        }
-
-        .cob-modal-btn-confirm {
-          background: #ef4444;
-          color: white;
-        }
-
-        .cob-modal-btn-confirm:hover {
-          background: #dc2626;
-        }
       `}</style>
     </div>
   )
