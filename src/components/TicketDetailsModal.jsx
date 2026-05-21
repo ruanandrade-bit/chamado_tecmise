@@ -125,7 +125,7 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 flex items-center justify-center z-[220] p-4"
       style={{
         background: 'rgba(2, 6, 23, 0.68)',
         backdropFilter: 'blur(10px) saturate(115%)',

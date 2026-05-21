@@ -468,6 +468,27 @@ export default function CameraObstruction() {
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   }
 
+  const getPeriodSummary = (startIso, endIso) => {
+    if (!startIso || !endIso) return 'Período indisponível'
+
+    const start = new Date(startIso)
+    const end = new Date(endIso)
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 'Período indisponível'
+
+    const startLabel = start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const endLabel = end.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const diffMinutes = Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000))
+
+    let durationLabel = `${diffMinutes} min`
+    if (diffMinutes >= 60) {
+      const hours = Math.floor(diffMinutes / 60)
+      const minutes = diffMinutes % 60
+      durationLabel = minutes > 0 ? `${hours}h ${minutes}min` : `${hours}h`
+    }
+
+    return `das ${startLabel} às ${endLabel} · ${durationLabel}`
+  }
+
   const getPercentColor = (pct) => {
     if (pct >= 80) return '#f87171' // high red
     if (pct >= 50) return '#fbbf24' // medium yellow
@@ -810,6 +831,10 @@ export default function CameraObstruction() {
                           <span className="cob-time-item">
                             <Clock size={12} />
                             Até: {new Date(record.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} ({new Date(record.endTime).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})
+                          </span>
+                          <span className="cob-time-item cob-time-period">
+                            <Clock size={12} />
+                            Período: {getPeriodSummary(record.startTime, record.endTime)}
                           </span>
                         </div>
                       </div>
@@ -1664,6 +1689,15 @@ export default function CameraObstruction() {
           gap: 4px;
           font-size: 0.75rem;
           color: #9ca3af;
+        }
+
+        .cob-time-period {
+          color: #bfdbfe;
+          font-weight: 500;
+          padding: 5px 10px;
+          border-radius: 999px;
+          border: 1px solid rgba(96, 165, 250, 0.28);
+          background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(37, 99, 235, 0.05));
         }
 
         .cob-record-side {
