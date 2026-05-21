@@ -25,6 +25,9 @@ export default function App() {
     || currentPage === 'camera-obstruction'
     || currentPage === 'archived'
     || currentPage === 'monthly-report'
+    || currentPage === 'school-config'
+    || currentPage === 'inventory'
+    || currentPage === 'devices-online'
   )
 
   useEffect(() => {

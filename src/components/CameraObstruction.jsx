@@ -825,12 +825,16 @@ export default function CameraObstruction() {
 
                         <div className="cob-record-time-info">
                           <span className="cob-time-item">
-                            <Clock size={12} />
-                            De: {new Date(record.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} ({new Date(record.startTime).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})
+                            <CalendarDays size={12} />
+                            Data: {new Date(record.startTime).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
                           </span>
                           <span className="cob-time-item">
                             <Clock size={12} />
-                            Até: {new Date(record.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} ({new Date(record.endTime).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })})
+                            De: {new Date(record.startTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                          <span className="cob-time-item">
+                            <Clock size={12} />
+                            Até: {new Date(record.endTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                           <span className="cob-time-item cob-time-period">
                             <Clock size={12} />

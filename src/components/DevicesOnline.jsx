@@ -325,13 +325,64 @@ export default function DevicesOnline() {
         .dvo-container {
           display: flex;
           flex-direction: column;
-          gap: 20px;
+          gap: 30px;
+          width: 100%;
+          max-width: 1700px;
+          margin: 0 auto;
+          position: relative;
+          isolation: isolate;
           animation: dvoFadeIn 0.5s ease-out;
+        }
+
+        .dvo-container::before,
+        .dvo-container::after {
+          content: '';
+          position: absolute;
+          border-radius: 999px;
+          pointer-events: none;
+          z-index: -1;
+          filter: blur(42px);
+          opacity: 0.28;
+        }
+
+        .dvo-container::before {
+          width: 320px;
+          height: 320px;
+          top: -72px;
+          right: 10%;
+          background: radial-gradient(circle, rgba(34, 197, 94, 0.26), rgba(34, 197, 94, 0));
+          animation: dvoGlowMove 9s ease-in-out infinite;
+        }
+
+        .dvo-container::after {
+          width: 280px;
+          height: 280px;
+          bottom: 8%;
+          left: 3%;
+          background: radial-gradient(circle, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0));
+          animation: dvoGlowMove 11s ease-in-out infinite reverse;
         }
 
         @keyframes dvoFadeIn {
           from { opacity: 0; transform: translateY(12px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes dvoRiseIn {
+          from { opacity: 0; transform: translateY(14px) scale(0.992); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        @keyframes dvoFloat {
+          0% { transform: translateY(0); }
+          50% { transform: translateY(-3px); }
+          100% { transform: translateY(0); }
+        }
+
+        @keyframes dvoGlowMove {
+          0% { transform: translate3d(0, 0, 0); }
+          50% { transform: translate3d(8px, -10px, 0); }
+          100% { transform: translate3d(0, 0, 0); }
         }
 
         .dvo-spin { animation: dvoSpin 1s linear infinite; }
@@ -341,12 +392,17 @@ export default function DevicesOnline() {
         .dvo-page-header {
           display: flex;
           align-items: center;
+          justify-content: space-between;
           gap: 16px;
+          flex-wrap: wrap;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          padding-bottom: 24px;
+          animation: dvoRiseIn 0.45s ease both;
         }
 
         .dvo-header-icon {
-          width: 48px;
-          height: 48px;
+          width: 50px;
+          height: 50px;
           border-radius: 14px;
           display: flex;
           align-items: center;
@@ -354,6 +410,7 @@ export default function DevicesOnline() {
           background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(22,163,74,0.08));
           border: 1px solid rgba(34,197,94,0.2);
           box-shadow: 0 0 20px rgba(34,197,94,0.06);
+          animation: dvoFloat 5.6s ease-in-out infinite;
         }
 
         .dvo-page-title {
@@ -375,11 +432,22 @@ export default function DevicesOnline() {
           align-items: center;
           gap: 12px;
           padding: 14px 20px;
-          background: rgba(15, 15, 30, 0.5);
+          background: linear-gradient(155deg, rgba(15, 15, 30, 0.55) 0%, rgba(11, 15, 28, 0.6) 100%);
           backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
           border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 16px;
+          border-radius: 18px;
+          box-shadow: 0 16px 28px rgba(0, 0, 0, 0.2);
           flex-wrap: wrap;
+          animation: dvoRiseIn 0.45s ease both;
+          animation-delay: 0.08s;
+          transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+        }
+
+        .dvo-stats-bar:hover {
+          transform: translateY(-1px);
+          border-color: rgba(134, 239, 172, 0.2);
+          box-shadow: 0 22px 34px rgba(2, 8, 23, 0.3), 0 0 18px rgba(34, 197, 94, 0.06);
         }
 
         .dvo-stat-item {
@@ -498,9 +566,10 @@ export default function DevicesOnline() {
           justify-content: center;
           gap: 12px;
           padding: 80px 20px;
-          background: rgba(15, 15, 30, 0.4);
-          border: 1px solid rgba(255, 255, 255, 0.05);
+          background: linear-gradient(160deg, rgba(15, 15, 30, 0.52) 0%, rgba(10, 13, 24, 0.58) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.07);
           border-radius: 20px;
+          box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
           color: #9ca3af;
           font-size: 0.9375rem;
         }
@@ -544,22 +613,25 @@ export default function DevicesOnline() {
         .dvo-schools-list {
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 14px;
         }
 
         .dvo-school-card {
-          background: rgba(15, 15, 30, 0.45);
+          background: linear-gradient(158deg, rgba(15, 15, 30, 0.58) 0%, rgba(10, 13, 26, 0.66) 100%);
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.08);
+          border-radius: 18px;
           overflow: hidden;
-          transition: all 0.3s ease;
+          transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+          box-shadow: 0 16px 28px rgba(0, 0, 0, 0.2);
           animation: dvoCardIn 0.4s ease-out both;
         }
 
         .dvo-school-card:hover {
-          border-color: rgba(255, 255, 255, 0.1);
+          transform: translateY(-1px);
+          border-color: rgba(96, 165, 250, 0.2);
+          box-shadow: 0 24px 38px rgba(2, 8, 23, 0.34), 0 0 20px rgba(59, 130, 246, 0.05);
         }
 
         @keyframes dvoCardIn {
@@ -572,7 +644,7 @@ export default function DevicesOnline() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 16px 20px;
+          padding: 18px 22px;
           background: transparent;
           border: none;
           cursor: pointer;
@@ -672,7 +744,7 @@ export default function DevicesOnline() {
 
         /* ── Device list ── */
         .dvo-device-list {
-          padding: 0 16px 16px 16px;
+          padding: 0 20px 20px 20px;
           display: flex;
           flex-direction: column;
           gap: 6px;
@@ -810,9 +882,10 @@ export default function DevicesOnline() {
           align-items: center;
           gap: 10px;
           padding: 12px 16px;
-          background: rgba(15, 15, 30, 0.4);
-          border: 1px solid rgba(255, 255, 255, 0.04);
-          border-radius: 12px;
+          background: linear-gradient(155deg, rgba(15, 15, 30, 0.52) 0%, rgba(11, 15, 28, 0.58) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 14px;
+          box-shadow: 0 14px 24px rgba(0, 0, 0, 0.2);
           font-size: 0.75rem;
           color: #6b7280;
         }
