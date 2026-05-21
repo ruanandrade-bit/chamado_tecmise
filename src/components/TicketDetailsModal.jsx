@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Paperclip, Send, MessageCircle, Upload, ClipboardList, Image as ImageIcon, Undo2 } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
@@ -23,6 +24,14 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
   const canManageAttachments = !isViewOnly && (isAdmin || isOwner)
   
   if (!ticket) return null
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [])
 
 
   const statusConfig = STATUSES.find(s => s.value === ticket.status)
@@ -123,13 +132,13 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
     setConfirmDeleteIndex(null)
   }
 
-  return (
+  const modalNode = (
     <div
-      className="fixed inset-0 flex items-center justify-center z-[220] p-4"
+      className="fixed inset-0 flex items-center justify-center z-[1200] p-4 sm:p-6"
       style={{
-        background: 'rgba(2, 6, 23, 0.68)',
-        backdropFilter: 'blur(10px) saturate(115%)',
-        WebkitBackdropFilter: 'blur(10px) saturate(115%)'
+        background: 'rgba(2, 6, 23, 0.72)',
+        backdropFilter: 'blur(12px) saturate(115%)',
+        WebkitBackdropFilter: 'blur(12px) saturate(115%)'
       }}
     >
       {/* Confirm delete dialog */}
@@ -502,4 +511,6 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
       )}
     </div>
   )
+
+  return createPortal(modalNode, document.body)
 }
