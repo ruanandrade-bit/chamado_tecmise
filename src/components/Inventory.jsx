@@ -637,7 +637,7 @@ export default function Inventory() {
         .inv-page-header {
           display: flex;
           align-items: center;
-          justify-content: space-between;
+          justify-content: flex-start;
           gap: 16px;
           flex-wrap: wrap;
           border-bottom: 1px solid rgba(255, 255, 255, 0.05);
