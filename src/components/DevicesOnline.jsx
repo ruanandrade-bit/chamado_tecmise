@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { Wifi, WifiOff, RefreshCw, Monitor, Loader2, Clock, ChevronDown, ChevronRight, School, AlertTriangle, BookOpen } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api } from '../services/api'
