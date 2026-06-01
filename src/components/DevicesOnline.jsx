@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Wifi, WifiOff, RefreshCw, Monitor, Loader2, Clock, ChevronDown, ChevronRight, School, AlertTriangle } from 'lucide-react'
+import { Wifi, WifiOff, RefreshCw, Monitor, Loader2, Clock, ChevronDown, ChevronRight, School, AlertTriangle, BookOpen } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api } from '../services/api'
 
@@ -23,6 +23,13 @@ function isWorkingHours() {
   const now = new Date()
   const h = now.getHours()
   return h >= 7 && h < 18
+}
+
+function formatDeviceSuffix(value) {
+  const raw = String(value || '').trim()
+  const digits = raw.match(/\d+/g)?.join('') || ''
+  if (!digits) return raw
+  return digits.slice(-3).padStart(3, '0')
 }
 
 export default function DevicesOnline() {
@@ -263,46 +270,65 @@ export default function DevicesOnline() {
                 {/* Expanded device list */}
                 {isExpanded && (
                   <div className="dvo-device-list">
-                    {devices.map(device => (
-                      <div
-                        key={device.id}
-                        className={`dvo-device-item ${device.online ? 'dvo-device-online' : !device.found ? 'dvo-device-notfound' : 'dvo-device-offline'}`}
-                      >
-                        <div className="dvo-device-status-dot">
-                          <span className={`dvo-status-indicator ${device.online ? 'dvo-indicator-on' : 'dvo-indicator-off'}`} />
-                        </div>
-                        <div className="dvo-device-info">
-                          <div className="dvo-device-id">
-                            <Monitor size={14} />
-                            <span>Device {device.id}</span>
-                            {!device.found && !device.online && (
-                              <span className="dvo-notfound-badge">
-                                <AlertTriangle size={10} />
-                                Não existe no Tailscale
-                              </span>
-                            )}
+                    {devices.map(device => {
+                      const turmas = Array.isArray(device.turmas) ? device.turmas : []
+                      const displayDeviceCode = formatDeviceSuffix(device.displayHostname || device.hostname || device.id)
+
+                      return (
+                        <div
+                          key={device.id}
+                          className={`dvo-device-item ${device.online ? 'dvo-device-online' : !device.found ? 'dvo-device-notfound' : 'dvo-device-offline'}`}
+                        >
+                          <div className="dvo-device-status-dot">
+                            <span className={`dvo-status-indicator ${device.online ? 'dvo-indicator-on' : 'dvo-indicator-off'}`} />
                           </div>
-                          <div className="dvo-device-meta">
-                            {device.online ? (
-                              <span className="dvo-status-text-on">
-                                <Wifi size={11} />
-                                Online agora
-                              </span>
-                            ) : (
-                              <span className="dvo-status-text-off">
-                                <WifiOff size={11} />
-                                {device.found
-                                  ? formatLastSeen(device.lastSeen)
-                                  : 'Verifique o número do device'}
-                              </span>
-                            )}
-                            {device.hostname && (
-                              <span className="dvo-device-hostname">{device.hostname}</span>
-                            )}
+                          <div className="dvo-device-info">
+                            <div className="dvo-device-id">
+                              <Monitor size={14} />
+                              <span>Device {device.id}</span>
+                              {!device.found && !device.online && (
+                                <span className="dvo-notfound-badge">
+                                  <AlertTriangle size={10} />
+                                  Não existe no Tailscale
+                                </span>
+                              )}
+                            </div>
+                            <div className="dvo-device-meta">
+                              {device.online ? (
+                                <span className="dvo-status-text-on">
+                                  <Wifi size={11} />
+                                  Online agora
+                                </span>
+                              ) : (
+                                <span className="dvo-status-text-off">
+                                  <WifiOff size={11} />
+                                  {device.found
+                                    ? formatLastSeen(device.lastSeen)
+                                    : 'Verifique o número do device'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="dvo-device-right">
+                            <span className="dvo-device-hostname dvo-device-hostname-full">
+                              {displayDeviceCode}
+                            </span>
+                            <div className="dvo-device-turmas" aria-label={`Turmas do device ${device.id}`}>
+                              <BookOpen size={11} />
+                              {turmas.length > 0 ? (
+                                turmas.map((turma, index) => (
+                                  <span key={`${device.id}-${turma}-${index}`} className="dvo-turma-pill">
+                                    {turma}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="dvo-turma-empty">Sem turma</span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -758,6 +784,7 @@ export default function DevicesOnline() {
           padding: 12px 16px;
           border-radius: 12px;
           transition: all 0.2s ease;
+          flex-wrap: wrap;
         }
 
         .dvo-device-online {
@@ -876,6 +903,51 @@ export default function DevicesOnline() {
           font-family: monospace;
         }
 
+        .dvo-device-right {
+          margin-left: auto;
+          min-width: 240px;
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 6px;
+        }
+
+        .dvo-device-hostname-full {
+          color: #c7d2fe;
+          background: rgba(99, 102, 241, 0.1);
+          border: 1px solid rgba(129, 140, 248, 0.18);
+          letter-spacing: 0.02em;
+          white-space: nowrap;
+        }
+
+        .dvo-device-turmas {
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          gap: 5px;
+          flex-wrap: wrap;
+          color: #86efac;
+          max-width: 100%;
+        }
+
+        .dvo-turma-pill {
+          padding: 2px 8px;
+          border-radius: 999px;
+          background: rgba(34, 197, 94, 0.1);
+          border: 1px solid rgba(34, 197, 94, 0.18);
+          color: #bbf7d0;
+          font-size: 0.625rem;
+          font-weight: 700;
+          line-height: 1.2;
+          white-space: nowrap;
+        }
+
+        .dvo-turma-empty {
+          color: #64748b;
+          font-size: 0.625rem;
+          font-weight: 600;
+        }
+
         /* ── Info banner ── */
         .dvo-info-banner {
           display: flex;
@@ -908,6 +980,21 @@ export default function DevicesOnline() {
           }
 
           .dvo-mini-dots { display: none; }
+
+          .dvo-device-item {
+            align-items: flex-start;
+          }
+
+          .dvo-device-right {
+            width: 100%;
+            min-width: 0;
+            margin-left: 22px;
+            align-items: flex-start;
+          }
+
+          .dvo-device-turmas {
+            justify-content: flex-start;
+          }
         }
       `}</style>
     </div>

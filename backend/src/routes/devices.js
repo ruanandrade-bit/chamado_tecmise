@@ -24,6 +24,7 @@ function getAllDeviceIds() {
 
 // ─── Cache ───────────────────────────────────────────────────────────
 let cachedResult = null
+let cachedConfigSignature = ''
 let cacheTimestamp = 0
 const CACHE_TTL_MS = 10 * 60 * 1000 // 10 minutes
 
@@ -110,15 +111,32 @@ function extractNumericAliases(...values) {
   return aliases
 }
 
+function getConfiguredDeviceNumber(id) {
+  const raw = String(id || '').trim()
+  const piHostnameMatch = raw.match(/pi5-8g-(\d+)/i)
+  if (piHostnameMatch?.[1]) return piHostnameMatch[1]
+
+  const trailingNumberMatch = raw.match(/(\d+)\s*$/)
+  if (trailingNumberMatch?.[1]) return trailingNumberMatch[1]
+
+  return raw.replace(/\D/g, '')
+}
+
 function buildConfiguredAliasMap(deviceIds) {
   const aliasToDeviceId = new Map()
   for (const id of deviceIds) {
     const deviceId = String(id)
-    getAliasCandidates(deviceId).forEach((alias) => {
+    getAliasCandidates(getConfiguredDeviceNumber(deviceId)).forEach((alias) => {
       aliasToDeviceId.set(alias, deviceId)
     })
   }
   return aliasToDeviceId
+}
+
+function formatDeviceDisplayCode(id) {
+  const digits = getConfiguredDeviceNumber(id)
+  if (!digits) return String(id || '').trim()
+  return digits.slice(-3).padStart(3, '0')
 }
 
 function chooseBestStatus(previous, current) {
@@ -143,9 +161,11 @@ async function safeJson(response) {
 
 async function fetchTailscaleDevices() {
   const now = Date.now()
+  const schoolData = memoryStore.getSchoolData()
+  const configSignature = JSON.stringify(schoolData)
 
   // Return cached if still valid
-  if (cachedResult && (now - cacheTimestamp) < CACHE_TTL_MS) {
+  if (cachedResult && cachedConfigSignature === configSignature && (now - cacheTimestamp) < CACHE_TTL_MS) {
     return cachedResult
   }
 
@@ -240,6 +260,8 @@ async function fetchTailscaleDevices() {
     for (const [schoolName, deviceIds] of Object.entries(SCHOOL_DEVICES)) {
       schools[schoolName] = deviceIds.map(id => ({
         id,
+        turmas: schoolData?.[schoolName]?.[id] || [],
+        displayHostname: formatDeviceDisplayCode(id),
         ...(deviceMap[id] || {
           online: false,
           lastSeen: null,
@@ -265,6 +287,7 @@ async function fetchTailscaleDevices() {
         ? 'Nenhum device configurado foi relacionado aos nomes vindos da API do Tailscale.'
         : null,
     }
+    cachedConfigSignature = configSignature
     cacheTimestamp = now
 
     console.log(
@@ -277,7 +300,7 @@ async function fetchTailscaleDevices() {
     console.error('[tailscale] ❌ Error fetching devices:', err.message)
 
     // Return stale cache if available
-    if (cachedResult) {
+    if (cachedResult && cachedConfigSignature === configSignature) {
       console.log('[tailscale] ↩️  Returning stale cache.')
       return { ...cachedResult, stale: true }
     }
@@ -287,6 +310,8 @@ async function fetchTailscaleDevices() {
     for (const [schoolName, deviceIds] of Object.entries(SCHOOL_DEVICES)) {
       schools[schoolName] = deviceIds.map(id => ({
         id,
+        turmas: schoolData?.[schoolName]?.[id] || [],
+        displayHostname: formatDeviceDisplayCode(id),
         online: false,
         lastSeen: null,
         hostname: '',
