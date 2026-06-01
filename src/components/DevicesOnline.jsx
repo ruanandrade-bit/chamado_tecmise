@@ -27,6 +27,19 @@ function isWorkingHours() {
 
 function formatDeviceSuffix(value) {
   const raw = String(value || '').trim()
+  
+  // Try to match specific pi5-8g pattern first
+  const piMatch = raw.match(/pi5-8g-(\d+)/i)
+  if (piMatch?.[1]) {
+    return piMatch[1].slice(-3).padStart(3, '0')
+  }
+
+  // Try to match trailing number
+  const trailingMatch = raw.match(/(\d+)\s*$/)
+  if (trailingMatch?.[1]) {
+    return trailingMatch[1].slice(-3).padStart(3, '0')
+  }
+
   const digits = raw.match(/\d+/g)?.join('') || ''
   if (!digits) return raw
   return digits.slice(-3).padStart(3, '0')
@@ -74,21 +87,38 @@ export default function DevicesOnline() {
     loadDevices(true)
   }, [loadDevices])
 
-  // Auto-refresh: every 10 minutes during working hours (07-18)
+  // Auto-refresh: every 10 minutes during working hours (07-18) when tab is active
   useEffect(() => {
     const setupInterval = () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
 
       intervalRef.current = setInterval(() => {
-        if (isWorkingHours()) {
+        if (isWorkingHours() && !document.hidden) {
           loadDevices(false)
         }
       }, 10 * 60 * 1000) // 10 minutes
     }
 
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current)
+          intervalRef.current = null
+        }
+      } else {
+        setupInterval()
+        if (isWorkingHours()) {
+          loadDevices(false)
+        }
+      }
+    }
+
     setupInterval()
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [loadDevices])
 
@@ -107,10 +137,16 @@ export default function DevicesOnline() {
     setExpandedSchools({})
   }
 
-  const getSchoolStats = (devices) => {
-    const online = devices.filter(d => d.online).length
-    return { online, total: devices.length }
-  }
+  // Memoize school statistics to avoid filtering arrays inside loops on every render
+  const schoolStats = useMemo(() => {
+    if (!data?.schools) return {}
+    const stats = {}
+    Object.entries(data.schools).forEach(([schoolName, devices]) => {
+      const online = devices.filter(d => d.online).length
+      stats[schoolName] = { online, total: devices.length }
+    })
+    return stats
+  }, [data])
 
   const isMissingTailscaleConfig = String(data?.error || '').toLowerCase().includes('chave da api do tailscale não configurada')
 
@@ -222,7 +258,7 @@ export default function DevicesOnline() {
         <div className="dvo-schools-list">
           {Object.entries(data.schools).map(([schoolName, devices], idx) => {
             const isExpanded = expandedSchools[schoolName] ?? false
-            const stats = getSchoolStats(devices)
+            const stats = schoolStats[schoolName] || { online: 0, total: 0 }
             const allOnline = stats.online === stats.total
             const anyOnline = stats.online > 0
 

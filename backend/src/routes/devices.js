@@ -24,7 +24,7 @@ function getAllDeviceIds() {
 
 // ─── Cache ───────────────────────────────────────────────────────────
 let cachedResult = null
-let cachedConfigSignature = ''
+let cachedSchoolDataRef = null
 let cacheTimestamp = 0
 const CACHE_TTL_MS = 10 * 60 * 1000 // 10 minutes
 
@@ -100,17 +100,6 @@ function getAliasCandidates(value) {
   return Array.from(out)
 }
 
-function extractNumericAliases(...values) {
-  const aliases = new Set()
-  values.forEach((value) => {
-    const tokens = String(value || '').match(/\d+/g) || []
-    tokens.forEach((token) => {
-      getAliasCandidates(token).forEach((alias) => aliases.add(alias))
-    })
-  })
-  return aliases
-}
-
 function getConfiguredDeviceNumber(id) {
   const raw = String(id || '').trim()
   const piHostnameMatch = raw.match(/pi5-8g-(\d+)/i)
@@ -139,6 +128,30 @@ function formatDeviceDisplayCode(id) {
   return digits.slice(-3).padStart(3, '0')
 }
 
+function extractNumericAliases(...values) {
+  const aliases = new Set()
+  values.forEach((value) => {
+    const str = String(value || '').trim()
+    const piHostnameMatch = str.match(/pi5-8g-(\d+)/i)
+    if (piHostnameMatch?.[1]) {
+      getAliasCandidates(piHostnameMatch[1]).forEach((alias) => aliases.add(alias))
+      return
+    }
+
+    const trailingNumberMatch = str.match(/(\d+)\s*$/)
+    if (trailingNumberMatch?.[1]) {
+      getAliasCandidates(trailingNumberMatch[1]).forEach((alias) => aliases.add(alias))
+      return
+    }
+
+    const tokens = str.match(/\d+/g) || []
+    tokens.forEach((token) => {
+      getAliasCandidates(token).forEach((alias) => aliases.add(alias))
+    })
+  })
+  return aliases
+}
+
 function chooseBestStatus(previous, current) {
   if (!previous) return current
   if (current.online && !previous.online) return current
@@ -162,10 +175,9 @@ async function safeJson(response) {
 async function fetchTailscaleDevices() {
   const now = Date.now()
   const schoolData = memoryStore.getSchoolData()
-  const configSignature = JSON.stringify(schoolData)
 
-  // Return cached if still valid
-  if (cachedResult && cachedConfigSignature === configSignature && (now - cacheTimestamp) < CACHE_TTL_MS) {
+  // Return cached if still valid (using reference check instead of expensive stringify)
+  if (cachedResult && cachedSchoolDataRef === schoolData && (now - cacheTimestamp) < CACHE_TTL_MS) {
     return cachedResult
   }
 
@@ -234,7 +246,9 @@ async function fetchTailscaleDevices() {
 
       if (!matchedId) {
         for (const id of ALL_DEVICE_IDS) {
-          if (haystack.includes(String(id).toLowerCase())) {
+          const idStr = String(id).toLowerCase()
+          // Only perform fallback substring match for longer IDs (> 2 chars) to avoid matching hardware model numbers (like pi5, 8g)
+          if (idStr.length > 2 && haystack.includes(idStr)) {
             matchedId = String(id)
             break
           }
@@ -287,7 +301,7 @@ async function fetchTailscaleDevices() {
         ? 'Nenhum device configurado foi relacionado aos nomes vindos da API do Tailscale.'
         : null,
     }
-    cachedConfigSignature = configSignature
+    cachedSchoolDataRef = schoolData
     cacheTimestamp = now
 
     console.log(
@@ -300,7 +314,7 @@ async function fetchTailscaleDevices() {
     console.error('[tailscale] ❌ Error fetching devices:', err.message)
 
     // Return stale cache if available
-    if (cachedResult && cachedConfigSignature === configSignature) {
+    if (cachedResult && cachedSchoolDataRef === schoolData) {
       console.log('[tailscale] ↩️  Returning stale cache.')
       return { ...cachedResult, stale: true }
     }
