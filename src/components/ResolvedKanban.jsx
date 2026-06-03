@@ -462,9 +462,6 @@ export default function ResolvedKanban() {
                   </div>
 
                   <div className="rk-card-footer-item">
-                    <span className="rk-card-resp-item" style={{ background: task.responsible === 'Psicóloga' ? '#10b981' : '#a78bfa' }}>
-                      {task.responsible?.charAt(0).toUpperCase()}
-                    </span>
                     <span className="rk-card-date-item">
                       {new Date(task.archivedAt || task.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
                     </span>
@@ -473,6 +470,165 @@ export default function ResolvedKanban() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Details Modal */}
+      {selectedTask && (
+        <div 
+          className="rk-modal-overlay" 
+          onClick={() => setSelectedTaskId(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9998,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'rgba(0, 0, 0, 0.5)',
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
+          }}
+        >
+          <div 
+            className="rk-modal-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'relative',
+              width: '100%',
+              maxWidth: '600px',
+              margin: '16px',
+              background: 'linear-gradient(135deg, rgba(20, 25, 40, 0.95) 0%, rgba(15, 20, 35, 0.98) 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '18px',
+              boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)',
+              backdropFilter: 'blur(12px)',
+              padding: '24px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+            }}
+          >
+            {/* Close button */}
+            <button 
+              onClick={() => setSelectedTaskId(null)}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                right: '16px',
+                width: '32px',
+                height: '32px',
+                border: 'none',
+                background: 'rgba(255, 255, 255, 0.05)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#94a3b8',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
+                e.currentTarget.style.color = '#cbd5e1'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
+                e.currentTarget.style.color = '#94a3b8'
+              }}
+            >
+              <X size={18} />
+            </button>
+
+            {/* Content */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>ID</span>
+                <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#86efac', margin: '8px 0 0 0' }}>#{selectedTask.id}</p>
+              </div>
+
+              <div>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Título</span>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f1f5f9', margin: '8px 0 0 0' }}>{selectedTask.title}</h2>
+              </div>
+
+              {selectedTask.description && (
+                <div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Descrição</span>
+                  <p style={{ fontSize: '0.875rem', color: '#cbd5e1', lineHeight: 1.5, whiteSpace: 'pre-wrap', margin: '8px 0 0 0' }}>{selectedTask.description}</p>
+                </div>
+              )}
+
+              {selectedTask.tags && selectedTask.tags.length > 0 && (
+                <div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Etiquetas</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                    {selectedTask.tags.map((tag, idx) => (
+                      <span key={idx} style={{ fontSize: '0.7rem', padding: '4px 10px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '6px', color: '#86efac', fontWeight: 500 }}>{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Metadata grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Prioridade</span>
+                  <p style={{ margin: '6px 0 0 0', fontWeight: 700, color: selectedTask.priority === 'high' ? '#fca5a5' : selectedTask.priority === 'medium' ? '#93c5fd' : '#86efac' }}>
+                    {selectedTask.priority === 'high' ? 'Alta' : selectedTask.priority === 'medium' ? 'Média' : 'Baixa'}
+                  </p>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</span>
+                  <p style={{ margin: '6px 0 0 0', color: '#cbd5e1' }}>
+                    {selectedTask.status === 'todo' ? 'A Fazer' : selectedTask.status === 'inprogress' ? 'Em Andamento' : selectedTask.status === 'inrevision' ? 'Em Revisão' : 'Concluído'}
+                  </p>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Responsável</span>
+                  <p style={{ margin: '6px 0 0 0', color: '#cbd5e1' }}>{selectedTask.responsible}</p>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Arquivado Em</span>
+                  <p style={{ margin: '6px 0 0 0', color: '#cbd5e1' }}>{new Date(selectedTask.archivedAt || selectedTask.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
+                </div>
+              </div>
+
+              {/* Delete button */}
+              {canDeleteTask && (
+                <button
+                  onClick={() => {
+                    handleDeleteRequest(selectedTask)
+                    setSelectedTaskId(null)
+                  }}
+                  style={{
+                    marginTop: '12px',
+                    padding: '10px 16px',
+                    background: 'linear-gradient(135deg, rgba(239,68,68,0.8) 0%, rgba(185,28,28,0.9) 100%)',
+                    border: '1px solid rgba(239,68,68,0.4)',
+                    borderRadius: '10px',
+                    color: '#fff',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(239,68,68,0.3)'
+                    e.currentTarget.style.transform = 'translateY(-2px)'
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = 'none'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                  }}
+                >
+                  <Trash2 size={16} /> Excluir Permanentemente
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -886,18 +1042,6 @@ export default function ResolvedKanban() {
           margin-top: 4px;
           padding-top: 12px;
           border-top: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .rk-card-resp-item {
-          width: 28px;
-          height: 28px;
-          border-radius: 6px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 0.75rem;
-          font-weight: 700;
-          color: #fff;
         }
 
         .rk-card-date-item {

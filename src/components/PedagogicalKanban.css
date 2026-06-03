@@ -101,7 +101,6 @@
 .prio-low { color: #38bdf8; }
 
 .pk-card-meta-right { display: flex; align-items: center; gap: 10px; font-size: 0.75rem; color: #9ca3af; }
-.pk-card-resp-badge { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%; font-size: 0.625rem; font-weight: 700; color: #ffffff; }
 
 /* ── Modal Layout ── */
 .pk-modal-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.65); backdrop-filter: blur(8px); animation: pkFadeIn 0.15s ease-out; }

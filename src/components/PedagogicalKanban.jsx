@@ -534,8 +534,7 @@ export default function PedagogicalKanban() {
                     </div>
                   ) : (
                     colTasks.map(task => {
-                      // Avatar letter
-                      const initial = task.responsible ? task.responsible.charAt(0).toUpperCase() : 'P'
+                      // Priority check
                       const isHigh = task.priority === 'high'
 
                       return (
@@ -591,15 +590,6 @@ export default function PedagogicalKanban() {
                                   <Calendar size={10} /> {formatDate(task.date)}
                                 </span>
                               )}
-                              <span
-                                className="pk-card-resp-badge"
-                                style={{
-                                  background: task.responsible === 'Psicóloga' ? '#10b981' : '#a78bfa'
-                                }}
-                                title={task.responsible}
-                              >
-                                {initial}
-                              </span>
                             </div>
                           </div>
                         </div>
