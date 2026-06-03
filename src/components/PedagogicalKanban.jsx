@@ -88,6 +88,16 @@ export default function PedagogicalKanban() {
       return setFormError('O título da tarefa é obrigatório.')
     }
 
+    if (!form.date.trim()) {
+      return setFormError('A data de prazo é obrigatória.')
+    }
+
+    // Validate date format (dd/mm)
+    const dateRegex = /^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])$/
+    if (!dateRegex.test(form.date.trim())) {
+      return setFormError('Data inválida. Use o formato dd/mm')
+    }
+
     setIsSaving(true)
     try {
       const tagsArray = form.tags
@@ -95,8 +105,14 @@ export default function PedagogicalKanban() {
         .map(t => t.trim())
         .filter(t => t.length > 0)
 
+      // Process date: convert dd/mm to yyyy-mm-dd
+      const [day, month] = form.date.trim().split('/')
+      const currentYear = new Date().getFullYear()
+      const fullDate = `${currentYear}-${month}-${day}`
+
       const payload = {
         ...form,
+        date: fullDate,
         tags: tagsArray
       }
 
@@ -828,12 +844,23 @@ export default function PedagogicalKanban() {
 
               <div className="pk-form-row">
                 <div className="pk-form-group" style={{ flex: 1 }}>
-                  <label>Prazo Limite</label>
+                  <label>Prazo Limite *</label>
                   <input
-                    type="date"
+                    type="text"
                     className="pk-input"
+                    placeholder="dd/mm"
                     value={form.date}
-                    onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
+                    onChange={e => {
+                      const value = e.target.value.replace(/[^0-9/]/g, '')
+                      if (value.length <= 5) {
+                        let formatted = value
+                        if (value.length === 2 && !value.includes('/')) {
+                          formatted = value + '/'
+                        }
+                        setForm(p => ({ ...p, date: formatted }))
+                      }
+                    }}
+                    maxLength="5"
                   />
                 </div>
                 <div className="pk-form-group" style={{ flex: 1 }}>

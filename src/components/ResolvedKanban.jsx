@@ -476,45 +476,56 @@ export default function ResolvedKanban() {
       {/* Details Modal */}
       {selectedTask && (
         <div 
-          className="rk-modal-overlay" 
+          className="fixed inset-0 z-[9998] flex items-center justify-center"
           onClick={() => setSelectedTaskId(null)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 9998,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'rgba(0, 0, 0, 0.5)',
-            backdropFilter: 'blur(4px)',
-            WebkitBackdropFilter: 'blur(4px)',
-          }}
+          style={{ animation: 'fadeIn 0.2s ease-out' }}
         >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'rgba(0, 0, 0, 0.65)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+            onClick={() => setSelectedTaskId(null)}
+          />
+
+          {/* Modal card */}
           <div 
-            className="rk-modal-card"
+            className="relative w-full max-w-2xl mx-4 rounded-2xl border overflow-hidden"
             onClick={(e) => e.stopPropagation()}
             style={{
-              position: 'relative',
-              width: '100%',
-              maxWidth: '600px',
-              margin: '16px',
-              background: 'linear-gradient(135deg, rgba(20, 25, 40, 0.95) 0%, rgba(15, 20, 35, 0.98) 100%)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '18px',
-              boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)',
-              backdropFilter: 'blur(12px)',
-              padding: '24px',
+              background: 'linear-gradient(145deg, rgba(30, 35, 50, 0.97) 0%, rgba(18, 22, 34, 0.99) 100%)',
+              borderColor: 'rgba(34, 197, 94, 0.2)',
+              boxShadow: '0 25px 80px rgba(0,0,0,0.6), 0 0 60px rgba(34, 197, 94, 0.06), inset 0 1px 0 rgba(255,255,255,0.03)',
+              animation: 'slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
               maxHeight: '90vh',
               overflowY: 'auto',
             }}
           >
+            {/* Top green accent bar */}
+            <div
+              style={{
+                height: '3px',
+                background: 'linear-gradient(90deg, transparent, rgba(34,197,94,0.6), rgba(34,197,94,0.8), rgba(34,197,94,0.6), transparent)',
+              }}
+            />
+
+            {/* Green glow */}
+            <div
+              className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full"
+              style={{
+                background: 'radial-gradient(circle, rgba(34, 197, 94, 0.1) 0%, transparent 65%)',
+                pointerEvents: 'none',
+              }}
+            />
+
             {/* Close button */}
             <button 
               onClick={() => setSelectedTaskId(null)}
+              className="absolute top-4 right-4 z-10"
               style={{
-                position: 'absolute',
-                top: '16px',
-                right: '16px',
                 width: '32px',
                 height: '32px',
                 border: 'none',
@@ -539,12 +550,28 @@ export default function ResolvedKanban() {
               <X size={18} />
             </button>
 
-            {/* Content */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-              {/* ID and Title */}
-              <div>
-                <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#86efac', margin: '0' }}>#{selectedTask.id}</p>
-                <p style={{ fontSize: '0.875rem', color: '#9ca3af', margin: '4px 0 0 0' }}>{selectedTask.title}</p>
+            <div className="relative p-6">
+              {/* Header with icon */}
+              <div className="flex items-start gap-4 mb-6">
+                <div
+                  style={{
+                    width: '56px',
+                    height: '56px',
+                    borderRadius: '14px',
+                    background: 'linear-gradient(135deg, rgba(34,197,94,0.12) 0%, rgba(16,185,129,0.08) 100%)',
+                    border: '1px solid rgba(34,197,94,0.2)',
+                    boxShadow: '0 0 30px rgba(34,197,94,0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Check size={28} style={{ color: '#10b981' }} />
+                </div>
+                <div>
+                  <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#86efac', margin: '0' }}>#{selectedTask.id}</p>
+                  <p style={{ fontSize: '0.875rem', color: '#9ca3af', margin: '4px 0 0 0', lineHeight: 1.4 }}>{selectedTask.title}</p>
+                </div>
               </div>
 
               {/* Main metadata grid - 3 columns */}
@@ -610,27 +637,21 @@ export default function ResolvedKanban() {
                     handleDeleteRequest(selectedTask)
                     setSelectedTaskId(null)
                   }}
+                  className="w-full mt-4 px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
                   style={{
-                    marginTop: '12px',
-                    padding: '10px 16px',
-                    background: 'linear-gradient(135deg, rgba(239,68,68,0.8) 0%, rgba(185,28,28,0.9) 100%)',
-                    border: '1px solid rgba(239,68,68,0.4)',
-                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, rgba(239,68,68,0.75) 0%, rgba(185,28,28,0.85) 100%)',
+                    border: '1px solid rgba(239,68,68,0.35)',
+                    boxShadow: '0 4px 20px rgba(239,68,68,0.2)',
                     color: '#fff',
-                    fontWeight: 600,
+                    fontWeight: 700,
                     cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    transition: 'all 0.2s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 6px 20px rgba(239,68,68,0.3)'
-                    e.currentTarget.style.transform = 'translateY(-2px)'
+                    e.currentTarget.style.boxShadow = '0 6px 25px rgba(239,68,68,0.35)'
+                    e.currentTarget.style.transform = 'translateY(-1px)'
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = 'none'
+                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(239,68,68,0.2)'
                     e.currentTarget.style.transform = 'translateY(0)'
                   }}
                 >
@@ -1057,6 +1078,22 @@ export default function ResolvedKanban() {
         .rk-card-date-item {
           font-size: 0.75rem;
           color: #64748b;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        @keyframes slideInUp {
+          from { 
+            opacity: 0; 
+            transform: translateY(20px);
+          }
+          to { 
+            opacity: 1; 
+            transform: translateY(0);
+          }
         }
       `}</style>
     </div>
