@@ -4,6 +4,50 @@ import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import './Deadlines.css'
 
+const generateGoogleCalendarUrl = (item) => {
+  const title = encodeURIComponent(item.title)
+  const description = encodeURIComponent(item.description || '')
+  const formattedDate = String(item.date).replace(/-/g, '')
+  
+  let datesParam = ''
+  if (item.time) {
+    const timeClean = String(item.time).replace(/:/g, '')
+    const startHour = parseInt(timeClean.substring(0, 2), 10)
+    const startMinute = parseInt(timeClean.substring(2, 4), 10)
+    
+    let endHour = startHour + 1
+    let endDayOffset = 0
+    if (endHour >= 24) {
+      endHour = endHour - 24
+      endDayOffset = 1
+    }
+    
+    const pad = (n) => String(n).padStart(2, '0')
+    const startTimeStr = `${pad(startHour)}${pad(startMinute)}00`
+    const endTimeStr = `${pad(endHour)}${pad(startMinute)}00`
+    
+    if (endDayOffset === 0) {
+      datesParam = `${formattedDate}T${startTimeStr}/${formattedDate}T${endTimeStr}`
+    } else {
+      const dateObj = new Date(item.date + 'T00:00:00')
+      dateObj.setDate(dateObj.getDate() + 1)
+      const nextDayStr = dateObj.toISOString().split('T')[0].replace(/-/g, '')
+      datesParam = `${formattedDate}T${startTimeStr}/${nextDayStr}T${endTimeStr}`
+    }
+  } else {
+    const dateObj = new Date(item.date + 'T00:00:00')
+    dateObj.setDate(dateObj.getDate() + 1)
+    const nextDayStr = dateObj.toISOString().split('T')[0].replace(/-/g, '')
+    datesParam = `${formattedDate}/${nextDayStr}`
+  }
+  
+  let url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${description}&dates=${datesParam}`
+  if (item.companyEmail) {
+    url += `&add=${encodeURIComponent(item.companyEmail)}`
+  }
+  return url
+}
+
 const CATEGORY_CONFIG = {
   pedagoga: { label: 'Pedagogia', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.25)' },
   psicologa: { label: 'Psicologia', color: '#34d399', bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.25)' },
@@ -29,6 +73,8 @@ export default function Deadlines() {
 
   const [deadlines, setDeadlines] = useState([])
   const [notes, setNotes] = useState([])
+  const [professionals, setProfessionals] = useState([])
+  const [calendarModalData, setCalendarModalData] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -68,12 +114,14 @@ export default function Deadlines() {
   const loadDeadlines = async () => {
     setIsLoading(true)
     try {
-      const [deadlinesData, notesData] = await Promise.all([
+      const [deadlinesData, notesData, profsData] = await Promise.all([
         api.get('/deadlines'),
-        api.get('/notes')
+        api.get('/notes'),
+        api.get('/professionals').catch(() => ({ professionals: [] }))
       ])
       setDeadlines(deadlinesData || [])
       setNotes(notesData || [])
+      setProfessionals(profsData?.professionals || [])
     } catch (e) { console.error('Error fetching deadlines:', e) }
     finally { setIsLoading(false) }
   }
@@ -86,8 +134,8 @@ export default function Deadlines() {
     const todayCheck = new Date().toISOString().split('T')[0]
     if (!editTarget && form.date < todayCheck) return setFormError('Não é permitido cadastrar prazos com data no passado.')
 
-    setIsSaving(true)
     try {
+      let savedItem = null
       if (editTarget) {
         if (editTarget.isReminder) {
           const noteForm = {
@@ -101,15 +149,42 @@ export default function Deadlines() {
           }
           const updated = await api.put(`/notes/${editTarget.id}`, noteForm)
           setNotes(prev => prev.map(n => n.id === updated.id ? updated : n))
+          savedItem = { ...updated, date: updated.reminderDate || updated.createdAt.split('T')[0], time: updated.reminderTime, isReminder: true }
         } else {
           const updated = await api.put(`/deadlines/${editTarget.id}`, form)
           setDeadlines(prev => prev.map(d => d.id === updated.id ? updated : d))
+          savedItem = updated
         }
         setEditTarget(null)
       } else {
         const newDeadline = await api.post('/deadlines', form)
         setDeadlines(prev => [newDeadline, ...prev])
+        savedItem = newDeadline
       }
+
+      if (savedItem) {
+        const loggedInProfessional = professionals.find(p => 
+          String(p.name || '').trim().toLowerCase() === String(user?.name || '').trim().toLowerCase() ||
+          String(p.email || '').trim().toLowerCase() === String(user?.email || '').trim().toLowerCase()
+        )
+        const currentCompanyEmail = loggedInProfessional?.companyEmail || ''
+        
+        const calendarUrl = generateGoogleCalendarUrl({
+          title: savedItem.title,
+          description: savedItem.description,
+          date: savedItem.date,
+          time: savedItem.time,
+          companyEmail: currentCompanyEmail
+        })
+        
+        setCalendarModalData({
+          title: savedItem.title,
+          date: savedItem.date,
+          time: savedItem.time,
+          url: calendarUrl
+        })
+      }
+
       setForm({ title: '', description: '', date: '', time: '', category: 'pedagoga', priority: 'media', status: 'pendente' })
       setIsFormPriorityOpen(false)
       setIsFormStatusOpen(false)
@@ -741,6 +816,60 @@ export default function Deadlines() {
           </div>
         )
       })()}
+
+      {/* Google Calendar Modal */}
+      {calendarModalData && (
+        <div className="dl-modal-overlay" onClick={() => setCalendarModalData(null)}>
+          <div className="dl-modal-card dl-modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="dl-modal-accent" style={{ background: '#fbbf24' }} />
+            <div className="dl-modal-head">
+              <div className="dl-modal-head-left">
+                <div className="dl-modal-head-icon" style={{ background: 'rgba(251, 191, 36, 0.1)', color: '#fbbf24' }}>
+                  <Calendar size={18} />
+                </div>
+                <div>
+                  <h3>Adicionar à Agenda?</h3>
+                  <p className="dl-modal-head-sub">Google Agenda</p>
+                </div>
+              </div>
+              <button className="dl-modal-close" onClick={() => setCalendarModalData(null)}><X size={16} /></button>
+            </div>
+            <div className="dl-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <p style={{ color: '#d1d5db', fontSize: '0.875rem', lineHeight: 1.5 }}>
+                O prazo/lembrete <strong style={{ color: '#f1f5f9' }}>"{calendarModalData.title}"</strong> foi salvo no sistema.
+              </p>
+              <p style={{ color: '#9ca3af', fontSize: '0.8125rem', lineHeight: 1.4 }}>
+                Deseja criar este evento em seu Google Agenda para o dia <strong style={{ color: '#fbbf24' }}>{formatDateDisplay(calendarModalData.date)}</strong>{calendarModalData.time && <> às <strong style={{ color: '#fbbf24' }}>{calendarModalData.time}</strong></>}?
+              </p>
+              <div className="dl-modal-actions" style={{ marginTop: '10px' }}>
+                <button className="dl-btn-cancel" onClick={() => setCalendarModalData(null)}>Agora Não</button>
+                <a 
+                  href={calendarModalData.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="dl-submit-btn" 
+                  style={{ 
+                    background: 'linear-gradient(135deg, #fbbf24, #d97706)',
+                    color: '#000',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    padding: '10px 16px',
+                    borderRadius: '10px',
+                    fontSize: '0.8125rem'
+                  }}
+                  onClick={() => setCalendarModalData(null)}
+                >
+                  <Calendar size={14} /> Sim, Adicionar
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

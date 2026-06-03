@@ -39,7 +39,8 @@ function sanitizeForClient(item) {
     id: item.id,
     name: item.name,
     role: item.role,
-    email: item.email || ''
+    email: item.email || '',
+    companyEmail: item.companyEmail || ''
   }
 }
 
@@ -106,11 +107,14 @@ router.put('/', authRequired, adminOnly, (req, res) => {
           throw new Error(`Informe uma senha para criar o usuário ${name}.`)
         }
 
+        const companyEmail = String(item?.companyEmail || existing?.companyEmail || '').trim()
+
         return {
           id,
           name,
           role,
           email,
+          companyEmail,
           passwordHash
         }
       })

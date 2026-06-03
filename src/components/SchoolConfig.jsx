@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Settings, School, Cpu, BookOpen, Plus, Trash2, Save, Loader2, AlertTriangle, ChevronDown, ChevronRight, ShieldAlert, Pencil, Check, Briefcase, Users, KeyRound } from 'lucide-react'
+import { Settings, School, Cpu, BookOpen, Plus, Trash2, Save, Loader2, AlertTriangle, ChevronDown, ChevronRight, ShieldAlert, Pencil, Check, Briefcase, Users, KeyRound, Mail } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 
@@ -90,9 +90,11 @@ export default function SchoolConfig() {
   const [newProfessionalName, setNewProfessionalName] = useState('')
   const [newProfessionalRole, setNewProfessionalRole] = useState('')
   const [newProfessionalPassword, setNewProfessionalPassword] = useState('')
+  const [newProfessionalCompanyEmail, setNewProfessionalCompanyEmail] = useState('')
   const [editingProfessionalId, setEditingProfessionalId] = useState(null)
   const [editingProfessionalName, setEditingProfessionalName] = useState('')
   const [editingProfessionalRole, setEditingProfessionalRole] = useState('')
+  const [editingProfessionalCompanyEmail, setEditingProfessionalCompanyEmail] = useState('')
 
   // Confirm delete modal state: { type: 'school'|'device'|'turma', label, action }
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -273,10 +275,11 @@ export default function SchoolConfig() {
     if (duplicated) return
 
     const id = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-    setProfessionals((prev) => [...prev, { id, name, role, password }])
+    setProfessionals((prev) => [...prev, { id, name, role, password, companyEmail: newProfessionalCompanyEmail.trim() }])
     setNewProfessionalName('')
     setNewProfessionalRole('')
     setNewProfessionalPassword('')
+    setNewProfessionalCompanyEmail('')
     setHasChanges(true)
   }
 
@@ -286,6 +289,7 @@ export default function SchoolConfig() {
       setEditingProfessionalId(null)
       setEditingProfessionalName('')
       setEditingProfessionalRole('')
+      setEditingProfessionalCompanyEmail('')
     }
     setHasChanges(true)
   }
@@ -294,6 +298,7 @@ export default function SchoolConfig() {
     setEditingProfessionalId(item.id)
     setEditingProfessionalName(item.name)
     setEditingProfessionalRole(item.role)
+    setEditingProfessionalCompanyEmail(item.companyEmail || '')
   }
 
   const confirmEditProfessional = () => {
@@ -305,20 +310,22 @@ export default function SchoolConfig() {
     const role = editingProfessionalRole.trim()
     if (!name || !role) return
 
-    const unchanged = current.name.trim() === name && current.role.trim() === role
+    const unchanged = current.name.trim() === name && current.role.trim() === role && (current.companyEmail || '') === editingProfessionalCompanyEmail.trim()
     if (unchanged) {
       setEditingProfessionalId(null)
       setEditingProfessionalName('')
       setEditingProfessionalRole('')
+      setEditingProfessionalCompanyEmail('')
       return
     }
 
     setProfessionals((prev) => prev.map((p) => (
-      p.id === editingProfessionalId ? { ...p, name, role } : p
+      p.id === editingProfessionalId ? { ...p, name, role, companyEmail: editingProfessionalCompanyEmail.trim() } : p
     )))
     setEditingProfessionalId(null)
     setEditingProfessionalName('')
     setEditingProfessionalRole('')
+    setEditingProfessionalCompanyEmail('')
     setHasChanges(true)
   }
 
@@ -568,6 +575,17 @@ export default function SchoolConfig() {
                 onKeyDown={(e) => e.key === 'Enter' && addProfessional()}
               />
             </div>
+            <div className="sc-password-wrap">
+              <Mail size={14} style={{ color: '#64748b' }} />
+              <input
+                type="email"
+                className="sc-input sc-input-password"
+                placeholder="E-mail do Google (opcional)"
+                value={newProfessionalCompanyEmail}
+                onChange={(e) => setNewProfessionalCompanyEmail(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addProfessional()}
+              />
+            </div>
             <button className="sc-add-btn" onClick={addProfessional} disabled={!newProfessionalName.trim() || !newProfessionalRole.trim() || String(newProfessionalPassword || '').trim().length < 6}>
               <Plus size={14} /> Adicionar Profissional
             </button>
@@ -599,6 +617,14 @@ export default function SchoolConfig() {
                         openSelectKey={openSelectKey}
                         setOpenSelectKey={setOpenSelectKey}
                       />
+                      <input
+                        className="sc-input sc-input-sm"
+                        value={editingProfessionalCompanyEmail}
+                        onChange={(e) => setEditingProfessionalCompanyEmail(e.target.value)}
+                        placeholder="E-mail do Google"
+                        type="email"
+                        style={{ maxWidth: '200px' }}
+                      />
                       <button className="sc-edit-confirm" onClick={confirmEditProfessional} title="Confirmar">
                         <Check size={12} />
                       </button>
@@ -610,6 +636,11 @@ export default function SchoolConfig() {
                         <h4 className="sc-prof-name">{item.name}</h4>
                         <p className="sc-prof-role">{item.role}</p>
                         {item.email && <p className="sc-prof-email">{item.email}</p>}
+                        {item.companyEmail && (
+                          <p className="sc-prof-email" style={{ color: '#fbbf24', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Mail size={11} /> Agenda: {item.companyEmail}
+                          </p>
+                        )}
                       </div>
                       <div className="sc-prof-actions">
                         <button className="sc-remove-btn sc-remove-btn-sm" onClick={() => startEditProfessional(item)} title="Editar profissional">
