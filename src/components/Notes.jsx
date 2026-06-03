@@ -336,7 +336,32 @@ export default function Notes() {
                       </div>
                       <div className="nt-card-meta">
                         <span>📅 {formatDateTime(note.createdAt)}</span>
-                        {canEdit && <button className="nt-card-del" onClick={(e) => { e.stopPropagation(); setDeleteTarget(note); }}><Trash2 size={12} /></button>}
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                          {canEdit && (
+                            <button
+                              className="nt-card-edit"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEditClick(note)
+                              }}
+                              title="Editar"
+                            >
+                              <Edit3 size={12} />
+                            </button>
+                          )}
+                          {canEdit && (
+                            <button
+                              className="nt-card-del"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setDeleteTarget(note)
+                              }}
+                              title="Excluir"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )
@@ -366,7 +391,30 @@ export default function Notes() {
                         <span className="nt-cat-badge-sm" style={{ background: cat.bg, color: cat.color }}>{cat.label}</span>
                         <span className="nt-status-badge" style={{ background: st.bg, color: st.color }}>• {st.label}</span>
                       </div>
-                      {canEdit && <button className="nt-reminder-del" onClick={(e) => { e.stopPropagation(); setDeleteTarget(rem) }}><Trash2 size={12} /></button>}
+                      {canEdit && (
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          <button
+                            className="nt-reminder-edit"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditClick(rem)
+                            }}
+                            title="Editar"
+                          >
+                            <Edit3 size={12} />
+                          </button>
+                          <button
+                            className="nt-reminder-del"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDeleteTarget(rem)
+                            }}
+                            title="Excluir"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -644,7 +692,7 @@ export default function Notes() {
       {/* Delete Confirm — padrão do sistema */}
       {deleteTarget && (
         <div className="nt-modal-overlay" onClick={() => setDeleteTarget(null)}>
-          <div className="nt-modal-card nt-modal-sm" onClick={e => e.stopPropagation()}>
+          <div className="nt-modal-card" onClick={e => e.stopPropagation()}>
             <div className="nt-modal-accent nt-accent-red" />
             <div className="nt-modal-head">
               <div className="nt-modal-head-left">
@@ -726,6 +774,73 @@ export default function Notes() {
                     </div>
                   )}
                 </div>
+
+                {canEdit && (
+                  <div className="nt-modal-actions" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 24, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                    <button
+                      className="nt-btn-cancel"
+                      onClick={() => {
+                        setViewNote(null)
+                        handleEditClick(viewNote)
+                      }}
+                      style={{
+                        background: 'rgba(167, 139, 250, 0.1)',
+                        color: '#a78bfa',
+                        border: '1px solid rgba(167, 139, 250, 0.2)',
+                        padding: '8px 16px',
+                        borderRadius: '10px',
+                        fontSize: '0.8125rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(167, 139, 250, 0.18)'
+                        e.currentTarget.style.borderColor = 'rgba(167, 139, 250, 0.3)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(167, 139, 250, 0.1)'
+                        e.currentTarget.style.borderColor = 'rgba(167, 139, 250, 0.2)'
+                      }}
+                    >
+                      <Edit3 size={14} /> Editar
+                    </button>
+                    <button
+                      className="nt-btn-danger"
+                      onClick={() => {
+                        setViewNote(null)
+                        setDeleteTarget(viewNote)
+                      }}
+                      style={{
+                        background: 'rgba(239, 68, 68, 0.1)',
+                        color: '#f87171',
+                        border: '1px solid rgba(239, 68, 68, 0.2)',
+                        padding: '8px 16px',
+                        borderRadius: '10px',
+                        fontSize: '0.8125rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)'
+                        e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
+                        e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.2)'
+                      }}
+                    >
+                      <Trash2 size={14} /> Excluir
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

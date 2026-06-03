@@ -242,3 +242,40 @@
   animation: ntDropdownFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+.nt-card-edit {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(167, 139, 250, 0.06);
+  color: #a78bfa;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.nt-card-edit:hover {
+  background: rgba(167, 139, 250, 0.15);
+}
+
+.nt-reminder-edit {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #4b5563;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.nt-reminder-edit:hover {
+  background: rgba(167, 139, 250, 0.1);
+  color: #a78bfa;
+}
+
+
