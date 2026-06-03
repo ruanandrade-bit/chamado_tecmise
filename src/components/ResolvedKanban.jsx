@@ -1,53 +1,273 @@
-import { useState, useEffect, useMemo } from 'react'
-import { Kanban as KanbanIcon, Trash2, Calendar, Search, Filter, Loader2, AlertCircle, X, Check, Archive, RotateCcw, AlertTriangle, ChevronDown } from 'lucide-react'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { Archive, Trash2, CalendarDays, Filter, Loader2, ShieldAlert, ChevronDown, Check, RotateCcw, X } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
-import './ResolvedKanban.css'
 
+function ResolvedPrettySelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+  icon: Icon,
+  selectKey,
+  openSelectKey,
+  setOpenSelectKey,
+  compact = false
+}) {
+  const containerRef = useRef(null)
+  const isOpen = openSelectKey === selectKey
+
+  const normalizedOptions = useMemo(
+    () => (options || []).map((item) => (
+      typeof item === 'string'
+        ? { value: item, label: item }
+        : { value: item.value, label: item.label ?? item.value }
+    )),
+    [options]
+  )
+
+  const selectedOption = normalizedOptions.find((item) => item.value === value)
+
+  useEffect(() => {
+    const handleOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setOpenSelectKey(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleOutside)
+    return () => document.removeEventListener('mousedown', handleOutside)
+  }, [setOpenSelectKey])
+
+  return (
+    <div
+      className={`rk-pretty-select ${isOpen ? 'rk-pretty-select-open' : ''} ${compact ? 'rk-pretty-select-compact' : ''}`}
+      ref={containerRef}
+    >
+      <button
+        type="button"
+        className="rk-pretty-trigger"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={() => setOpenSelectKey((prev) => (prev === selectKey ? null : selectKey))}
+        aria-expanded={isOpen}
+      >
+        <span className={`rk-pretty-label ${value ? 'rk-pretty-label-filled' : ''}`}>
+          {Icon && <Icon size={14} />}
+          {selectedOption?.label || placeholder}
+        </span>
+        <ChevronDown size={15} className={`rk-pretty-chevron ${isOpen ? 'rk-pretty-chevron-open' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="rk-pretty-options" onMouseDown={(e) => e.stopPropagation()}>
+          {normalizedOptions.map((item, index) => (
+            <button
+              key={`${selectKey}-${item.value}`}
+              type="button"
+              className={`rk-pretty-option ${value === item.value ? 'rk-pretty-option-active' : ''}`}
+              onClick={() => {
+                onChange(item.value)
+                setOpenSelectKey(null)
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              style={{ '--rk-option-index': index }}
+            >
+              {value === item.value && <Check size={12} className="rk-pretty-option-check" />}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ─── Confirm Delete Modal (premium glassmorphism) ─────────────────── */
+function ConfirmDeleteModalResolved({ isOpen, onClose, onConfirm, isDeleting, task }) {
+  if (!isOpen || !task) return null
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape' && !isDeleting) onClose()
+  }
+
+  const previewText = task.title || task.description || ''
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center"
+      style={{ animation: 'fadeIn 0.2s ease-out' }}
+      onKeyDown={handleKeyDown}
+      tabIndex={-1}
+    >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
+        onClick={!isDeleting ? onClose : undefined}
+      />
+
+      {/* Modal card */}
+      <div
+        className="relative w-full max-w-md mx-4 rounded-2xl border overflow-hidden"
+        style={{
+          background: 'linear-gradient(145deg, rgba(30, 35, 50, 0.97) 0%, rgba(18, 22, 34, 0.99) 100%)',
+          borderColor: 'rgba(239, 68, 68, 0.2)',
+          boxShadow: '0 25px 80px rgba(0,0,0,0.6), 0 0 60px rgba(239, 68, 68, 0.06), inset 0 1px 0 rgba(255,255,255,0.03)',
+          animation: 'slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+      >
+        {/* Top red accent bar */}
+        <div
+          style={{
+            height: '3px',
+            background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.6), rgba(239,68,68,0.8), rgba(239,68,68,0.6), transparent)',
+          }}
+        />
+
+        {/* Red glow */}
+        <div
+          className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(239, 68, 68, 0.1) 0%, transparent 65%)',
+            pointerEvents: 'none',
+          }}
+        />
+
+        <div className="relative p-6 flex flex-col items-center text-center space-y-5">
+          {/* Animated icon */}
+          <div
+            className="w-18 h-18 rounded-2xl flex items-center justify-center"
+            style={{
+              width: '72px',
+              height: '72px',
+              background: 'linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(220,38,38,0.08) 100%)',
+              border: '1px solid rgba(239,68,68,0.2)',
+              boxShadow: '0 0 30px rgba(239,68,68,0.08)',
+            }}
+          >
+            <ShieldAlert size={32} style={{ color: '#f87171' }} />
+          </div>
+
+          {/* Text */}
+          <div className="space-y-2">
+            <h3 className="text-xl font-bold" style={{ color: '#f1f5f9' }}>
+              Excluir Tarefa?
+            </h3>
+            <p className="text-sm leading-relaxed" style={{ color: '#94a3b8' }}>
+              Tem certeza que deseja excluir esta tarefa? Essa ação <strong style={{ color: '#f87171' }}>não poderá ser desfeita</strong>.
+            </p>
+          </div>
+
+          {/* Preview of task being deleted */}
+          <div
+            className="w-full rounded-xl p-3 text-left"
+            style={{
+              background: 'rgba(239, 68, 68, 0.04)',
+              border: '1px solid rgba(239, 68, 68, 0.1)',
+            }}
+          >
+            <p className="text-xs font-medium mb-1" style={{ color: '#64748b' }}>Tarefa a ser excluída:</p>
+            <p className="text-sm font-semibold mb-0.5" style={{ color: '#f87171' }}>
+              #{task.id}
+            </p>
+            {previewText && (
+              <p className="text-sm line-clamp-3" style={{ color: '#cbd5e1' }}>
+                {previewText.length > 120 ? previewText.slice(0, 120) + '…' : previewText}
+              </p>
+            )}
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 w-full pt-1">
+            <button
+              onClick={onClose}
+              disabled={isDeleting}
+              className="flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all"
+              style={{
+                background: 'rgba(100, 116, 139, 0.1)',
+                color: '#94a3b8',
+                border: '1px solid rgba(100, 116, 139, 0.15)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(100, 116, 139, 0.18)'
+                e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.3)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(100, 116, 139, 0.1)'
+                e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.15)'
+              }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={isDeleting}
+              className="flex-1 px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+              style={{
+                background: isDeleting
+                  ? 'rgba(239, 68, 68, 0.2)'
+                  : 'linear-gradient(135deg, rgba(239,68,68,0.75) 0%, rgba(185,28,28,0.85) 100%)',
+                color: '#fff',
+                border: '1px solid rgba(239,68,68,0.35)',
+                boxShadow: isDeleting ? 'none' : '0 4px 20px rgba(239,68,68,0.2)',
+                cursor: isDeleting ? 'not-allowed' : 'pointer',
+                opacity: isDeleting ? 0.7 : 1,
+              }}
+              onMouseEnter={(e) => {
+                if (!isDeleting) {
+                  e.currentTarget.style.boxShadow = '0 6px 25px rgba(239,68,68,0.35)'
+                  e.currentTarget.style.transform = 'translateY(-1px)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.boxShadow = '0 4px 20px rgba(239,68,68,0.2)'
+                e.currentTarget.style.transform = 'translateY(0)'
+              }}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" />
+                  Excluindo...
+                </>
+              ) : (
+                <>
+                  <Trash2 size={15} />
+                  Sim, excluir
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ─── Main Component ──────────────────────────────────────────────── */
 export default function ResolvedKanban() {
   const { user } = useAuthStore()
-  const role = (user?.role || '').toLowerCase()
-  const canEdit = role === 'pedagoga' || role === 'psicóloga' || user?.canDragDrop === true
-
   const [tasks, setTasks] = useState([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [taskToDelete, setTaskToDelete] = useState(null)
+  const [selectedTaskId, setSelectedTaskId] = useState(null)
+  const [openSelectKey, setOpenSelectKey] = useState(null)
 
-  // Filters state
-  const [searchQuery, setSearchQuery] = useState('')
-  const [filterPriority, setFilterPriority] = useState('')
-  const [filterResp, setFilterResp] = useState('')
-  const [timelineMonth, setTimelineMonth] = useState(() => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-  })
+  // ── Date filters ──
+  const currentYear = new Date().getFullYear()
+  const currentMonth = new Date().getMonth() + 1
+  const [filterYear, setFilterYear] = useState(String(currentYear))
+  const [filterMonth, setFilterMonth] = useState(String(currentMonth))
 
-  // Dropdown states
-  const [isMonthOpen, setIsMonthOpen] = useState(false)
-  const [isPriorityOpen, setIsPriorityOpen] = useState(false)
-  const [isRespOpen, setIsRespOpen] = useState(false)
+  const canDeleteTask = user?.canDragDrop === true
 
-  // Modals state
-  const [showDetailModal, setShowDetailModal] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [showRestoreModal, setShowRestoreModal] = useState(false)
-  const [viewTarget, setViewTarget] = useState(null)
-  const [deleteTarget, setDeleteTarget] = useState(null)
-  const [restoreTarget, setRestoreTarget] = useState(null)
-
+  // Fetch tasks
   useEffect(() => {
     fetchTasks()
-  }, [])
-
-  // Close dropdowns on outside click
-  useEffect(() => {
-    const handleOutsideClick = () => {
-      setIsMonthOpen(false)
-      setIsPriorityOpen(false)
-      setIsRespOpen(false)
-    }
-    document.addEventListener('click', handleOutsideClick)
-    return () => document.removeEventListener('click', handleOutsideClick)
   }, [])
 
   const fetchTasks = async () => {
@@ -56,422 +276,201 @@ export default function ResolvedKanban() {
       const data = await api.get('/kanban')
       setTasks(data || [])
     } catch (err) {
-      console.error('Erro ao buscar tarefas:', err)
+      console.error('Erro ao buscar tarefas resolvidas:', err)
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleRestoreTask = async () => {
-    if (!restoreTarget) return
-    setIsSaving(true)
-    try {
-      await api.put(`/kanban/${restoreTarget.id}`, { 
-        isArchived: false, 
-        archivedAt: null 
-      })
-      setTasks(prev => prev.map(t => t.id === restoreTarget.id ? { ...t, isArchived: false, archivedAt: null } : t))
-      setShowRestoreModal(false)
-      setShowDetailModal(false)
-      setRestoreTarget(null)
-      setViewTarget(null)
-    } catch (err) {
-      alert(`Erro ao restaurar tarefa: ${err.message}`)
-    } finally {
-      setIsSaving(false)
-    }
-  }
+  // Build available years from task data
+  const availableYears = [...new Set(tasks.filter(t => t.isArchived).map(t => {
+    const d = new Date(t.archivedAt || t.createdAt)
+    return d.getFullYear()
+  }))].sort((a, b) => b - a)
 
-  const handleDeleteTask = async () => {
-    if (!deleteTarget) return
-    setIsSaving(true)
-    try {
-      await api.delete(`/kanban/${deleteTarget.id}`)
-      setTasks(prev => prev.filter(t => t.id !== deleteTarget.id))
-      setShowDeleteModal(false)
-      setShowDetailModal(false)
-      setDeleteTarget(null)
-      setViewTarget(null)
-    } catch (err) {
-      alert(`Erro ao excluir tarefa permanentemente: ${err.message}`)
-    } finally {
-      setIsSaving(false)
-    }
-  }
+  // If current year has no tasks, add it anyway
+  if (!availableYears.includes(currentYear)) availableYears.unshift(currentYear)
 
-  const monthOptions = useMemo(() => {
-    const list = []
-    const date = new Date()
-    for (let i = 0; i < 12; i++) {
-      const d = new Date(date.getFullYear(), date.getMonth() - i, 1)
-      const year = d.getFullYear()
-      const monthNum = String(d.getMonth() + 1).padStart(2, '0')
-      const value = `${year}-${monthNum}`
-      
-      const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
-      const capitalizedLabel = label.charAt(0).toUpperCase() + label.slice(1)
-      
-      list.push({ value, label: capitalizedLabel })
-    }
-    return list
-  }, [])
+  const months = [
+    { value: '0', label: 'Todos os meses' },
+    { value: '1', label: 'Janeiro' },
+    { value: '2', label: 'Fevereiro' },
+    { value: '3', label: 'Março' },
+    { value: '4', label: 'Abril' },
+    { value: '5', label: 'Maio' },
+    { value: '6', label: 'Junho' },
+    { value: '7', label: 'Julho' },
+    { value: '8', label: 'Agosto' },
+    { value: '9', label: 'Setembro' },
+    { value: '10', label: 'Outubro' },
+    { value: '11', label: 'Novembro' },
+    { value: '12', label: 'Dezembro' },
+  ]
+  const yearOptions = availableYears.map((year) => ({ value: String(year), label: String(year) }))
 
-  const selectedMonthLabel = useMemo(() => {
-    const found = monthOptions.find(o => o.value === timelineMonth)
-    return found ? found.label : 'Selecionar Mês'
-  }, [timelineMonth, monthOptions])
+  // Filter by year and month
+  const filteredTasks = tasks.filter(task => {
+    if (!task.isArchived) return false
+    
+    const d = new Date(task.archivedAt || task.createdAt)
+    const taskYear = d.getFullYear()
+    const taskMonth = d.getMonth() + 1
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return ''
-    const [y, m, d] = dateStr.split('-')
-    const date = new Date(+y, +m - 1, +d)
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
-  }
-
-  const formatDateTime = (isoStr) => {
-    if (!isoStr) return ''
-    const date = new Date(isoStr)
-    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-  }
-
-  const getPriorityLabel = (p) => {
-    if (p === 'high') return 'Alta'
-    if (p === 'medium') return 'Média'
-    return 'Baixa'
-  }
-
-  // Filter Tasks
-  const filteredTasks = tasks.filter(t => {
-    if (!t.isArchived) return false
-
-    // Filter by Month (matches archivedAt date)
-    if (timelineMonth && t.archivedAt) {
-      if (!t.archivedAt.startsWith(timelineMonth)) return false
-    }
-
-    const matchesSearch =
-      t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (t.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.responsible.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (t.tags || []).some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-
-    const matchesPriority = !filterPriority || t.priority === filterPriority
-    const matchesResp = !filterResp || t.responsible.toLowerCase() === filterResp.toLowerCase()
-
-    return matchesSearch && matchesPriority && matchesResp
+    if (String(taskYear) !== filterYear) return false
+    if (filterMonth !== '0' && taskMonth !== Number(filterMonth)) return false
+    return true
   })
 
-  // Group stats only for selected month's archived tasks
-  const stats = useMemo(() => {
-    const monthTasks = tasks.filter(t => t.isArchived && t.archivedAt && t.archivedAt.startsWith(timelineMonth))
-    return {
-      total: monthTasks.length,
-      pedagoga: monthTasks.filter(t => t.responsible === 'Pedagoga').length,
-      psicologa: monthTasks.filter(t => t.responsible === 'Psicóloga').length,
-      highPriority: monthTasks.filter(t => t.priority === 'high').length
-    }
-  }, [tasks, timelineMonth])
+  const selectedTask = filteredTasks.find((task) => task.id === selectedTaskId) || null
 
-  const columns = [
-    { id: 'todo', label: 'A Fazer', color: '#a78bfa' },
-    { id: 'inprogress', label: 'Em Andamento', color: '#38bdf8' },
-    { id: 'inrevision', label: 'Em Revisão', color: '#fbbf24' },
-    { id: 'completed', label: 'Concluído', color: '#10b981' }
-  ]
+  const handleDeleteRequest = (task) => {
+    setTaskToDelete(task)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!taskToDelete || isDeleting) return
+    setIsDeleting(true)
+    try {
+      await api.delete(`/kanban/${taskToDelete.id}`)
+      setTasks(prev => prev.filter(t => t.id !== taskToDelete.id))
+      if (selectedTaskId === taskToDelete.id) {
+        setSelectedTaskId(null)
+      }
+    } catch (error) {
+      alert(error.message || 'Não foi possível excluir a tarefa.')
+    } finally {
+      setIsDeleting(false)
+      setTaskToDelete(null)
+    }
+  }
 
   return (
     <div className="rk-container">
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModalResolved
+        isOpen={taskToDelete !== null}
+        onClose={() => setTaskToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        isDeleting={isDeleting}
+        task={taskToDelete}
+      />
+
       {/* Header */}
       <div className="rk-page-header">
-        <div className="rk-header-left">
-          <div className="rk-header-icon"><Archive size={24} /></div>
-          <div>
-            <h1 className="rk-page-title">Kanban Resolvido</h1>
-            <p className="rk-page-sub">Histórico de tarefas concluídas e arquivadas</p>
-          </div>
+        <div className="rk-header-icon">
+          <Archive size={22} style={{ color: '#86efac' }} />
         </div>
-        <div className="rk-header-right">
-          <div className="rk-search-box">
-            <Search size={14} />
-            <input
-              placeholder="Buscar histórico..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-            />
-          </div>
+        <div>
+          <h1 className="rk-page-title">Tarefas Resolvidas</h1>
+          <p className="rk-page-subtitle">Tarefas arquivadas após conclusão</p>
         </div>
       </div>
 
-      {/* Top statistics */}
-      <div className="rk-stats-grid">
-        <div className="rk-stat-card">
-          <div className="rk-stat-icon" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}><Archive size={16} /></div>
-          <div className="rk-stat-info">
-            <span className="rk-stat-label">Arquivadas no Mês</span>
-            <span className="rk-stat-val">{stats.total}</span>
-          </div>
+  return (
+    <div className="rk-container">
+      {/* ── Year/Month filter bar ── */}
+      <div className="rk-filter-bar">
+        <div className="rk-filter-group">
+          <CalendarDays size={16} style={{ color: '#86efac', flexShrink: 0 }} />
+          <ResolvedPrettySelect
+            value={filterYear}
+            onChange={setFilterYear}
+            options={yearOptions}
+            placeholder="Ano"
+            selectKey="rk-filter-year"
+            openSelectKey={openSelectKey}
+            setOpenSelectKey={setOpenSelectKey}
+            compact
+          />
+          <ResolvedPrettySelect
+            value={filterMonth}
+            onChange={setFilterMonth}
+            options={months}
+            placeholder="Mês"
+            selectKey="rk-filter-month"
+            openSelectKey={openSelectKey}
+            setOpenSelectKey={setOpenSelectKey}
+            compact
+          />
         </div>
-        <div className="rk-stat-card">
-          <div className="rk-stat-icon" style={{ background: 'rgba(167,139,250,0.1)', color: '#a78bfa' }}><Check size={16} /></div>
-          <div className="rk-stat-info">
-            <span className="rk-stat-label">Pedagoga</span>
-            <span className="rk-stat-val">{stats.pedagoga}</span>
-          </div>
-        </div>
-        <div className="rk-stat-card">
-          <div className="rk-stat-icon" style={{ background: 'rgba(56,189,248,0.1)', color: '#38bdf8' }}><Check size={16} /></div>
-          <div className="rk-stat-info">
-            <span className="rk-stat-label">Psicóloga</span>
-            <span className="rk-stat-val">{stats.psicologa}</span>
-          </div>
-        </div>
-        <div className="rk-stat-card">
-          <div className="rk-stat-icon" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}><AlertCircle size={16} /></div>
-          <div className="rk-stat-info">
-            <span className="rk-stat-label">Alta Prioridade</span>
-            <span className="rk-stat-val text-red-400">{stats.highPriority}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Premium Filters Bar */}
-      <div className="rk-filters-bar">
-        <div className="rk-filters-left">
-          <div className="rk-filters-icon-label">
-            <Filter size={14} />
-            <span>Filtros:</span>
-          </div>
-
-          {/* Month Selector */}
-          <div className="rk-custom-select-container" onClick={e => e.stopPropagation()}>
-            <button
-              className={`rk-filter-btn ${timelineMonth ? 'active' : ''}`}
-              onClick={() => {
-                setIsMonthOpen(!isMonthOpen)
-                setIsPriorityOpen(false)
-                setIsRespOpen(false)
-              }}
-            >
-              <Calendar size={14} />
-              <span>{selectedMonthLabel}</span>
-              <ChevronDown size={14} className={`rk-select-chevron ${isMonthOpen ? 'open' : ''}`} />
-            </button>
-            {isMonthOpen && (
-              <div className="rk-custom-dropdown">
-                {monthOptions.map(opt => (
-                  <div
-                    key={opt.value}
-                    className={`rk-dropdown-option ${timelineMonth === opt.value ? 'selected' : ''}`}
-                    onClick={() => {
-                      setTimelineMonth(opt.value)
-                      setIsMonthOpen(false)
-                    }}
-                  >
-                    {opt.label}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Professional Selector */}
-          <div className="rk-custom-select-container" onClick={e => e.stopPropagation()}>
-            <button
-              className={`rk-filter-btn ${filterResp ? 'active' : ''}`}
-              onClick={() => {
-                setIsRespOpen(!isRespOpen)
-                setIsMonthOpen(false)
-                setIsPriorityOpen(false)
-              }}
-            >
-              <span className="rk-option-dot" style={{ background: filterResp === 'Psicóloga' ? '#10b981' : filterResp === 'Pedagoga' ? '#a78bfa' : '#6b7280' }} />
-              <span>{filterResp || 'Todos os Profissionais'}</span>
-              <ChevronDown size={14} className={`rk-select-chevron ${isRespOpen ? 'open' : ''}`} />
-            </button>
-            {isRespOpen && (
-              <div className="rk-custom-dropdown">
-                <div
-                  className={`rk-dropdown-option ${!filterResp ? 'selected' : ''}`}
-                  onClick={() => {
-                    setFilterResp('')
-                    setIsRespOpen(false)
-                  }}
-                >
-                  <span className="rk-option-dot" style={{ background: '#6b7280' }} />
-                  Todos os Profissionais
-                </div>
-                <div
-                  className={`rk-dropdown-option ${filterResp === 'Pedagoga' ? 'selected' : ''}`}
-                  onClick={() => {
-                    setFilterResp('Pedagoga')
-                    setIsRespOpen(false)
-                  }}
-                >
-                  <span className="rk-option-dot" style={{ background: '#a78bfa' }} />
-                  Pedagoga
-                </div>
-                <div
-                  className={`rk-dropdown-option ${filterResp === 'Psicóloga' ? 'selected' : ''}`}
-                  onClick={() => {
-                    setFilterResp('Psicóloga')
-                    setIsRespOpen(false)
-                  }}
-                >
-                  <span className="rk-option-dot" style={{ background: '#10b981' }} />
-                  Psicóloga
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Priority Selector */}
-          <div className="rk-custom-select-container" onClick={e => e.stopPropagation()}>
-            <button
-              className={`rk-filter-btn ${filterPriority ? 'active' : ''}`}
-              onClick={() => {
-                setIsPriorityOpen(!isPriorityOpen)
-                setIsMonthOpen(false)
-                setIsRespOpen(false)
-              }}
-            >
-              <span className="rk-option-dot" style={{ background: filterPriority === 'high' ? '#ef4444' : filterPriority === 'medium' ? '#3b82f6' : filterPriority === 'low' ? '#10b981' : '#6b7280' }} />
-              <span>{filterPriority ? `Prioridade: ${getPriorityLabel(filterPriority)}` : 'Todas as Prioridades'}</span>
-              <ChevronDown size={14} className={`rk-select-chevron ${isPriorityOpen ? 'open' : ''}`} />
-            </button>
-            {isPriorityOpen && (
-              <div className="rk-custom-dropdown">
-                <div
-                  className={`rk-dropdown-option ${!filterPriority ? 'selected' : ''}`}
-                  onClick={() => {
-                    setFilterPriority('')
-                    setIsPriorityOpen(false)
-                  }}
-                >
-                  <span className="rk-option-dot" style={{ background: '#6b7280' }} />
-                  Todas as Prioridades
-                </div>
-                <div
-                  className={`rk-dropdown-option ${filterPriority === 'high' ? 'selected' : ''}`}
-                  onClick={() => {
-                    setFilterPriority('high')
-                    setIsPriorityOpen(false)
-                  }}
-                >
-                  <span className="rk-option-dot" style={{ background: '#ef4444' }} />
-                  Alta
-                </div>
-                <div
-                  className={`rk-dropdown-option ${filterPriority === 'medium' ? 'selected' : ''}`}
-                  onClick={() => {
-                    setFilterPriority('medium')
-                    setIsPriorityOpen(false)
-                  }}
-                >
-                  <span className="rk-option-dot" style={{ background: '#3b82f6' }} />
-                  Média
-                </div>
-                <div
-                  className={`rk-dropdown-option ${filterPriority === 'low' ? 'selected' : ''}`}
-                  onClick={() => {
-                    setFilterPriority('low')
-                    setIsPriorityOpen(false)
-                  }}
-                >
-                  <span className="rk-option-dot" style={{ background: '#10b981' }} />
-                  Baixa
-                </div>
-              </div>
-            )}
-          </div>
+        <div className="rk-filter-count">
+          <Filter size={13} style={{ color: '#6b7280' }} />
+          <span>{filteredTasks.length} tarefa{filteredTasks.length !== 1 ? 's' : ''}</span>
         </div>
       </div>
 
-      {/* Board Layout (Read-Only) */}
-      {isLoading ? (
-        <div className="rk-board-loading">
-          <Loader2 className="rk-spinner" size={32} />
-          <span>Carregando histórico...</span>
+      {filteredTasks.length === 0 ? (
+        <div className="rk-empty">
+          <div className="rk-empty-icon">
+            <Archive size={28} style={{ color: '#4b5563' }} />
+          </div>
+          <p className="rk-empty-text">Nenhuma tarefa encontrada para o período selecionado.</p>
         </div>
       ) : (
-        <div className="rk-board">
-          {columns.map(col => {
-            const colTasks = filteredTasks.filter(t => t.status === col.id)
+        <div className="rk-grid">
+          {filteredTasks.map((task, index) => {
+            const status = task.status === 'todo' ? 'A Fazer' : 
+                           task.status === 'inprogress' ? 'Em Andamento' : 
+                           task.status === 'inrevision' ? 'Em Revisão' : 'Concluído'
 
             return (
-              <div key={col.id} className="rk-column">
-                <div className="rk-col-header">
-                  <div className="rk-col-title-wrap">
-                    <span className="rk-col-dot" style={{ background: col.color }} />
-                    <span className="rk-col-title">{col.label}</span>
-                  </div>
-                  <span className="rk-col-count">{colTasks.length}</span>
-                </div>
-
-                <div className="rk-col-body">
-                  {colTasks.length === 0 ? (
-                    <div className="rk-column-empty">
-                      <div className="rk-column-empty-icon"><Archive size={16} /></div>
-                      <span className="rk-column-empty-text">Sem arquivadas</span>
-                    </div>
-                  ) : (
-                    colTasks.map(task => {
-                      const initial = task.responsible ? task.responsible.charAt(0).toUpperCase() : 'P'
-
-                      return (
-                        <div
-                          key={task.id}
-                          className={`rk-card rk-card-priority-${task.priority}`}
-                          onClick={() => { setViewTarget(task); setShowDetailModal(true) }}
+              <div key={task.id} className="rk-card-wrap" style={{ animationDelay: `${index * 0.06}s` }}>
+                <div 
+                  className="rk-card-item"
+                  onClick={() => setSelectedTaskId(task.id)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="rk-card-header-item">
+                    <div className="rk-card-id">#{task.id}</div>
+                    <div className="rk-card-actions">
+                      {canDeleteTask && (
+                        <button 
+                          className="rk-card-action-btn"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleDeleteRequest(task)
+                          }}
+                          title="Excluir tarefa"
                         >
-                          <div className="rk-card-header">
-                            <h4 className="rk-card-title">{task.title}</h4>
-                          </div>
+                          <Trash2 size={16} style={{ color: '#ef4444' }} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
 
-                          {task.description && (
-                            <p className="rk-card-desc">{task.description}</p>
-                          )}
-
-                          {task.tags && task.tags.length > 0 && (
-                            <div className="rk-card-tags">
-                              {task.tags.map((tag, idx) => (
-                                <span key={idx} className="rk-card-tag">{tag}</span>
-                              ))}
-                            </div>
-                          )}
-
-                          <div className="rk-card-archive-date">
-                            <Archive size={10} />
-                            <span>Arquivado em {formatDateTime(task.archivedAt)}</span>
-                          </div>
-
-                          <div className="rk-card-footer">
-                            <div className="rk-card-meta-left">
-                              <span className={`rk-card-priority-badge prio-${task.priority}`}>
-                                {getPriorityLabel(task.priority)}
-                              </span>
-                            </div>
-
-                            <div className="rk-card-meta-right">
-                              {task.date && (
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.6875rem' }}>
-                                  <Calendar size={10} /> {formatDate(task.date)}
-                                </span>
-                              )}
-                              <span
-                                className="rk-card-resp-badge"
-                                style={{
-                                  background: task.responsible === 'Psicóloga' ? '#10b981' : '#a78bfa'
-                                }}
-                                title={task.responsible}
-                              >
-                                {initial}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })
+                  <h3 className="rk-card-title-item">{task.title}</h3>
+                  
+                  {task.description && (
+                    <p className="rk-card-desc-item">{task.description}</p>
                   )}
+
+                  {task.tags && task.tags.length > 0 && (
+                    <div className="rk-card-tags-item">
+                      {task.tags.slice(0, 2).map((tag, idx) => (
+                        <span key={idx} className="rk-card-tag-item">{tag}</span>
+                      ))}
+                      {task.tags.length > 2 && (
+                        <span className="rk-card-tag-item rk-card-tag-more">+{task.tags.length - 2}</span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="rk-card-meta-item">
+                    <span className={`rk-card-priority-item prio-${task.priority}`}>
+                      {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
+                    </span>
+                    <span className="rk-card-status-item">{status}</span>
+                  </div>
+
+                  <div className="rk-card-footer-item">
+                    <span className="rk-card-resp-item" style={{ background: task.responsible === 'Psicóloga' ? '#10b981' : '#a78bfa' }}>
+                      {task.responsible?.charAt(0).toUpperCase()}
+                    </span>
+                    <span className="rk-card-date-item">
+                      {new Date(task.archivedAt || task.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                    </span>
+                  </div>
                 </div>
               </div>
             )
@@ -479,158 +478,435 @@ export default function ResolvedKanban() {
         </div>
       )}
 
-      {/* Details Modal */}
-      {showDetailModal && viewTarget && (
-        <div className="rk-modal-overlay" onClick={() => setShowDetailModal(false)}>
-          <div className="rk-modal-card" onClick={e => e.stopPropagation()}>
-            <div className="rk-modal-accent" style={{ background: '#10b981' }} />
-            <div className="rk-modal-head">
-              <div className="rk-modal-head-left">
-                <div className="rk-modal-head-icon" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>
-                  <Archive size={18} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f3f4f6' }}>#{viewTarget.id}</h3>
-                  <p className="rk-modal-head-sub">Criado por {viewTarget.author}</p>
-                </div>
-              </div>
-              <button className="rk-modal-close" onClick={() => setShowDetailModal(false)}><X size={16} /></button>
-            </div>
+      <style>{`
+        .rk-container {
+          display: flex;
+          flex-direction: column;
+          gap: 34px;
+          width: 100%;
+          max-width: 1700px;
+          margin: 0 auto;
+          position: relative;
+          isolation: isolate;
+          animation: rkFadeIn 0.55s ease-out;
+        }
 
-            <div className="rk-modal-body">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Título</span>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f3f4f6', margin: 0 }}>{viewTarget.title}</h2>
-              </div>
+        @keyframes rkFadeIn {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
 
-              {viewTarget.description && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Descrição</span>
-                  <p style={{ fontSize: '0.875rem', color: '#d1d5db', lineHeight: 1.5, whiteSpace: 'pre-wrap', margin: 0 }}>{viewTarget.description}</p>
-                </div>
-              )}
+        .rk-page-header {
+          display: flex;
+          align-items: center;
+          gap: 18px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+          padding-bottom: 24px;
+          animation: rkRiseIn 0.45s ease both;
+        }
 
-              {viewTarget.tags && viewTarget.tags.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Etiquetas (Tags)</span>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {viewTarget.tags.map((tag, idx) => (
-                      <span key={idx} className="rk-card-tag" style={{ fontSize: '0.75rem', padding: '3px 8px' }}>{tag}</span>
-                    ))}
-                  </div>
-                </div>
-              )}
+        @keyframes rkRiseIn {
+          from { opacity: 0; transform: translateY(14px) scale(0.992); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
 
-              <div className="rk-detail-info-grid">
-                <div className="rk-detail-info-item">
-                  <span className="rk-detail-label">Responsável</span>
-                  <span className="rk-detail-val">{viewTarget.responsible}</span>
-                </div>
-                <div className="rk-detail-info-item">
-                  <span className="rk-detail-label">Prioridade</span>
-                  <span className={`rk-detail-val prio-${viewTarget.priority}`} style={{ fontWeight: 700 }}>
-                    {getPriorityLabel(viewTarget.priority)}
-                  </span>
-                </div>
-                <div className="rk-detail-info-item">
-                  <span className="rk-detail-label">Status ao Arquivar</span>
-                  <span className="rk-detail-val" style={{ textTransform: 'capitalize' }}>
-                    {viewTarget.status === 'todo' ? 'A Fazer' : viewTarget.status === 'inprogress' ? 'Em Andamento' : viewTarget.status === 'inrevision' ? 'Em Revisão' : 'Concluído'}
-                  </span>
-                </div>
-                <div className="rk-detail-info-item">
-                  <span className="rk-detail-label">Arquivado Em</span>
-                  <span className="rk-detail-val" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Calendar size={12} /> {viewTarget.archivedAt ? formatDateTime(viewTarget.archivedAt) : ''}
-                  </span>
-                </div>
-              </div>
+        .rk-header-icon {
+          width: 50px;
+          height: 50px;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(22,163,74,0.08));
+          border: 1px solid rgba(34,197,94,0.2);
+          box-shadow: 0 0 20px rgba(34,197,94,0.06);
+        }
 
-              {canEdit && (
-                <div className="rk-modal-actions">
-                  <button 
-                    className="rk-btn-cancel" 
-                    style={{ border: '1px solid rgba(167,139,250,0.3)', color: '#a78bfa', display: 'flex', alignItems: 'center', gap: 6 }} 
-                    onClick={() => { setRestoreTarget(viewTarget); setShowRestoreModal(true) }}
-                  >
-                    <RotateCcw size={14} /> Desarquivar
-                  </button>
-                  <button className="rk-btn-danger" onClick={() => { setDeleteTarget(viewTarget); setShowDeleteModal(true) }}>
-                    <Trash2 size={14} /> Excluir Permanentemente
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+        .rk-page-title {
+          font-size: 1.875rem;
+          font-weight: 700;
+          color: #f3f4f6;
+          letter-spacing: -0.01em;
+        }
 
-      {/* Restore Confirmation Modal */}
-      {showRestoreModal && restoreTarget && (
-        <div className="rk-modal-overlay" onClick={() => setShowRestoreModal(false)}>
-          <div className="rk-modal-card rk-modal-sm" onClick={e => e.stopPropagation()}>
-            <div className="rk-modal-accent" style={{ background: '#a78bfa' }} />
-            <div className="rk-modal-head">
-              <div className="rk-modal-head-left">
-                <div className="rk-modal-head-icon" style={{ background: 'rgba(167,139,250,0.1)', color: '#a78bfa' }}>
-                  <RotateCcw size={18} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#f3f4f6' }}>Confirmar Desarquivamento</h3>
-                </div>
-              </div>
-              <button className="rk-modal-close" onClick={() => setShowRestoreModal(false)}><X size={16} /></button>
-            </div>
-            <div className="rk-modal-body" style={{ gap: 18 }}>
-              <p style={{ fontSize: '0.875rem', color: '#9ca3af', lineHeight: 1.5, margin: 0 }}>
-                Tem certeza que deseja restaurar a tarefa <strong>"{restoreTarget.title}"</strong> de volta ao Kanban ativo?
-              </p>
-              <div className="rk-modal-actions" style={{ marginTop: 6 }}>
-                <button className="rk-btn-cancel" onClick={() => setShowRestoreModal(false)}>Cancelar</button>
-                <button 
-                  className="rk-btn-danger" 
-                  style={{ background: '#a78bfa', color: 'white' }} 
-                  onClick={handleRestoreTask} 
-                  disabled={isSaving}
-                >
-                  {isSaving ? 'Restaurando...' : 'Sim, Restaurar'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        .rk-page-subtitle {
+          font-size: 0.9375rem;
+          color: #9ca3af;
+          margin-top: 2px;
+        }
 
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && deleteTarget && (
-        <div className="rk-modal-overlay" onClick={() => setShowDeleteModal(false)}>
-          <div className="rk-modal-card rk-modal-sm" onClick={e => e.stopPropagation()}>
-            <div className="rk-modal-accent rk-accent-red" />
-            <div className="rk-modal-head">
-              <div className="rk-modal-head-left">
-                <div className="rk-modal-head-icon rk-icon-red">
-                  <AlertTriangle size={18} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#f3f4f6' }}>Confirmar Exclusão</h3>
-                </div>
-              </div>
-              <button className="rk-modal-close" onClick={() => setShowDeleteModal(false)}><X size={16} /></button>
-            </div>
-            <div className="rk-modal-body" style={{ gap: 18 }}>
-              <p style={{ fontSize: '0.875rem', color: '#9ca3af', lineHeight: 1.5, margin: 0 }}>
-                Tem certeza que deseja excluir permanentemente a tarefa <strong>"{deleteTarget.title}"</strong>? Esta ação não pode ser desfeita.
-              </p>
-              <div className="rk-modal-actions" style={{ marginTop: 6 }}>
-                <button className="rk-btn-cancel" onClick={() => setShowDeleteModal(false)}>Cancelar</button>
-                <button className="rk-btn-danger" onClick={handleDeleteTask} disabled={isSaving}>
-                  {isSaving ? 'Excluindo...' : 'Sim, Excluir'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        .rk-filter-bar {
+          position: relative;
+          z-index: 60;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          padding: 16px 22px;
+          background: linear-gradient(155deg, rgba(15, 15, 30, 0.55) 0%, rgba(11, 15, 28, 0.6) 100%);
+          backdrop-filter: blur(12px);
+          border: 1px solid rgba(255, 255, 255, 0.07);
+          border-radius: 18px;
+          box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
+          flex-wrap: wrap;
+          animation: rkRiseIn 0.45s ease both;
+          animation-delay: 0.08s;
+        }
+
+        .rk-filter-bar:hover {
+          border-color: rgba(134, 239, 172, 0.2);
+          box-shadow: 0 20px 34px rgba(2, 8, 23, 0.3), 0 0 18px rgba(34, 197, 94, 0.06);
+        }
+
+        .rk-filter-group {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          flex-wrap: wrap;
+        }
+
+        .rk-pretty-select {
+          position: relative;
+          min-width: 148px;
+        }
+
+        .rk-pretty-select-open {
+          z-index: 80;
+        }
+
+        .rk-pretty-trigger {
+          width: 100%;
+          min-height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 10px 12px;
+          border-radius: 11px;
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          background: rgba(255, 255, 255, 0.03);
+          color: #e5e7eb;
+          cursor: pointer;
+          transition: all 0.24s ease;
+        }
+
+        .rk-pretty-trigger:hover {
+          border-color: rgba(34, 197, 94, 0.24);
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .rk-pretty-select-open .rk-pretty-trigger {
+          border-color: rgba(34, 197, 94, 0.42);
+          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08), 0 0 16px rgba(34, 197, 94, 0.06);
+          background: rgba(255, 255, 255, 0.06);
+        }
+
+        .rk-pretty-label {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          color: #d1d5db;
+          text-align: left;
+          font-size: 0.8rem;
+          line-height: 1.15;
+          font-weight: 500;
+          white-space: nowrap;
+        }
+
+        .rk-pretty-label-filled {
+          color: #e5e7eb;
+        }
+
+        .rk-pretty-chevron {
+          color: #64748b;
+          transition: transform 0.2s ease;
+          flex-shrink: 0;
+        }
+
+        .rk-pretty-chevron-open {
+          transform: rotate(180deg);
+        }
+
+        .rk-pretty-options {
+          position: absolute;
+          top: calc(100% + 4px);
+          left: 0;
+          right: 0;
+          z-index: 100;
+          background: linear-gradient(135deg, rgba(15, 15, 30, 0.95) 0%, rgba(11, 15, 28, 0.98) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          border-radius: 12px;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+          backdrop-filter: blur(16px);
+          overflow: hidden;
+          max-height: 320px;
+          overflow-y: auto;
+        }
+
+        .rk-pretty-option {
+          width: 100%;
+          padding: 10px 12px;
+          border: none;
+          background: transparent;
+          color: #d1d5db;
+          text-align: left;
+          font-size: 0.85rem;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: all 0.15s ease;
+        }
+
+        .rk-pretty-option:hover {
+          background: rgba(34, 197, 94, 0.08);
+          color: #86efac;
+        }
+
+        .rk-pretty-option-active {
+          background: rgba(34, 197, 94, 0.12);
+          color: #86efac;
+          font-weight: 500;
+        }
+
+        .rk-pretty-option-check {
+          color: #86efac;
+        }
+
+        .rk-filter-count {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 6px 12px;
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          font-size: 0.8rem;
+          color: #9ca3af;
+        }
+
+        .rk-empty {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 16px;
+          padding: 60px 24px;
+          background: linear-gradient(135deg, rgba(15, 15, 30, 0.4) 0%, rgba(11, 15, 28, 0.45) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.05);
+          border-radius: 18px;
+          animation: rkRiseIn 0.45s ease both;
+          animation-delay: 0.16s;
+        }
+
+        .rk-empty-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 64px;
+          height: 64px;
+          border-radius: 14px;
+          background: rgba(34, 197, 94, 0.05);
+          border: 1px solid rgba(34, 197, 94, 0.1);
+        }
+
+        .rk-empty-text {
+          font-size: 0.95rem;
+          color: #9ca3af;
+          text-align: center;
+          margin: 0;
+        }
+
+        .rk-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+          gap: 20px;
+          animation: rkRiseIn 0.45s ease both;
+          animation-delay: 0.12s;
+        }
+
+        .rk-card-wrap {
+          animation: rkCardIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        @keyframes rkCardIn {
+          from { opacity: 0; transform: translateY(16px) scale(0.96); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .rk-card-item {
+          padding: 20px;
+          background: linear-gradient(135deg, rgba(20, 25, 40, 0.6) 0%, rgba(15, 20, 35, 0.7) 100%);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 14px;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          backdrop-filter: blur(8px);
+        }
+
+        .rk-card-item:hover {
+          border-color: rgba(34, 197, 94, 0.3);
+          background: linear-gradient(135deg, rgba(20, 25, 40, 0.8) 0%, rgba(15, 20, 35, 0.9) 100%);
+          box-shadow: 0 8px 32px rgba(34, 197, 94, 0.08), 0 0 20px rgba(34, 197, 94, 0.04);
+          transform: translateY(-4px);
+        }
+
+        .rk-card-header-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+
+        .rk-card-id {
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #86efac;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+
+        .rk-card-actions {
+          display: flex;
+          gap: 6px;
+        }
+
+        .rk-card-action-btn {
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: none;
+          background: rgba(239, 68, 68, 0.05);
+          border-radius: 8px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          opacity: 0;
+        }
+
+        .rk-card-item:hover .rk-card-action-btn {
+          opacity: 1;
+        }
+
+        .rk-card-action-btn:hover {
+          background: rgba(239, 68, 68, 0.15);
+        }
+
+        .rk-card-title-item {
+          font-size: 1rem;
+          font-weight: 700;
+          color: #f1f5f9;
+          margin: 0;
+          line-height: 1.4;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .rk-card-desc-item {
+          font-size: 0.85rem;
+          color: #cbd5e1;
+          margin: 0;
+          line-height: 1.4;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+
+        .rk-card-tags-item {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+        }
+
+        .rk-card-tag-item {
+          display: inline-block;
+          font-size: 0.7rem;
+          padding: 3px 8px;
+          background: rgba(34, 197, 94, 0.1);
+          border: 1px solid rgba(34, 197, 94, 0.2);
+          border-radius: 6px;
+          color: #86efac;
+          font-weight: 500;
+        }
+
+        .rk-card-tag-more {
+          background: rgba(100, 116, 139, 0.1);
+          border-color: rgba(100, 116, 139, 0.2);
+          color: #94a3b8;
+        }
+
+        .rk-card-meta-item {
+          display: flex;
+          gap: 8px;
+          margin-top: 4px;
+        }
+
+        .rk-card-priority-item {
+          display: inline-block;
+          font-size: 0.7rem;
+          padding: 3px 8px;
+          border-radius: 6px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
+        }
+
+        .rk-card-priority-item.prio-high {
+          background: rgba(239, 68, 68, 0.15);
+          color: #fca5a5;
+        }
+
+        .rk-card-priority-item.prio-medium {
+          background: rgba(59, 130, 246, 0.15);
+          color: #93c5fd;
+        }
+
+        .rk-card-priority-item.prio-low {
+          background: rgba(34, 197, 94, 0.15);
+          color: #86efac;
+        }
+
+        .rk-card-status-item {
+          font-size: 0.7rem;
+          padding: 3px 8px;
+          background: rgba(100, 116, 139, 0.1);
+          border-radius: 6px;
+          color: #cbd5e1;
+          font-weight: 500;
+        }
+
+        .rk-card-footer-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-top: 4px;
+          padding-top: 12px;
+          border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .rk-card-resp-item {
+          width: 28px;
+          height: 28px;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #fff;
+        }
+
+        .rk-card-date-item {
+          font-size: 0.75rem;
+          color: #64748b;
+        }
+      `}</style>
     </div>
   )
 }
