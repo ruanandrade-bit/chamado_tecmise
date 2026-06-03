@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Kanban as KanbanIcon, Plus, Trash2, Calendar, CalendarDays, Clock, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronRight, ChevronLeft, ChevronDown, Archive, History, ShieldAlert, RotateCcw } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
@@ -93,7 +94,7 @@ function ConfirmDeleteModalResolved({ isOpen, onClose, onConfirm, isDeleting, ta
 
   const previewText = task.title || task.description || ''
 
-  return (
+  return createPortal((
     <div
       className="pk-modal-overlay"
       style={{ zIndex: 99999 }}
@@ -230,7 +231,7 @@ function ConfirmDeleteModalResolved({ isOpen, onClose, onConfirm, isDeleting, ta
         </div>
       </div>
     </div>
-  )
+  ), document.body)
 }
 
 /* ─── Main Component ──────────────────────────────────────────────── */
@@ -314,6 +315,17 @@ export default function ResolvedKanban() {
   })
 
   const selectedTask = filteredTasks.find((task) => task.id === selectedTaskId) || null
+
+  useEffect(() => {
+    if (!selectedTask && !taskToDelete) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [selectedTask, taskToDelete])
 
   const handleDeleteRequest = (task) => {
     setTaskToDelete(task)
@@ -471,7 +483,7 @@ export default function ResolvedKanban() {
       )}
 
       {/* Details Modal */}
-      {selectedTask && (
+      {selectedTask && createPortal((
         <div className="pk-modal-overlay" onClick={() => setSelectedTaskId(null)}>
           <div 
             className="pk-modal-card" 
@@ -648,7 +660,7 @@ export default function ResolvedKanban() {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
 
       <style>{`
         .rk-container {
