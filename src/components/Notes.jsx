@@ -189,8 +189,6 @@ export default function Notes() {
     return new Date(dateA) - new Date(dateB)
   })
 
-  const countPedagoga = notes.filter(n => n.category === 'pedagoga').length + deadlines.filter(d => d.category === 'pedagoga').length
-  const countPsicologa = notes.filter(n => n.category === 'psicologa').length + deadlines.filter(d => d.category === 'psicologa').length
   const activeNotes = notes.filter(n => n.noteType === 'note').length
   const pendingReminders = notes.filter(n => n.noteType === 'reminder').length + deadlines.filter(d => d.status !== 'concluido').length
 
@@ -448,6 +446,29 @@ export default function Notes() {
                 })}
               </div>
             )}
+
+            {pinned.length > 0 && (
+              <>
+                <div className="nt-section-header" style={{ marginTop: 20 }}><h2>FIXADAS</h2></div>
+                <div className="nt-pinned-list">
+                  {pinned.map(note => {
+                    const cat = CATEGORY_CONFIG[note.category] || CATEGORY_CONFIG.pedagoga
+                    return (
+                      <div key={note.id} className="nt-pinned-card" onClick={() => setViewNote(note)} style={{ cursor: 'pointer' }}>
+                        <div className="nt-pinned-icon" style={{ background: cat.bg, color: cat.color }}>
+                          {note.category === 'psicologa' ? <Brain size={16} /> : <BookOpen size={16} />}
+                        </div>
+                        <div className="nt-pinned-info">
+                          <span className="nt-pinned-title">{note.title}</span>
+                          <span className="nt-pinned-meta">{formatDate(note.createdAt)} • {note.author}</span>
+                        </div>
+                        {canEdit && <button className="nt-pin-active" onClick={(e) => { e.stopPropagation(); togglePin(note) }}><Pin size={14} /></button>}
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Middle Column — Reminders */}
@@ -505,37 +526,6 @@ export default function Notes() {
             )}
           </div>
 
-          {/* Right Column — Categories + Pinned */}
-          <div className="nt-col-right">
-            <div className="nt-section-header"><h2>PROFISSIONAIS</h2></div>
-            <div className="nt-categories-box">
-              <div className="nt-cat-row"><span className="nt-cat-dot" style={{ background: '#a78bfa' }} /> Pedagoga <span className="nt-cat-count">{countPedagoga}</span></div>
-              <div className="nt-cat-row"><span className="nt-cat-dot" style={{ background: '#34d399' }} /> Psicóloga <span className="nt-cat-count">{countPsicologa}</span></div>
-            </div>
-
-            {pinned.length > 0 && (
-              <>
-                <div className="nt-section-header" style={{ marginTop: 20 }}><h2>FIXADAS</h2></div>
-                <div className="nt-pinned-list">
-                  {pinned.map(note => {
-                    const cat = CATEGORY_CONFIG[note.category] || CATEGORY_CONFIG.pedagoga
-                    return (
-                      <div key={note.id} className="nt-pinned-card" onClick={() => setViewNote(note)} style={{ cursor: 'pointer' }}>
-                        <div className="nt-pinned-icon" style={{ background: cat.bg, color: cat.color }}>
-                          {note.category === 'psicologa' ? <Brain size={16} /> : <BookOpen size={16} />}
-                        </div>
-                        <div className="nt-pinned-info">
-                          <span className="nt-pinned-title">{note.title}</span>
-                          <span className="nt-pinned-meta">{formatDate(note.createdAt)} • {note.author}</span>
-                        </div>
-                        {canEdit && <button className="nt-pin-active" onClick={(e) => { e.stopPropagation(); togglePin(note) }}><Pin size={14} /></button>}
-                      </div>
-                    )
-                  })}
-                </div>
-              </>
-            )}
-          </div>
         </div>
       )}
 
