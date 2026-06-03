@@ -42,6 +42,9 @@ export default function Deadlines() {
   const [isCategoryOpen, setIsCategoryOpen] = useState(false)
   const [isPriorityOpen, setIsPriorityOpen] = useState(false)
   const [isStatusOpen, setIsStatusOpen] = useState(false)
+  const [isFormCategoryOpen, setIsFormCategoryOpen] = useState(false)
+  const [isFormPriorityOpen, setIsFormPriorityOpen] = useState(false)
+  const [isFormStatusOpen, setIsFormStatusOpen] = useState(false)
 
   // Form state
   const [form, setForm] = useState({ title: '', description: '', date: '', time: '', category: 'pedagoga', priority: 'media', status: 'pendente' })
@@ -55,6 +58,9 @@ export default function Deadlines() {
       setIsCategoryOpen(false)
       setIsPriorityOpen(false)
       setIsStatusOpen(false)
+      setIsFormCategoryOpen(false)
+      setIsFormPriorityOpen(false)
+      setIsFormStatusOpen(false)
     }
     window.addEventListener('click', handleOutsideClick)
     return () => window.removeEventListener('click', handleOutsideClick)
@@ -88,6 +94,9 @@ export default function Deadlines() {
         setDeadlines(prev => [newDeadline, ...prev])
       }
       setForm({ title: '', description: '', date: '', time: '', category: 'pedagoga', priority: 'media', status: 'pendente' })
+      setIsFormCategoryOpen(false)
+      setIsFormPriorityOpen(false)
+      setIsFormStatusOpen(false)
       setShowAddModal(false)
     } catch (err) { setFormError(err.message || 'Falha ao salvar.') }
     finally { setIsSaving(false) }
@@ -104,6 +113,9 @@ export default function Deadlines() {
       priority: d.priority || 'media',
       status: d.status || 'pendente'
     })
+    setIsFormCategoryOpen(false)
+    setIsFormPriorityOpen(false)
+    setIsFormStatusOpen(false)
     setShowAddModal(true)
   }
 
@@ -181,7 +193,14 @@ export default function Deadlines() {
             <input placeholder="Buscar prazos ou descrições..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
           </div>
           {canEdit ? (
-            <button className="dl-new-btn" onClick={() => { setEditTarget(null); setForm({ title: '', description: '', date: '', time: '', category: 'pedagoga', priority: 'media', status: 'pendente' }); setShowAddModal(true) }}>
+            <button className="dl-new-btn" onClick={() => {
+              setEditTarget(null)
+              setForm({ title: '', description: '', date: '', time: '', category: 'pedagoga', priority: 'media', status: 'pendente' })
+              setIsFormCategoryOpen(false)
+              setIsFormPriorityOpen(false)
+              setIsFormStatusOpen(false)
+              setShowAddModal(true)
+            }}>
               <Plus size={16} /> Novo prazo
             </button>
           ) : (
@@ -479,28 +498,142 @@ export default function Deadlines() {
               <div className="dl-form-row">
                 <div className="dl-form-group" style={{ flex: 1 }}>
                   <label>Categoria</label>
-                  <select className="dl-input" value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))}>
-                    <option value="pedagoga">Pedagogia</option>
-                    <option value="psicologa">Psicologia</option>
-                    <option value="geral">Geral / Outros</option>
-                  </select>
+                  <div className="dl-form-select-container">
+                    <button
+                      type="button"
+                      className={`dl-form-select-btn ${isFormCategoryOpen ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setIsFormCategoryOpen(!isFormCategoryOpen)
+                        setIsFormPriorityOpen(false)
+                        setIsFormStatusOpen(false)
+                      }}
+                    >
+                      <span>
+                        {form.category === 'pedagoga' ? 'Pedagogia' :
+                         form.category === 'psicologa' ? 'Psicologia' : 'Geral / Outros'}
+                      </span>
+                      <ChevronDown size={14} className={`dl-select-chevron ${isFormCategoryOpen ? 'open' : ''}`} />
+                    </button>
+                    {isFormCategoryOpen && (
+                      <div className="dl-form-dropdown" onClick={(e) => e.stopPropagation()}>
+                        <div
+                          className={`dl-form-option ${form.category === 'pedagoga' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, category: 'pedagoga' })); setIsFormCategoryOpen(false) }}
+                        >
+                          <span className="dl-option-dot" style={{ background: '#a78bfa' }} />
+                          Pedagogia
+                        </div>
+                        <div
+                          className={`dl-form-option ${form.category === 'psicologa' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, category: 'psicologa' })); setIsFormCategoryOpen(false) }}
+                        >
+                          <span className="dl-option-dot" style={{ background: '#34d399' }} />
+                          Psicologia
+                        </div>
+                        <div
+                          className={`dl-form-option ${form.category === 'geral' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, category: 'geral' })); setIsFormCategoryOpen(false) }}
+                        >
+                          <span className="dl-option-dot" style={{ background: '#60a5fa' }} />
+                          Geral / Outros
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="dl-form-group" style={{ flex: 1 }}>
                   <label>Prioridade</label>
-                  <select className="dl-input" value={form.priority} onChange={e => setForm(p => ({ ...p, priority: e.target.value }))}>
-                    <option value="alta">Alta</option>
-                    <option value="media">Média</option>
-                    <option value="baixa">Baixa</option>
-                  </select>
+                  <div className="dl-form-select-container">
+                    <button
+                      type="button"
+                      className={`dl-form-select-btn ${isFormPriorityOpen ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setIsFormPriorityOpen(!isFormPriorityOpen)
+                        setIsFormCategoryOpen(false)
+                        setIsFormStatusOpen(false)
+                      }}
+                    >
+                      <span>
+                        {form.priority === 'alta' ? 'Alta' :
+                         form.priority === 'media' ? 'Média' : 'Baixa'}
+                      </span>
+                      <ChevronDown size={14} className={`dl-select-chevron ${isFormPriorityOpen ? 'open' : ''}`} />
+                    </button>
+                    {isFormPriorityOpen && (
+                      <div className="dl-form-dropdown" onClick={(e) => e.stopPropagation()}>
+                        <div
+                          className={`dl-form-option ${form.priority === 'alta' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, priority: 'alta' })); setIsFormPriorityOpen(false) }}
+                        >
+                          <span className="dl-option-dot" style={{ background: '#f87171' }} />
+                          Alta
+                        </div>
+                        <div
+                          className={`dl-form-option ${form.priority === 'media' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, priority: 'media' })); setIsFormPriorityOpen(false) }}
+                        >
+                          <span className="dl-option-dot" style={{ background: '#fbbf24' }} />
+                          Média
+                        </div>
+                        <div
+                          className={`dl-form-option ${form.priority === 'baixa' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, priority: 'baixa' })); setIsFormPriorityOpen(false) }}
+                        >
+                          <span className="dl-option-dot" style={{ background: '#9ca3af' }} />
+                          Baixa
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="dl-form-group">
                 <label>Status</label>
-                <select className="dl-input" value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))}>
-                  <option value="pendente">Pendente</option>
-                  <option value="em_andamento">Em Andamento</option>
-                  <option value="concluido">Concluído</option>
-                </select>
+                <div className="dl-form-select-container">
+                  <button
+                    type="button"
+                    className={`dl-form-select-btn ${isFormStatusOpen ? 'active' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setIsFormStatusOpen(!isFormStatusOpen)
+                      setIsFormCategoryOpen(false)
+                      setIsFormPriorityOpen(false)
+                    }}
+                  >
+                    <span>
+                      {form.status === 'pendente' ? 'Pendente' :
+                       form.status === 'em_andamento' ? 'Em Andamento' : 'Concluído'}
+                    </span>
+                    <ChevronDown size={14} className={`dl-select-chevron ${isFormStatusOpen ? 'open' : ''}`} />
+                  </button>
+                  {isFormStatusOpen && (
+                    <div className="dl-form-dropdown up" onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className={`dl-form-option ${form.status === 'pendente' ? 'selected' : ''}`}
+                        onClick={() => { setForm(p => ({ ...p, status: 'pendente' })); setIsFormStatusOpen(false) }}
+                      >
+                        <span className="dl-option-dot" style={{ background: '#f87171' }} />
+                        Pendente
+                      </div>
+                      <div
+                        className={`dl-form-option ${form.status === 'em_andamento' ? 'selected' : ''}`}
+                        onClick={() => { setForm(p => ({ ...p, status: 'em_andamento' })); setIsFormStatusOpen(false) }}
+                      >
+                        <span className="dl-option-dot" style={{ background: '#fbbf24' }} />
+                        Em Andamento
+                      </div>
+                      <div
+                        className={`dl-form-option ${form.status === 'concluido' ? 'selected' : ''}`}
+                        onClick={() => { setForm(p => ({ ...p, status: 'concluido' })); setIsFormStatusOpen(false) }}
+                      >
+                        <span className="dl-option-dot" style={{ background: '#34d399' }} />
+                        Concluído
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <button type="submit" className="dl-submit-btn" disabled={isSaving}>
                 {isSaving ? <><Loader2 size={16} className="dl-spinner" /> Salvando...</> : <><Plus size={16} /> Salvar Prazo</>}

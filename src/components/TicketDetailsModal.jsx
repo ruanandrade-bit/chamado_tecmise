@@ -232,16 +232,6 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
               </p>
             </div>
             <div>
-              <p className="text-dark-400 text-xs font-medium mb-1">Turma / Device</p>
-              <p className="text-sm font-semibold text-dark-100">
-                {ticket.classroom} / {ticket.device}
-              </p>
-            </div>
-            <div>
-              <p className="text-dark-400 text-xs font-medium mb-1">Período</p>
-              <p className="text-sm font-semibold text-dark-100">{ticket.period}</p>
-            </div>
-            <div>
               <p className="text-dark-400 text-xs font-medium mb-1">Responsável</p>
               <p className="text-sm font-semibold text-dark-100">{ticket.responsible}</p>
             </div>
@@ -259,9 +249,6 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
 
           {/* Problem type and description */}
           <div className="card-base border-dark-600">
-            <h3 className="font-semibold text-dark-100 mb-3">Local do problema</h3>
-            <p className="px-3 py-2 bg-dark-750 rounded-lg text-sm text-dark-300 mb-4">{ticket.problemType}</p>
-            
             <h3 className="font-semibold text-dark-100 mb-3">Descrição</h3>
             <p className="text-dark-300 text-sm leading-relaxed">{ticket.description}</p>
           </div>

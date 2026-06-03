@@ -4,10 +4,35 @@ import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import './PedagogicalKanban.css'
 
+const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/
+
+const getTodayIsoLocal = () => {
+  const now = new Date()
+  const timezoneOffsetMs = now.getTimezoneOffset() * 60000
+  return new Date(now.getTime() - timezoneOffsetMs).toISOString().split('T')[0]
+}
+
+const normalizeDateForInput = (value) => {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  if (isoDateRegex.test(raw)) return raw
+
+  const ddMmMatch = raw.match(/^(\d{2})\/(\d{2})$/)
+  if (ddMmMatch) {
+    const currentYear = new Date().getFullYear()
+    const [, day, month] = ddMmMatch
+    return `${currentYear}-${month}-${day}`
+  }
+
+  return ''
+}
+
 export default function PedagogicalKanban() {
   const { user } = useAuthStore()
   const role = (user?.role || '').toLowerCase()
   const canEdit = role === 'pedagoga' || role === 'psicóloga' || user?.canDragDrop === true
+  const currentUserName = (user?.name || '').trim() || 'Usuário'
+  const minDueDate = getTodayIsoLocal()
 
   const [tasks, setTasks] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -19,7 +44,6 @@ export default function PedagogicalKanban() {
   const [filterResp, setFilterResp] = useState('')
   const [isPriorityOpen, setIsPriorityOpen] = useState(false)
   const [isRespOpen, setIsRespOpen] = useState(false)
-  const [isFormRespOpen, setIsFormRespOpen] = useState(false)
   const [isFormPriorityOpen, setIsFormPriorityOpen] = useState(false)
   const [isFormStatusOpen, setIsFormStatusOpen] = useState(false)
 
@@ -41,7 +65,7 @@ export default function PedagogicalKanban() {
     priority: 'medium',
     date: '',
     tags: '',
-    responsible: 'Pedagoga'
+    responsible: currentUserName
   })
   const [formError, setFormError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -58,7 +82,6 @@ export default function PedagogicalKanban() {
     const handleOutsideClick = () => {
       setIsPriorityOpen(false)
       setIsRespOpen(false)
-      setIsFormRespOpen(false)
       setIsFormPriorityOpen(false)
       setIsFormStatusOpen(false)
     }
@@ -92,10 +115,13 @@ export default function PedagogicalKanban() {
       return setFormError('A data de prazo é obrigatória.')
     }
 
-    // Validate date format (dd/mm)
-    const dateRegex = /^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])$/
-    if (!dateRegex.test(form.date.trim())) {
-      return setFormError('Data inválida. Use o formato dd/mm')
+    const dueDate = form.date.trim()
+    if (!isoDateRegex.test(dueDate)) {
+      return setFormError('Data inválida. Use o calendário para selecionar o prazo.')
+    }
+
+    if (dueDate < minDueDate) {
+      return setFormError('Não é permitido cadastrar prazo com data anterior a hoje.')
     }
 
     setIsSaving(true)
@@ -105,14 +131,9 @@ export default function PedagogicalKanban() {
         .map(t => t.trim())
         .filter(t => t.length > 0)
 
-      // Process date: convert dd/mm to yyyy-mm-dd
-      const [day, month] = form.date.trim().split('/')
-      const currentYear = new Date().getFullYear()
-      const fullDate = `${currentYear}-${month}-${day}`
-
       const payload = {
         ...form,
-        date: fullDate,
+        date: dueDate,
         tags: tagsArray
       }
 
@@ -246,9 +267,9 @@ export default function PedagogicalKanban() {
       description: task.description || '',
       status: task.status || 'todo',
       priority: task.priority || 'medium',
-      date: task.date || '',
+      date: normalizeDateForInput(task.date),
       tags: (task.tags || []).join(', '),
-      responsible: task.responsible || 'Pedagoga'
+      responsible: task.responsible || currentUserName
     })
     setShowFormModal(true)
   }
@@ -261,7 +282,7 @@ export default function PedagogicalKanban() {
       priority: 'medium',
       date: '',
       tags: '',
-      responsible: 'Pedagoga'
+      responsible: currentUserName
     })
     setFormError('')
   }
@@ -762,40 +783,12 @@ export default function PedagogicalKanban() {
 
               <div className="pk-form-row">
                 <div className="pk-form-group" style={{ flex: 1 }}>
-                  <label>Responsável *</label>
-                  <div className="pk-form-select-container">
-                    <button 
-                      type="button"
-                      className={`pk-form-select-btn ${isFormRespOpen ? 'active' : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setIsFormRespOpen(!isFormRespOpen)
-                        setIsFormPriorityOpen(false)
-                        setIsFormStatusOpen(false)
-                      }}
-                    >
-                      <span>{form.responsible}</span>
-                      <ChevronDown size={14} className={`pk-select-chevron ${isFormRespOpen ? 'open' : ''}`} />
-                    </button>
-                    {isFormRespOpen && (
-                      <div className="pk-form-dropdown" onClick={(e) => e.stopPropagation()}>
-                        <div 
-                          className={`pk-dropdown-option ${form.responsible === 'Pedagoga' ? 'selected' : ''}`}
-                          onClick={() => { setForm(p => ({ ...p, responsible: 'Pedagoga' })); setIsFormRespOpen(false) }}
-                        >
-                          <span className="pk-option-dot" style={{ background: '#a78bfa' }} />
-                          Pedagoga
-                        </div>
-                        <div 
-                          className={`pk-dropdown-option ${form.responsible === 'Psicóloga' ? 'selected' : ''}`}
-                          onClick={() => { setForm(p => ({ ...p, responsible: 'Psicóloga' })); setIsFormRespOpen(false) }}
-                        >
-                          <span className="pk-option-dot" style={{ background: '#10b981' }} />
-                          Psicóloga
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <label>Usuário</label>
+                  <input
+                    className="pk-input"
+                    value={form.responsible}
+                    readOnly
+                  />
                 </div>
                 <div className="pk-form-group" style={{ flex: 1 }}>
                   <label>Prioridade *</label>
@@ -806,7 +799,6 @@ export default function PedagogicalKanban() {
                       onClick={(e) => {
                         e.stopPropagation()
                         setIsFormPriorityOpen(!isFormPriorityOpen)
-                        setIsFormRespOpen(false)
                         setIsFormStatusOpen(false)
                       }}
                     >
@@ -846,21 +838,12 @@ export default function PedagogicalKanban() {
                 <div className="pk-form-group" style={{ flex: 1 }}>
                   <label>Prazo Limite *</label>
                   <input
-                    type="text"
+                    type="date"
                     className="pk-input"
-                    placeholder="dd/mm"
                     value={form.date}
-                    onChange={e => {
-                      const value = e.target.value.replace(/[^0-9/]/g, '')
-                      if (value.length <= 5) {
-                        let formatted = value
-                        if (value.length === 2 && !value.includes('/')) {
-                          formatted = value + '/'
-                        }
-                        setForm(p => ({ ...p, date: formatted }))
-                      }
-                    }}
-                    maxLength="5"
+                    onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
+                    min={minDueDate}
+                    required
                   />
                 </div>
                 <div className="pk-form-group" style={{ flex: 1 }}>
@@ -872,7 +855,6 @@ export default function PedagogicalKanban() {
                       onClick={(e) => {
                         e.stopPropagation()
                         setIsFormStatusOpen(!isFormStatusOpen)
-                        setIsFormRespOpen(false)
                         setIsFormPriorityOpen(false)
                       }}
                     >

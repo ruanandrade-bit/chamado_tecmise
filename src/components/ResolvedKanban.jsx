@@ -103,9 +103,9 @@ function ConfirmDeleteModalResolved({ isOpen, onClose, onConfirm, isDeleting, ta
       <div
         className="absolute inset-0"
         style={{
-          background: 'rgba(0, 0, 0, 0.65)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(8px)',
+          background: 'radial-gradient(circle at 15% 20%, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0) 35%), radial-gradient(circle at 80% 12%, rgba(56,189,248,0.08) 0%, rgba(56,189,248,0) 32%), rgba(2, 6, 23, 0.76)',
+          backdropFilter: 'blur(14px) saturate(118%)',
+          WebkitBackdropFilter: 'blur(14px) saturate(118%)',
         }}
         onClick={!isDeleting ? onClose : undefined}
       />
@@ -484,9 +484,9 @@ export default function ResolvedKanban() {
           <div
             className="absolute inset-0"
             style={{
-              background: 'rgba(0, 0, 0, 0.65)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
+              background: 'radial-gradient(circle at 15% 20%, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0) 35%), radial-gradient(circle at 80% 12%, rgba(56,189,248,0.08) 0%, rgba(56,189,248,0) 32%), rgba(2, 6, 23, 0.76)',
+              backdropFilter: 'blur(14px) saturate(118%)',
+              WebkitBackdropFilter: 'blur(14px) saturate(118%)',
             }}
             onClick={() => setSelectedTaskId(null)}
           />
@@ -574,21 +574,13 @@ export default function ResolvedKanban() {
                 </div>
               </div>
 
-              {/* Main metadata grid - 3 columns */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+              {/* Main metadata grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
                 <div>
                   <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</span>
                   <p style={{ margin: '6px 0 0 0', fontWeight: 600, color: '#86efac' }}>
                     {selectedTask.status === 'todo' ? 'A Fazer' : selectedTask.status === 'inprogress' ? 'Em Andamento' : selectedTask.status === 'inrevision' ? 'Em Revisão' : 'Concluído'}
                   </p>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Turma / Device</span>
-                  <p style={{ margin: '6px 0 0 0', color: '#cbd5e1' }}>{selectedTask.deviceId || 'N/A'}</p>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Período</span>
-                  <p style={{ margin: '6px 0 0 0', color: '#cbd5e1' }}>{selectedTask.period || 'N/A'}</p>
                 </div>
               </div>
 
@@ -610,10 +602,10 @@ export default function ResolvedKanban() {
                 </div>
               </div>
 
-              {/* Local do problema / Descrição */}
+              {/* Descrição */}
               {selectedTask.description && (
                 <div style={{ paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Local do problema</span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Descrição</span>
                   <p style={{ fontSize: '0.875rem', color: '#cbd5e1', lineHeight: 1.5, whiteSpace: 'pre-wrap', margin: '8px 0 0 0' }}>{selectedTask.description}</p>
                 </div>
               )}
