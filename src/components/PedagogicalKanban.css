@@ -251,3 +251,117 @@
   border-color: rgba(16, 185, 129, 0.3);
   color: #34d399;
 }
+
+/* ── History Timeline ── */
+.pk-history-section {
+  margin-top: 14px;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.pk-history-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.pk-history-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+  padding-left: 16px;
+}
+
+.pk-history-timeline::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  background: linear-gradient(to bottom, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+  border-radius: 2px;
+}
+
+.pk-history-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+  position: relative;
+  animation: pkHistoryFadeIn 0.3s ease-out both;
+}
+
+.pk-history-item:nth-child(1) { animation-delay: 0.05s; }
+.pk-history-item:nth-child(2) { animation-delay: 0.1s; }
+.pk-history-item:nth-child(3) { animation-delay: 0.15s; }
+.pk-history-item:nth-child(4) { animation-delay: 0.2s; }
+.pk-history-item:nth-child(5) { animation-delay: 0.25s; }
+.pk-history-item:nth-child(n+6) { animation-delay: 0.3s; }
+
+@keyframes pkHistoryFadeIn {
+  from { opacity: 0; transform: translateX(-6px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.pk-history-dot {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  position: relative;
+  z-index: 1;
+  transition: transform 0.15s ease;
+}
+
+.pk-history-item:hover .pk-history-dot {
+  transform: scale(1.15);
+}
+
+.pk-history-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 2px;
+  min-width: 0;
+}
+
+.pk-history-text {
+  font-size: 0.8125rem;
+  color: #d1d5db;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.pk-history-text strong {
+  color: #f3f4f6;
+  font-weight: 700;
+}
+
+.pk-history-text em {
+  color: #a78bfa;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.pk-history-date {
+  font-size: 0.6875rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+

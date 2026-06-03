@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Kanban as KanbanIcon, Plus, Trash2, Calendar, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronRight, ChevronLeft, ChevronDown, Archive } from 'lucide-react'
+import { Kanban as KanbanIcon, Plus, Trash2, Calendar, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronRight, ChevronLeft, ChevronDown, Archive, History } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import './PedagogicalKanban.css'
@@ -231,7 +231,9 @@ export default function PedagogicalKanban() {
     setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: targetStatus } : t))
 
     try {
-      await api.put(`/kanban/${taskId}`, { status: targetStatus })
+      const updated = await api.put(`/kanban/${taskId}`, { status: targetStatus })
+      // Sync full response (includes history) back into local state
+      setTasks(prev => prev.map(t => t.id === updated.id ? updated : t))
     } catch (err) {
       // Revert if API fails
       setTasks(previousTasks)
@@ -252,7 +254,8 @@ export default function PedagogicalKanban() {
       const nextStatus = statuses[nextIndex]
       setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: nextStatus } : t))
       try {
-        await api.put(`/kanban/${task.id}`, { status: nextStatus })
+        const updated = await api.put(`/kanban/${task.id}`, { status: nextStatus })
+        setTasks(prev => prev.map(t => t.id === updated.id ? updated : t))
       } catch (err) {
         fetchTasks()
         alert(`Erro ao atualizar status: ${err.message}`)
@@ -713,6 +716,81 @@ export default function PedagogicalKanban() {
                 </div>
               </div>
 
+              {/* ── History Timeline ── */}
+              {viewTarget.history && viewTarget.history.length > 0 && (
+                <div className="pk-history-section">
+                  <div className="pk-history-header">
+                    <History size={14} />
+                    <span>Histórico de Atividades</span>
+                  </div>
+                  <div className="pk-history-timeline">
+                    {[...viewTarget.history].reverse().map((entry, idx) => {
+                      const d = new Date(entry.date)
+                      const dateStr = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                      const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+                      const statusLabel = (s) => {
+                        if (s === 'todo') return 'A Fazer'
+                        if (s === 'inprogress') return 'Em Andamento'
+                        if (s === 'inrevision') return 'Em Revisão'
+                        if (s === 'completed') return 'Concluído'
+                        return s
+                      }
+
+                      let icon, color, text
+                      switch (entry.action) {
+                        case 'created':
+                          icon = <Plus size={12} />
+                          color = '#10b981'
+                          text = <><strong>{entry.user}</strong> criou a tarefa</>
+                          break
+                        case 'status_changed':
+                          icon = <ArrowRight size={12} />
+                          color = entry.to === 'completed' ? '#10b981' : '#38bdf8'
+                          text = <><strong>{entry.user}</strong> moveu de <em>{statusLabel(entry.from)}</em> para <em>{statusLabel(entry.to)}</em></>
+                          break
+                        case 'priority_changed':
+                          icon = <AlertTriangle size={12} />
+                          color = '#fbbf24'
+                          text = <><strong>{entry.user}</strong> mudou a prioridade de <em>{getPriorityLabel(entry.from)}</em> para <em>{getPriorityLabel(entry.to)}</em></>
+                          break
+                        case 'deadline_changed':
+                          icon = <Calendar size={12} />
+                          color = '#a78bfa'
+                          text = <><strong>{entry.user}</strong> mudou o prazo de <em>{formatDate(entry.from)}</em> para <em>{formatDate(entry.to)}</em></>
+                          break
+                        case 'archived':
+                          icon = <Archive size={12} />
+                          color = '#f59e0b'
+                          text = <><strong>{entry.user}</strong> arquivou a tarefa</>
+                          break
+                        case 'unarchived':
+                          icon = <Archive size={12} />
+                          color = '#8b5cf6'
+                          text = <><strong>{entry.user}</strong> restaurou a tarefa</>
+                          break
+                        default:
+                          icon = <Clock size={12} />
+                          color = '#6b7280'
+                          text = <><strong>{entry.user}</strong> realizou uma ação</>
+                      }
+
+                      return (
+                        <div key={idx} className="pk-history-item">
+                          <div className="pk-history-dot" style={{ background: color, boxShadow: `0 0 8px ${color}44` }}>
+                            {icon}
+                          </div>
+                          <div className="pk-history-content">
+                            <p className="pk-history-text">{text}</p>
+                            <span className="pk-history-date">{dateStr} às {timeStr}</span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               {canEdit && (
                 <div className="pk-modal-actions">
                   {viewTarget.status === 'completed' && (
@@ -929,7 +1007,7 @@ export default function PedagogicalKanban() {
       {/* Delete Confirmation Modal (Uniform style) */}
       {showDeleteModal && deleteTarget && (
         <div className="pk-modal-overlay" onClick={() => setShowDeleteModal(false)}>
-          <div className="pk-modal-card pk-modal-sm" onClick={e => e.stopPropagation()}>
+          <div className="pk-modal-card" onClick={e => e.stopPropagation()}>
             <div className="pk-modal-accent pk-accent-red" />
             <div className="pk-modal-head">
               <div className="pk-modal-head-left">

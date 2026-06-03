@@ -8,6 +8,7 @@ import { USERS, STATUSES, TICKETS } from '../data/mockData.js'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = join(__dirname, '..', 'data')
 const STORE_PATH = join(DATA_DIR, 'store.json')
+const LEGACY_KANBAN_SEED_IDS = new Set(['KB-001', 'KB-002', 'KB-003', 'KB-004', 'KB-005', 'KB-006'])
 
 function loadFromDisk() {
   try {
@@ -104,9 +105,9 @@ async function loadFromMongo() {
   return null
 }
 
-function saveToMongo() {
-  if (!mongoCollection) return
-  mongoCollection.replaceOne(
+async function saveToMongoNow() {
+  if (!mongoCollection) return false
+  await mongoCollection.replaceOne(
     { _id: 'app_state' },
     {
       _id: 'app_state',
@@ -123,7 +124,12 @@ function saveToMongo() {
       _savedAt: new Date()
     },
     { upsert: true }
-  ).catch((err) => {
+  )
+  return true
+}
+
+function saveToMongo() {
+  saveToMongoNow().catch((err) => {
     console.error('[store] ❌ MongoDB save failed:', err.message)
   })
 }
@@ -146,6 +152,22 @@ const state = {
   notes: [],             // [{ id, title, description, category, author, authorRole, ... }]
   deadlines: [],         // [{ id, title, date, time, category, status, priority, author, createdAt }]
   kanbanTasks: []        // [{ id, title, description, status, priority, date, tags, responsible, author, createdAt }]
+}
+
+function stripLegacyKanbanSeedTasks() {
+  const current = Array.isArray(state.kanbanTasks) ? state.kanbanTasks : []
+  const cleaned = current.filter((task) => !LEGACY_KANBAN_SEED_IDS.has(String(task?.id || '')))
+  const changed = cleaned.length !== current.length
+  if (changed) state.kanbanTasks = cleaned
+  return changed
+}
+
+function syncCollaborationCollections(source) {
+  const payload = source || {}
+  state.notes = Array.isArray(payload.notes) ? payload.notes : []
+  state.deadlines = Array.isArray(payload.deadlines) ? payload.deadlines : []
+  state.kanbanTasks = Array.isArray(payload.kanbanTasks) ? payload.kanbanTasks : []
+  stripLegacyKanbanSeedTasks()
 }
 
 const CORE_USER_EMAILS = new Set(Object.keys(USERS))
@@ -274,9 +296,13 @@ export async function initStore() {
       saveToMongo()
     }
   } else {
-    console.log('[store] 🆕 First run — seeding with mock data.')
-    seedKanbanTasks()
+    console.log('[store] 🆕 First run — initializing empty Kanban/Notas/Prazos.')
     persistState()
+  }
+
+  const removedLegacyKanbanSeeds = stripLegacyKanbanSeedTasks()
+  if (removedLegacyKanbanSeeds) {
+    console.log('[store] 🧹 Removed legacy seeded Kanban tasks (KB-001..KB-006).')
   }
 
   if (!Array.isArray(state.professionals) || state.professionals.length === 0) {
@@ -877,9 +903,6 @@ export const memoryStore = {
 
   // ─── Pedagogical Kanban ───────────────────────────────────────────
   getKanbanTasks() {
-    if (!Array.isArray(state.kanbanTasks) || state.kanbanTasks.length === 0) {
-      seedKanbanTasks()
-    }
     return state.kanbanTasks || []
   },
   addKanbanTask(t) {
@@ -898,84 +921,42 @@ export const memoryStore = {
   deleteKanbanTask(id) {
     state.kanbanTasks = (state.kanbanTasks || []).filter(t => t.id !== id)
     persistState()
-  }
-}
+  },
 
-function seedKanbanTasks() {
-  state.kanbanTasks = [
-    {
-      id: 'KB-001',
-      title: 'Mapear jornada do aluno',
-      description: 'Documentar o fluxo completo de uso do produto, identificar pontos de atrito e oportunidades de melhoria.',
-      status: 'inprogress',
-      priority: 'medium',
-      date: new Date(Date.now() + 5*24*60*60*1000).toISOString().split('T')[0],
-      tags: ['UX', 'Research'],
-      responsible: 'Pedagoga',
-      author: 'Admin',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'KB-002',
-      title: 'Finalizar proposta pedagógica',
-      description: 'Elaborar e revisar a proposta de atendimento integrado para o aluno João Silva.',
-      status: 'inprogress',
-      priority: 'high',
-      date: new Date(Date.now() + 1*24*60*60*1000).toISOString().split('T')[0],
-      tags: ['Pedagógico', 'Acolhimento'],
-      responsible: 'Pedagoga',
-      author: 'Admin',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'KB-003',
-      title: 'Ajustar relatórios de atendimento',
-      description: 'Revisar e padronizar os feedbacks mensais enviados aos responsáveis.',
-      status: 'inprogress',
-      priority: 'low',
-      date: new Date(Date.now() + 6*24*60*60*1000).toISOString().split('T')[0],
-      tags: ['Atendimento'],
-      responsible: 'Psicóloga',
-      author: 'Admin',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'KB-004',
-      title: 'Validar calendário de entregas',
-      description: 'Revisar todas as datas de entrega do trimestre, alinhar com as equipes e ajustar cronograma conforme necessário.',
-      status: 'inrevision',
-      priority: 'medium',
-      date: new Date(Date.now() + 1*24*60*60*1000).toISOString().split('T')[0],
-      tags: ['Reuniões'],
-      responsible: 'Pedagoga',
-      author: 'Admin',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'KB-005',
-      title: 'Configurar ambiente de acolhimento',
-      description: 'Preparar a sala de recursos para o acolhimento de novos alunos com necessidades especiais.',
-      status: 'completed',
-      priority: 'medium',
-      date: new Date(Date.now() - 2*24*60*60*1000).toISOString().split('T')[0],
-      tags: ['Acolhimento'],
-      responsible: 'Psicóloga',
-      author: 'Admin',
-      createdAt: new Date().toISOString()
-    },
-    {
-      id: 'KB-006',
-      title: 'Preparar apresentação institucional',
-      description: 'Criar slides com os principais resultados do projeto pedagógico para a próxima reunião de pais.',
-      status: 'completed',
-      priority: 'high',
-      date: new Date(Date.now() + 4*24*60*60*1000).toISOString().split('T')[0],
-      tags: ['Apresentação'],
-      responsible: 'Pedagoga',
-      author: 'Admin',
-      createdAt: new Date().toISOString()
+  hasMongoPersistence() {
+    return Boolean(mongoCollection)
+  },
+
+  async refreshCollaborativeData() {
+    if (mongoCollection) {
+      const mongoData = await loadFromMongo()
+      if (mongoData) {
+        syncCollaborationCollections(mongoData)
+        return true
+      }
     }
-  ]
+
+    const diskData = loadFromDisk()
+    if (diskData) {
+      syncCollaborationCollections(diskData)
+      return true
+    }
+
+    return false
+  },
+
+  async ensureDurableCollaborativeData() {
+    try {
+      if (mongoCollection) {
+        await saveToMongoNow()
+      }
+      saveToDisk()
+      return true
+    } catch (err) {
+      console.error('[store] ❌ Failed to durably persist collaborative data:', err.message)
+      return false
+    }
+  }
 }
 
 // ─── Default School Data (seeds once, then managed via admin panel) ──

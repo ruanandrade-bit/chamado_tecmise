@@ -4,18 +4,36 @@ import { memoryStore } from '../services/memoryStore.js'
 import crypto from 'node:crypto'
 
 const router = Router()
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
 
 // All routes require authentication
 router.use(authRequired)
 
+function ensurePersistentStorage(res) {
+  if (IS_PRODUCTION && !memoryStore.hasMongoPersistence()) {
+    res.status(503).json({
+      message: 'Persistência indisponível. Configure MONGODB_URI no backend para salvar Kanban/Anotações/Prazos.'
+    })
+    return false
+  }
+  return true
+}
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
 // GET — anyone authenticated can view
-router.get('/', (_req, res) => {
+router.get('/', async (_req, res) => {
+  if (!ensurePersistentStorage(res)) return
+  await memoryStore.refreshCollaborativeData()
   const notes = memoryStore.getNotes()
   res.json(notes)
 })
 
 // POST — pedagoga/psicóloga/admin only
-router.post('/', pedagogaOrPsicologaOnly, (req, res) => {
+router.post('/', pedagogaOrPsicologaOnly, async (req, res) => {
+  if (!ensurePersistentStorage(res)) return
+  await memoryStore.refreshCollaborativeData()
+
   const { title, description, category, noteType, reminderDate, reminderTime, reminderStatus } = req.body
 
   if (!title || typeof title !== 'string' || !title.trim()) {
@@ -41,11 +59,18 @@ router.post('/', pedagogaOrPsicologaOnly, (req, res) => {
   }
 
   memoryStore.addNote(note)
+  const persisted = await memoryStore.ensureDurableCollaborativeData()
+  if (!persisted) {
+    return res.status(503).json({ message: 'Falha ao persistir anotação no banco. Tente novamente.' })
+  }
   res.status(201).json(note)
 })
 
 // PUT — pedagoga/psicóloga/admin only
-router.put('/:id', pedagogaOrPsicologaOnly, (req, res) => {
+router.put('/:id', pedagogaOrPsicologaOnly, async (req, res) => {
+  if (!ensurePersistentStorage(res)) return
+  await memoryStore.refreshCollaborativeData()
+
   const { title, description, category, noteType, isPinned, reminderDate, reminderTime, reminderStatus } = req.body
   const updates = {}
 
@@ -58,16 +83,32 @@ router.put('/:id', pedagogaOrPsicologaOnly, (req, res) => {
   if (reminderTime !== undefined) updates.reminderTime = reminderTime
   if (reminderStatus !== undefined) updates.reminderStatus = reminderStatus
 
-  const updated = memoryStore.updateNote(req.params.id, updates)
+  let updated = memoryStore.updateNote(req.params.id, updates)
+  if (!updated) {
+    await wait(120)
+    await memoryStore.refreshCollaborativeData()
+    updated = memoryStore.updateNote(req.params.id, updates)
+  }
+
   if (!updated) {
     return res.status(404).json({ message: 'Anotação não encontrada.' })
+  }
+  const persisted = await memoryStore.ensureDurableCollaborativeData()
+  if (!persisted) {
+    return res.status(503).json({ message: 'Falha ao persistir atualização no banco. Tente novamente.' })
   }
   res.json(updated)
 })
 
 // DELETE — pedagoga/psicóloga/admin only
-router.delete('/:id', pedagogaOrPsicologaOnly, (req, res) => {
+router.delete('/:id', pedagogaOrPsicologaOnly, async (req, res) => {
+  if (!ensurePersistentStorage(res)) return
+  await memoryStore.refreshCollaborativeData()
   memoryStore.deleteNote(req.params.id)
+  const persisted = await memoryStore.ensureDurableCollaborativeData()
+  if (!persisted) {
+    return res.status(503).json({ message: 'Falha ao persistir exclusão no banco. Tente novamente.' })
+  }
   res.json({ success: true })
 })
 
