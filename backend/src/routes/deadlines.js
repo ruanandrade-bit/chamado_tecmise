@@ -37,6 +37,11 @@ router.post('/', pedagogaOrPsicologaOnly, (req, res) => {
 
 // PUT — update deadline, persist in background (fast like tickets)
 router.put('/:id', pedagogaOrPsicologaOnly, (req, res) => {
+  const current = memoryStore.getDeadlines().find((deadline) => deadline.id === req.params.id)
+  if (current?.status === 'concluido') {
+    return res.status(403).json({ message: 'Prazos concluídos não podem ser editados.' })
+  }
+
   const updated = memoryStore.updateDeadline(req.params.id, req.body)
   if (!updated) return res.status(404).json({ message: 'Prazo não encontrado.' })
   res.json(updated)
@@ -44,6 +49,11 @@ router.put('/:id', pedagogaOrPsicologaOnly, (req, res) => {
 
 // DELETE — delete deadline, persist in background (fast like tickets)
 router.delete('/:id', pedagogaOrPsicologaOnly, (req, res) => {
+  const current = memoryStore.getDeadlines().find((deadline) => deadline.id === req.params.id)
+  if (current?.status === 'concluido') {
+    return res.status(403).json({ message: 'Prazos concluídos não podem ser excluídos.' })
+  }
+
   memoryStore.deleteDeadline(req.params.id)
   res.json({ success: true })
 })

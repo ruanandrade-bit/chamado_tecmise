@@ -328,11 +328,12 @@ export default function ResolvedKanban() {
   }, [selectedTask, taskToDelete])
 
   const handleDeleteRequest = (task) => {
+    if (!canDeleteTask) return
     setTaskToDelete(task)
   }
 
   const handleConfirmDelete = async () => {
-    if (!taskToDelete || isDeleting) return
+    if (!canDeleteTask || !taskToDelete || isDeleting) return
     setIsDeleting(true)
     try {
       await api.delete(`/kanban/${taskToDelete.id}`)

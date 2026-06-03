@@ -119,6 +119,7 @@ export default function Deadlines() {
   }
 
   const handleEditClick = (d) => {
+    if (d.status === 'concluido') return
     setEditTarget(d)
     setForm({
       title: d.title,
@@ -136,6 +137,9 @@ export default function Deadlines() {
 
   const handleDelete = async (id) => {
     try {
+      const target = allDeadlinesAndReminders.find(d => d.id === id)
+      if (target?.status === 'concluido') return
+
       if (String(id).startsWith('AN-')) {
         await api.delete(`/notes/${id}`)
         setNotes(prev => prev.filter(n => n.id !== id))
@@ -149,6 +153,7 @@ export default function Deadlines() {
 
   const toggleStatus = async (d) => {
     if (!canEdit) return
+    if (d.status === 'concluido') return
     try {
       if (String(d.id).startsWith('AN-')) {
         const newStatus = d.status === 'concluido' ? 'agendado' : 'concluido'
@@ -437,11 +442,12 @@ export default function Deadlines() {
             const prio = PRIORITY_CONFIG[dl.priority] || PRIORITY_CONFIG.media
             const st = STATUS_CONFIG[dl.status] || STATUS_CONFIG.pendente
             const overdue = isOverdue(dl.date, dl.status)
+            const canModifyDeadline = canEdit && dl.status !== 'concluido'
 
             return (
               <div key={dl.id} className={`dl-row-card ${dl.status === 'concluido' ? 'dl-completed-card' : ''}`} style={{ animationDelay: `${i * 0.04}s` }} onClick={() => setViewDeadline(dl)}>
                 {/* Status Toggle Box */}
-                <div className="dl-status-box" onClick={(e) => { e.stopPropagation(); toggleStatus(dl) }} title={canEdit ? "Alterar status" : ""}>
+                <div className="dl-status-box" onClick={(e) => { e.stopPropagation(); if (canModifyDeadline) toggleStatus(dl) }} title={canModifyDeadline ? "Alterar status" : ""}>
                   {dl.status === 'concluido' ? (
                     <CheckCircle2 size={22} className="dl-status-check-active" />
                   ) : (
@@ -479,7 +485,7 @@ export default function Deadlines() {
                   <span className="dl-tag-badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
                 </div>
 
-                {canEdit && (
+                {canModifyDeadline && (
                   <div className="dl-actions-group" onClick={e => e.stopPropagation()}>
                     <button className="dl-action-btn" onClick={() => handleEditClick(dl)} title="Editar prazo"><Edit3 size={14} /></button>
                     <button className="dl-action-btn dl-btn-del" onClick={() => setDeleteTarget(dl)} title="Excluir prazo"><Trash2 size={14} /></button>

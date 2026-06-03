@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { authRequired, pedagogaOrPsicologaOnly } from '../middleware/auth.js'
+import { adminOnly, authRequired, pedagogaOrPsicologaOnly } from '../middleware/auth.js'
 import { memoryStore } from '../services/memoryStore.js'
 import crypto from 'node:crypto'
 
@@ -148,8 +148,8 @@ router.put('/:id', pedagogaOrPsicologaOnly, (req, res) => {
   res.json(updated)
 })
 
-// DELETE — remove task, persist in background (fast like tickets)
-router.delete('/:id', pedagogaOrPsicologaOnly, (req, res) => {
+// DELETE — admin only remove task, persist in background (fast like tickets)
+router.delete('/:id', adminOnly, (req, res) => {
   memoryStore.deleteKanbanTask(req.params.id)
   res.json({ success: true })
 })
