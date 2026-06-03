@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { StickyNote, Plus, Trash2, Pin, PinOff, Calendar, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check } from 'lucide-react'
+import { StickyNote, Plus, Trash2, Pin, PinOff, Calendar, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import './Notes.css'
@@ -25,6 +25,8 @@ export default function Notes() {
   const [isLoading, setIsLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [viewNote, setViewNote] = useState(null)
+  const [showTimeline, setShowTimeline] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCategory, setFilterCategory] = useState('')
   const [filterType, setFilterType] = useState('')
@@ -253,7 +255,7 @@ export default function Notes() {
                   {pinned.map(note => {
                     const cat = CATEGORY_CONFIG[note.category] || CATEGORY_CONFIG.pedagoga
                     return (
-                      <div key={note.id} className="nt-pinned-card">
+                      <div key={note.id} className="nt-pinned-card" onClick={() => setViewNote(note)} style={{ cursor: 'pointer' }}>
                         <div className="nt-pinned-icon" style={{ background: cat.bg, color: cat.color }}>
                           {note.category === 'psicologa' ? <Brain size={16} /> : <BookOpen size={16} />}
                         </div>
@@ -261,7 +263,7 @@ export default function Notes() {
                           <span className="nt-pinned-title">{note.title}</span>
                           <span className="nt-pinned-meta">{formatDate(note.createdAt)} • {note.author}</span>
                         </div>
-                        {canEdit && <button className="nt-pin-active" onClick={() => togglePin(note)}><Pin size={14} /></button>}
+                        {canEdit && <button className="nt-pin-active" onClick={(e) => { e.stopPropagation(); togglePin(note) }}><Pin size={14} /></button>}
                       </div>
                     )
                   })}
@@ -293,6 +295,9 @@ export default function Notes() {
               )
             })}
           </div>
+          <button className="nt-timeline-view-all" onClick={() => setShowTimeline(true)}>
+            Ver toda a linha do tempo <ArrowRight size={14} />
+          </button>
         </div>
       )}
 
@@ -362,20 +367,122 @@ export default function Notes() {
         </div>
       )}
 
-      {/* Delete Confirm */}
+      {/* Delete Confirm — padrão do sistema */}
       {deleteTarget && (
         <div className="nt-modal-overlay" onClick={() => setDeleteTarget(null)}>
           <div className="nt-modal-card nt-modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="nt-modal-accent nt-accent-red" />
             <div className="nt-modal-head">
-              <h3>⚠️ Confirmar Exclusão</h3>
+              <div className="nt-modal-head-left">
+                <div className="nt-modal-head-icon nt-icon-red">
+                  <AlertTriangle size={18} />
+                </div>
+                <div>
+                  <h3>Confirmar Exclusão</h3>
+                  <p className="nt-modal-head-sub">Esta ação não pode ser desfeita</p>
+                </div>
+              </div>
+              <button className="nt-modal-close" onClick={() => setDeleteTarget(null)}><X size={16} /></button>
             </div>
             <div className="nt-modal-body">
-              <p>Excluir <strong>"{deleteTarget.title}"</strong>?</p>
-              <p style={{ fontSize: '0.75rem', color: '#f87171', marginTop: 8 }}>Esta ação é irreversível.</p>
+              <p style={{ color: '#d1d5db', fontSize: '0.875rem', lineHeight: 1.5 }}>Tem certeza que deseja excluir a anotação <strong style={{ color: '#f1f5f9' }}>"{deleteTarget.title}"</strong>?</p>
               <div className="nt-modal-actions">
                 <button className="nt-btn-cancel" onClick={() => setDeleteTarget(null)}>Cancelar</button>
-                <button className="nt-btn-danger" onClick={() => handleDelete(deleteTarget.id)}>Excluir</button>
+                <button className="nt-btn-danger" onClick={() => handleDelete(deleteTarget.id)}><Trash2 size={14} /> Excluir</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Note Detail Modal (fixadas) */}
+      {viewNote && (() => {
+        const cat = CATEGORY_CONFIG[viewNote.category] || CATEGORY_CONFIG.pedagoga
+        return (
+          <div className="nt-modal-overlay" onClick={() => setViewNote(null)}>
+            <div className="nt-modal-card" onClick={e => e.stopPropagation()}>
+              <div className="nt-modal-accent" />
+              <div className="nt-modal-head">
+                <div className="nt-modal-head-left">
+                  <div className="nt-modal-head-icon" style={{ background: cat.bg, color: cat.color }}>
+                    {viewNote.category === 'psicologa' ? <Brain size={18} /> : <BookOpen size={18} />}
+                  </div>
+                  <div>
+                    <h3>{viewNote.title}</h3>
+                    <p className="nt-modal-head-sub">{cat.label} • {viewNote.author}</p>
+                  </div>
+                </div>
+                <button className="nt-modal-close" onClick={() => setViewNote(null)}><X size={16} /></button>
+              </div>
+              <div className="nt-modal-body">
+                {viewNote.description ? (
+                  <p style={{ color: '#d1d5db', fontSize: '0.875rem', lineHeight: 1.6 }}>{viewNote.description}</p>
+                ) : (
+                  <p style={{ color: '#6b7280', fontSize: '0.8125rem', fontStyle: 'italic' }}>Sem descrição.</p>
+                )}
+                <div className="nt-detail-info-grid">
+                  <div className="nt-detail-info-item">
+                    <span className="nt-detail-label">Categoria</span>
+                    <span className="nt-cat-badge" style={{ background: cat.bg, color: cat.color, borderColor: cat.border }}>{cat.label}</span>
+                  </div>
+                  <div className="nt-detail-info-item">
+                    <span className="nt-detail-label">Autor</span>
+                    <span style={{ color: '#e5e7eb', fontSize: '0.8125rem' }}>👤 {viewNote.author}</span>
+                  </div>
+                  <div className="nt-detail-info-item">
+                    <span className="nt-detail-label">Tipo</span>
+                    <span style={{ color: '#e5e7eb', fontSize: '0.8125rem' }}>{viewNote.noteType === 'reminder' ? '🔔 Lembrete' : '📝 Anotação'}</span>
+                  </div>
+                  <div className="nt-detail-info-item">
+                    <span className="nt-detail-label">Criado em</span>
+                    <span style={{ color: '#e5e7eb', fontSize: '0.8125rem' }}>📅 {formatDateTime(viewNote.createdAt)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
+      {/* Full Timeline Modal */}
+      {showTimeline && (
+        <div className="nt-modal-overlay" onClick={() => setShowTimeline(false)}>
+          <div className="nt-modal-card nt-modal-lg" onClick={e => e.stopPropagation()}>
+            <div className="nt-modal-accent" />
+            <div className="nt-modal-head">
+              <div className="nt-modal-head-left">
+                <div className="nt-modal-head-icon" style={{ background: 'rgba(167,139,250,0.12)', color: '#a78bfa' }}>
+                  <Clock size={18} />
+                </div>
+                <div>
+                  <h3>Linha do Tempo Completa</h3>
+                  <p className="nt-modal-head-sub">{notes.length} registro{notes.length !== 1 ? 's' : ''}</p>
+                </div>
+              </div>
+              <button className="nt-modal-close" onClick={() => setShowTimeline(false)}><X size={16} /></button>
+            </div>
+            <div className="nt-modal-body nt-timeline-modal-body">
+              {notes.map((note, i) => {
+                const cat = CATEGORY_CONFIG[note.category] || CATEGORY_CONFIG.pedagoga
+                const time = note.reminderTime || new Date(note.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                return (
+                  <div key={note.id} className="nt-tl-modal-row">
+                    <div className="nt-tl-modal-line">
+                      <span className="nt-tl-dot" style={{ background: cat.color }} />
+                      {i < notes.length - 1 && <div className="nt-tl-connector" />}
+                    </div>
+                    <div className="nt-tl-modal-content">
+                      <div className="nt-tl-modal-time">{time} • {formatDate(note.createdAt)}</div>
+                      <h4 className="nt-tl-title">{note.title}</h4>
+                      {note.description && <p className="nt-tl-desc">{note.description}</p>}
+                      <div className="nt-tl-footer">
+                        <span className="nt-cat-badge-sm" style={{ background: cat.bg, color: cat.color }}>{cat.label}</span>
+                        <span style={{ fontSize: '0.625rem', color: '#6b7280' }}>👤 {note.author}</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>

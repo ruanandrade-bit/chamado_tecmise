@@ -14,6 +14,7 @@ import SchoolConfig from './components/SchoolConfig'
 import NotificationCenter from './components/NotificationCenter'
 import CameraObstruction from './components/CameraObstruction'
 import Notes from './components/Notes'
+import Deadlines from './components/Deadlines'
 
 export default function App() {
   const { isAuthenticated, isAuthLoading, initAuth } = useAuthStore()
@@ -30,6 +31,7 @@ export default function App() {
     || currentPage === 'inventory'
     || currentPage === 'devices-online'
     || currentPage === 'notes'
+    || currentPage === 'deadlines'
   )
 
   useEffect(() => {
@@ -98,6 +100,7 @@ export default function App() {
             {currentPage === 'school-config' && <SchoolConfig />}
             {currentPage === 'camera-obstruction' && <CameraObstruction />}
             {currentPage === 'notes' && <Notes />}
+            {currentPage === 'deadlines' && <Deadlines />}
           </div>
         </main>
       </div>

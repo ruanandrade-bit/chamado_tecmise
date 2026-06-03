@@ -24,7 +24,8 @@ function loadFromDisk() {
           schoolData: data.schoolData || null,
           professionals: Array.isArray(data.professionals) ? data.professionals : null,
           cameraObstructions: Array.isArray(data.cameraObstructions) ? data.cameraObstructions : [],
-          notes: Array.isArray(data.notes) ? data.notes : []
+          notes: Array.isArray(data.notes) ? data.notes : [],
+          deadlines: Array.isArray(data.deadlines) ? data.deadlines : []
         }
       }
     }
@@ -46,6 +47,7 @@ function saveToDisk() {
       professionals: state.professionals,
       cameraObstructions: state.cameraObstructions,
       notes: state.notes,
+      deadlines: state.deadlines,
       _savedAt: new Date().toISOString()
     }, null, 2))
   } catch (err) {
@@ -89,7 +91,8 @@ async function loadFromMongo() {
         schoolData: doc.schoolData || null,
         professionals: Array.isArray(doc.professionals) ? doc.professionals : null,
         cameraObstructions: Array.isArray(doc.cameraObstructions) ? doc.cameraObstructions : [],
-        notes: Array.isArray(doc.notes) ? doc.notes : []
+        notes: Array.isArray(doc.notes) ? doc.notes : [],
+        deadlines: Array.isArray(doc.deadlines) ? doc.deadlines : []
       }
     }
   } catch (err) {
@@ -112,6 +115,7 @@ function saveToMongo() {
       professionals: state.professionals,
       cameraObstructions: state.cameraObstructions,
       notes: state.notes,
+      deadlines: state.deadlines,
       _savedAt: new Date()
     },
     { upsert: true }
@@ -135,7 +139,8 @@ const state = {
   schoolData: null,     // school→device→turma config, managed via admin panel
   professionals: null,  // [{ id, name, role }], managed via admin panel
   cameraObstructions: [], // [{ id, school, devices, startTime, endTime, percentage, createdAt, createdBy }]
-  notes: []              // [{ id, title, description, category, author, authorRole, ... }]
+  notes: [],             // [{ id, title, description, category, author, authorRole, ... }]
+  deadlines: []          // [{ id, title, date, time, category, status, priority, author, createdAt }]
 }
 
 const CORE_USER_EMAILS = new Set(Object.keys(USERS))
@@ -850,7 +855,13 @@ export const memoryStore = {
   deleteNote(id) {
     state.notes = (state.notes || []).filter(n => n.id !== id)
     persistState()
-  }
+  },
+
+  // ─── Deadlines (Datas & Prazos) ───────────────────────────────────
+  getDeadlines() { return state.deadlines || [] },
+  addDeadline(d) { if (!Array.isArray(state.deadlines)) state.deadlines = []; state.deadlines.unshift(d); persistState(); return d },
+  updateDeadline(id, u) { const i = (state.deadlines||[]).findIndex(d=>d.id===id); if(i===-1) return null; state.deadlines[i]={...state.deadlines[i],...u}; persistState(); return state.deadlines[i] },
+  deleteDeadline(id) { state.deadlines=(state.deadlines||[]).filter(d=>d.id!==id); persistState() }
 }
 
 // ─── Default School Data (seeds once, then managed via admin panel) ──

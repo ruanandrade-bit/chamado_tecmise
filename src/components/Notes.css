@@ -136,5 +136,30 @@
 .nt-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
 .nt-btn-cancel { padding: 10px 16px; border-radius: 8px; font-size: 0.8125rem; font-weight: 600; cursor: pointer; border: none; background: rgba(255,255,255,0.05); color: #9ca3af; transition: all 0.2s; }
 .nt-btn-cancel:hover { background: rgba(255,255,255,0.08); color: #f3f4f6; }
-.nt-btn-danger { padding: 10px 16px; border-radius: 8px; font-size: 0.8125rem; font-weight: 600; cursor: pointer; border: none; background: #ef4444; color: white; transition: all 0.2s; }
+.nt-btn-danger { padding: 10px 16px; border-radius: 8px; font-size: 0.8125rem; font-weight: 600; cursor: pointer; border: none; background: #ef4444; color: white; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
 .nt-btn-danger:hover { background: #dc2626; }
+
+/* ── Modal Head with Icon (system pattern) ── */
+.nt-modal-head-left { display: flex; align-items: center; gap: 12px; }
+.nt-modal-head-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: rgba(167,139,250,0.12); color: #a78bfa; }
+.nt-icon-red { background: rgba(239,68,68,0.12) !important; color: #f87171 !important; }
+.nt-modal-head-sub { font-size: 0.75rem; color: #6b7280; margin-top: 2px; font-weight: 400; }
+.nt-accent-red { background: linear-gradient(90deg, transparent, rgba(239,68,68,0.5), rgba(248,113,113,0.7), rgba(239,68,68,0.5), transparent) !important; }
+.nt-modal-lg { max-width: 640px; }
+
+/* ── Note Detail Info Grid ── */
+.nt-detail-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 8px; padding: 16px; background: rgba(0,0,0,0.15); border-radius: 12px; border: 1px solid rgba(255,255,255,0.04); }
+.nt-detail-info-item { display: flex; flex-direction: column; gap: 4px; }
+.nt-detail-label { font-size: 0.6875rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; }
+
+/* ── Timeline View All Button ── */
+.nt-timeline-view-all { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 14px; margin-top: 16px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); color: #9ca3af; font-size: 0.8125rem; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+.nt-timeline-view-all:hover { background: rgba(167,139,250,0.06); border-color: rgba(167,139,250,0.15); color: #a78bfa; }
+
+/* ── Full Timeline Modal ── */
+.nt-timeline-modal-body { gap: 0 !important; }
+.nt-tl-modal-row { display: flex; gap: 16px; }
+.nt-tl-modal-line { display: flex; flex-direction: column; align-items: center; width: 16px; flex-shrink: 0; padding-top: 4px; }
+.nt-tl-connector { width: 2px; flex: 1; background: rgba(255,255,255,0.06); margin-top: 4px; }
+.nt-tl-modal-content { flex: 1; padding-bottom: 20px; }
+.nt-tl-modal-time { font-size: 0.6875rem; color: #6b7280; margin-bottom: 4px; }
