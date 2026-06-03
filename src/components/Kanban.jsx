@@ -338,7 +338,7 @@ export default function Kanban() {
 
       {/* Header with title on left and button on right */}
       <div className="kb-header-wrapper">
-        <h1 className="kb-title">Kanban Board</h1>
+        <h1 className="kb-title">Chamados</h1>
         
         {!isViewOnly && (
           <button

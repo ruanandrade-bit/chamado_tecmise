@@ -1,0 +1,710 @@
+import { useState, useEffect } from 'react'
+import { Kanban as KanbanIcon, Plus, Trash2, Calendar, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronRight, ChevronLeft } from 'lucide-react'
+import { api } from '../services/api'
+import { useAuthStore } from '../stores/authStore'
+import './PedagogicalKanban.css'
+
+export default function PedagogicalKanban() {
+  const { user } = useAuthStore()
+  const canEdit = user?.role && ['pedagoga', 'psicologa', 'admin'].includes(user.role)
+
+  const [tasks, setTasks] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterPriority, setFilterPriority] = useState('')
+  const [filterResp, setFilterResp] = useState('')
+
+  // Modals
+  const [showFormModal, setShowFormModal] = useState(false)
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [editTarget, setEditTarget] = useState(null)
+  const [viewTarget, setViewTarget] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+
+  // Form State
+  const [form, setForm] = useState({
+    title: '',
+    description: '',
+    status: 'todo',
+    priority: 'medium',
+    date: '',
+    tags: '',
+    responsible: 'Pedagoga'
+  })
+  const [formError, setFormError] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+
+  // Drag State
+  const [draggedTaskId, setDraggedTaskId] = useState(null)
+  const [dragOverColumn, setDragOverColumn] = useState(null)
+
+  useEffect(() => {
+    fetchTasks()
+  }, [])
+
+  const fetchTasks = async () => {
+    setIsLoading(true)
+    setError('')
+    try {
+      const data = await api.get('/kanban')
+      setTasks(data || [])
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Handle Form Submission (Create or Edit)
+  const handleFormSubmit = async (e) => {
+    e.preventDefault()
+    setFormError('')
+
+    if (!form.title.trim()) {
+      return setFormError('O título da tarefa é obrigatório.')
+    }
+
+    setIsSaving(true)
+    try {
+      const tagsArray = form.tags
+        .split(',')
+        .map(t => t.trim())
+        .filter(t => t.length > 0)
+
+      const payload = {
+        ...form,
+        tags: tagsArray
+      }
+
+      if (editTarget) {
+        const updated = await api.put(`/kanban/${editTarget.id}`, payload)
+        setTasks(prev => prev.map(t => t.id === updated.id ? updated : t))
+        if (viewTarget && viewTarget.id === updated.id) {
+          setViewTarget(updated)
+        }
+      } else {
+        const created = await api.post('/kanban', payload)
+        setTasks(prev => [created, ...prev])
+      }
+
+      setShowFormModal(false)
+      setEditTarget(null)
+      resetForm()
+    } catch (err) {
+      setFormError(err.message)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Handle Delete Task
+  const handleDeleteTask = async () => {
+    if (!deleteTarget) return
+    setIsSaving(true)
+    try {
+      await api.delete(`/kanban/${deleteTarget.id}`)
+      setTasks(prev => prev.filter(t => t.id !== deleteTarget.id))
+      setShowDeleteModal(false)
+      setShowDetailModal(false)
+      setDeleteTarget(null)
+      setViewTarget(null)
+    } catch (err) {
+      alert(`Erro ao excluir tarefa: ${err.message}`)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Handle Drag & Drop
+  const handleDragStart = (e, taskId) => {
+    if (!canEdit) return e.preventDefault()
+    setDraggedTaskId(taskId)
+    e.dataTransfer.setData('text/plain', taskId)
+  }
+
+  const handleDragOver = (e, colStatus) => {
+    if (!canEdit) return
+    e.preventDefault()
+    setDragOverColumn(colStatus)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverColumn(null)
+  }
+
+  const handleDrop = async (e, targetStatus) => {
+    if (!canEdit) return
+    e.preventDefault()
+    setDragOverColumn(null)
+
+    const taskId = draggedTaskId || e.dataTransfer.getData('text/plain')
+    if (!taskId) return
+
+    const task = tasks.find(t => t.id === taskId)
+    if (!task || task.status === targetStatus) return
+
+    // Optimistic UI update
+    const previousTasks = [...tasks]
+    setTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: targetStatus } : t))
+
+    try {
+      await api.put(`/kanban/${taskId}`, { status: targetStatus })
+    } catch (err) {
+      // Revert if API fails
+      setTasks(previousTasks)
+      alert(`Falha ao mover tarefa: ${err.message}`)
+    } finally {
+      setDraggedTaskId(null)
+    }
+  }
+
+  // Move via buttons (for accessibility & non-drag interactions)
+  const handleMoveTaskStatus = async (task, direction) => {
+    if (!canEdit) return
+    const statuses = ['todo', 'inprogress', 'inrevision', 'completed']
+    const currentIndex = statuses.indexOf(task.status)
+    const nextIndex = currentIndex + direction
+
+    if (nextIndex >= 0 && nextIndex < statuses.length) {
+      const nextStatus = statuses[nextIndex]
+      setTasks(prev => prev.map(t => t.id === task.id ? { ...t, status: nextStatus } : t))
+      try {
+        await api.put(`/kanban/${task.id}`, { status: nextStatus })
+      } catch (err) {
+        fetchTasks()
+        alert(`Erro ao atualizar status: ${err.message}`)
+      }
+    }
+  }
+
+  const handleEditClick = (task) => {
+    setEditTarget(task)
+    setForm({
+      title: task.title,
+      description: task.description || '',
+      status: task.status || 'todo',
+      priority: task.priority || 'medium',
+      date: task.date || '',
+      tags: (task.tags || []).join(', '),
+      responsible: task.responsible || 'Pedagoga'
+    })
+    setShowFormModal(true)
+  }
+
+  const resetForm = () => {
+    setForm({
+      title: '',
+      description: '',
+      status: 'todo',
+      priority: 'medium',
+      date: '',
+      tags: '',
+      responsible: 'Pedagoga'
+    })
+    setFormError('')
+  }
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return ''
+    const [y, m, d] = dateStr.split('-')
+    const date = new Date(+y, +m - 1, +d)
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+  }
+
+  const getPriorityLabel = (p) => {
+    if (p === 'high') return 'Alta'
+    if (p === 'medium') return 'Média'
+    return 'Baixa'
+  }
+
+  // Filter Tasks
+  const filteredTasks = tasks.filter(t => {
+    const matchesSearch =
+      t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (t.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.responsible.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (t.tags || []).some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+
+    const matchesPriority = !filterPriority || t.priority === filterPriority
+    const matchesResp = !filterResp || t.responsible.toLowerCase() === filterResp.toLowerCase()
+
+    return matchesSearch && matchesPriority && matchesResp
+  })
+
+  // Dynamic Statistics
+  const openTasksCount = tasks.filter(t => ['todo', 'inprogress', 'inrevision'].includes(t.status)).length
+  const highPriorityCount = tasks.filter(t => t.priority === 'high' && t.status !== 'completed').length
+  const completedTasksCount = tasks.filter(t => t.status === 'completed').length
+
+  const columns = [
+    { id: 'todo', label: 'A Fazer', color: '#a78bfa' },
+    { id: 'inprogress', label: 'Em Andamento', color: '#38bdf8' },
+    { id: 'inrevision', label: 'Em Revisão', color: '#fbbf24' },
+    { id: 'completed', label: 'Concluído', color: '#10b981' }
+  ]
+
+  return (
+    <div className="pk-container">
+      {/* Header */}
+      <div className="pk-page-header">
+        <div className="pk-header-left">
+          <div className="pk-header-icon"><KanbanIcon size={24} /></div>
+          <div>
+            <h1 className="pk-page-title">Kanban</h1>
+            <p className="pk-page-sub">Acompanhe tarefas, projetos pedagógicos e psicológicos</p>
+          </div>
+        </div>
+        <div className="pk-header-right">
+          <div className="pk-search-box">
+            <Search size={14} />
+            <input
+              placeholder="Buscar tarefas, tags, responsáveis..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+          </div>
+          {canEdit ? (
+            <button className="pk-new-btn" onClick={() => { setEditTarget(null); resetForm(); setShowFormModal(true) }}>
+              <Plus size={16} /> Nova Tarefa
+            </button>
+          ) : (
+            <span className="pk-badge-view"><AlertCircle size={14} /> Somente Leitura</span>
+          )}
+        </div>
+      </div>
+
+      {/* Statistics */}
+      <div className="pk-stats-grid">
+        <div className="pk-stat-card">
+          <div className="pk-stat-card-left">
+            <div className="pk-stat-icon" style={{ color: '#38bdf8', background: 'rgba(56,189,248,0.1)' }}><Clock size={20} /></div>
+            <div>
+              <p className="pk-stat-num">{openTasksCount}</p>
+              <p className="pk-stat-label">Em aberto</p>
+            </div>
+          </div>
+          <svg className="pk-sparkline-svg" style={{ stroke: '#38bdf8' }} viewBox="0 0 100 40">
+            <path d="M 0 30 Q 20 15 40 25 T 80 10 T 100 20" />
+            <circle cx="100" cy="20" r="3" fill="#38bdf8" />
+          </svg>
+        </div>
+        <div className="pk-stat-card">
+          <div className="pk-stat-card-left">
+            <div className="pk-stat-icon" style={{ color: '#f87171', background: 'rgba(248,113,113,0.1)' }}><AlertTriangle size={20} /></div>
+            <div>
+              <p className="pk-stat-num">{highPriorityCount}</p>
+              <p className="pk-stat-label">Alta prioridade</p>
+            </div>
+          </div>
+          <svg className="pk-sparkline-svg" style={{ stroke: '#f87171' }} viewBox="0 0 100 40">
+            <path d="M 0 35 Q 30 10 50 28 T 100 5" />
+            <circle cx="100" cy="5" r="3" fill="#f87171" />
+          </svg>
+        </div>
+        <div className="pk-stat-card">
+          <div className="pk-stat-card-left">
+            <div className="pk-stat-icon" style={{ color: '#10b981', background: 'rgba(16,185,129,0.1)' }}><Check size={20} /></div>
+            <div>
+              <p className="pk-stat-num">{completedTasksCount}</p>
+              <p className="pk-stat-label">Concluídas</p>
+            </div>
+          </div>
+          <svg className="pk-sparkline-svg" style={{ stroke: '#10b981' }} viewBox="0 0 100 40">
+            <path d="M 0 38 Q 20 30 50 15 T 80 18 T 100 2" />
+            <circle cx="100" cy="2" r="3" fill="#10b981" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Filters Bar */}
+      <div className="pk-filters-bar">
+        <div className="pk-filter-item">
+          <Filter size={12} />
+          <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)}>
+            <option value="">Todas as prioridades</option>
+            <option value="high">Alta prioridade</option>
+            <option value="medium">Média prioridade</option>
+            <option value="low">Baixa prioridade</option>
+          </select>
+        </div>
+        <div className="pk-filter-item">
+          <Brain size={12} />
+          <select value={filterResp} onChange={e => setFilterResp(e.target.value)}>
+            <option value="">Todos os responsáveis</option>
+            <option value="Pedagoga">Pedagoga</option>
+            <option value="Psicóloga">Psicóloga</option>
+          </select>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="pk-loading" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 80, color: '#9ca3af' }}>
+          <Loader2 size={32} className="pk-spinner" style={{ animation: 'spin 1s linear infinite' }} />
+          <p style={{ marginTop: 12 }}>Carregando quadro...</p>
+        </div>
+      ) : error ? (
+        <div className="pk-alert-error" style={{ margin: '20px 0' }}><AlertCircle size={16} /> {error}</div>
+      ) : (
+        /* Kanban Board Grid */
+        <div className="pk-board">
+          {columns.map(col => {
+            const colTasks = filteredTasks.filter(t => t.status === col.id)
+            const isTarget = dragOverColumn === col.id
+
+            return (
+              <div
+                key={col.id}
+                className={`pk-column ${isTarget ? 'drag-over' : ''}`}
+                onDragOver={e => handleDragOver(e, col.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={e => handleDrop(e, col.id)}
+              >
+                <div className="pk-col-header">
+                  <div className="pk-col-title-wrap">
+                    <span className="pk-col-dot" style={{ background: col.color }} />
+                    <span className="pk-col-title">{col.label}</span>
+                  </div>
+                  <span className="pk-col-count">{colTasks.length}</span>
+                </div>
+
+                <div className="pk-col-body">
+                  {colTasks.length === 0 ? (
+                    <div className="pk-column-empty">
+                      <div className="pk-column-empty-icon"><KanbanIcon size={16} /></div>
+                      <span className="pk-column-empty-text">Nenhuma tarefa</span>
+                    </div>
+                  ) : (
+                    colTasks.map(task => {
+                      // Avatar letter
+                      const initial = task.responsible ? task.responsible.charAt(0).toUpperCase() : 'P'
+                      const isHigh = task.priority === 'high'
+
+                      return (
+                        <div
+                          key={task.id}
+                          className={`pk-card pk-card-priority-${task.priority}`}
+                          draggable={canEdit}
+                          onDragStart={e => handleDragStart(e, task.id)}
+                          onClick={() => { setViewTarget(task); setShowDetailModal(true) }}
+                        >
+                          <div className="pk-card-header">
+                            <h4 className="pk-card-title">{task.title}</h4>
+                          </div>
+
+                          {task.description && (
+                            <p className="pk-card-desc">{task.description}</p>
+                          )}
+
+                          {task.tags && task.tags.length > 0 && (
+                            <div className="pk-card-tags">
+                              {task.tags.map((tag, idx) => (
+                                <span key={idx} className="pk-card-tag">{tag}</span>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="pk-card-footer">
+                            <div className="pk-card-meta-left">
+                              <span className={`pk-card-priority-badge prio-${task.priority}`}>
+                                {getPriorityLabel(task.priority)}
+                              </span>
+                            </div>
+
+                            <div className="pk-card-meta-right">
+                              {task.date && (
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.6875rem' }}>
+                                  <Calendar size={10} /> {formatDate(task.date)}
+                                </span>
+                              )}
+                              <span
+                                className="pk-card-resp-badge"
+                                style={{
+                                  background: task.responsible === 'Psicóloga' ? '#10b981' : '#a78bfa'
+                                }}
+                                title={task.responsible}
+                              >
+                                {initial}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Column Mover buttons for viewOnly roles or mobile, styled compactly */}
+                          {canEdit && (
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.02)', paddingTop: 6 }}>
+                              <button
+                                title="Mover para esquerda"
+                                disabled={task.status === 'todo'}
+                                onClick={(e) => { e.stopPropagation(); handleMoveTaskStatus(task, -1) }}
+                                style={{ background: 'rgba(255,255,255,0.03)', border: 'none', borderRadius: 4, width: 22, height: 18, color: '#9ca3af', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              >
+                                <ChevronLeft size={12} />
+                              </button>
+                              <button
+                                title="Mover para direita"
+                                disabled={task.status === 'completed'}
+                                onClick={(e) => { e.stopPropagation(); handleMoveTaskStatus(task, 1) }}
+                                style={{ background: 'rgba(255,255,255,0.03)', border: 'none', borderRadius: 4, width: 22, height: 18, color: '#9ca3af', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              >
+                                <ChevronRight size={12} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Details Modal */}
+      {showDetailModal && viewTarget && (
+        <div className="pk-modal-overlay" onClick={() => setShowDetailModal(false)}>
+          <div className="pk-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="pk-modal-accent" style={{ background: viewTarget.status === 'completed' ? '#10b981' : '#a78bfa' }} />
+            <div className="pk-modal-head">
+              <div className="pk-modal-head-left">
+                <div
+                  className="pk-modal-head-icon"
+                  style={{
+                    background: viewTarget.status === 'completed' ? 'rgba(16,185,129,0.1)' : 'rgba(167,139,250,0.1)',
+                    color: viewTarget.status === 'completed' ? '#10b981' : '#a78bfa'
+                  }}
+                >
+                  <KanbanIcon size={18} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f3f4f6' }}>#{viewTarget.id}</h3>
+                  <p className="pk-modal-head-sub">Criado por {viewTarget.author}</p>
+                </div>
+              </div>
+              <button className="pk-modal-close" onClick={() => setShowDetailModal(false)}><X size={16} /></button>
+            </div>
+
+            <div className="pk-modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Título</span>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f3f4f6', margin: 0 }}>{viewTarget.title}</h2>
+              </div>
+
+              {viewTarget.description && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Descrição</span>
+                  <p style={{ fontSize: '0.875rem', color: '#d1d5db', lineHeight: 1.5, whiteSpace: 'pre-wrap', margin: 0 }}>{viewTarget.description}</p>
+                </div>
+              )}
+
+              {viewTarget.tags && viewTarget.tags.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Etiquetas (Tags)</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {viewTarget.tags.map((tag, idx) => (
+                      <span key={idx} className="pk-card-tag" style={{ fontSize: '0.75rem', padding: '3px 8px' }}>{tag}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="pk-detail-info-grid">
+                <div className="pk-detail-info-item">
+                  <span className="pk-detail-label">Responsável</span>
+                  <span className="pk-detail-val">{viewTarget.responsible}</span>
+                </div>
+                <div className="pk-detail-info-item">
+                  <span className="pk-detail-label">Prioridade</span>
+                  <span className={`pk-detail-val prio-${viewTarget.priority}`} style={{ fontWeight: 700 }}>
+                    {getPriorityLabel(viewTarget.priority)}
+                  </span>
+                </div>
+                <div className="pk-detail-info-item">
+                  <span className="pk-detail-label">Status Atual</span>
+                  <span className="pk-detail-val" style={{ textTransform: 'capitalize' }}>
+                    {viewTarget.status === 'todo' ? 'A Fazer' : viewTarget.status === 'inprogress' ? 'Em Andamento' : viewTarget.status === 'inrevision' ? 'Em Revisão' : 'Concluído'}
+                  </span>
+                </div>
+                <div className="pk-detail-info-item">
+                  <span className="pk-detail-label">Prazo Limite</span>
+                  <span className="pk-detail-val" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Calendar size={12} /> {viewTarget.date ? formatDate(viewTarget.date) : 'Sem data definida'}
+                  </span>
+                </div>
+              </div>
+
+              {canEdit && (
+                <div className="pk-modal-actions">
+                  <button className="pk-btn-cancel" onClick={() => handleEditClick(viewTarget)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Edit3 size={14} /> Editar
+                  </button>
+                  <button className="pk-btn-danger" onClick={() => { setDeleteTarget(viewTarget); setShowDeleteModal(true) }}>
+                    <Trash2 size={14} /> Excluir
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create / Edit Form Modal */}
+      {showFormModal && (
+        <div className="pk-modal-overlay" onClick={() => { setShowFormModal(false); setEditTarget(null) }}>
+          <div className="pk-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="pk-modal-accent" />
+            <div className="pk-modal-head">
+              <div className="pk-modal-head-left">
+                <div className="pk-modal-head-icon">
+                  <KanbanIcon size={18} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f3f4f6' }}>
+                    {editTarget ? 'Editar Tarefa' : 'Nova Tarefa Kanban'}
+                  </h3>
+                  <p className="pk-modal-head-sub">Preencha os campos para {editTarget ? 'atualizar' : 'criar'} a tarefa</p>
+                </div>
+              </div>
+              <button className="pk-modal-close" onClick={() => { setShowFormModal(false); setEditTarget(null) }}><X size={16} /></button>
+            </div>
+
+            <form onSubmit={handleFormSubmit} className="pk-modal-body">
+              {formError && <div className="pk-alert-error"><AlertCircle size={14} /> {formError}</div>}
+
+              <div className="pk-form-group">
+                <label>Título *</label>
+                <input
+                  className="pk-input"
+                  value={form.title}
+                  onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+                  placeholder="Ex: Reunião com responsáveis - João"
+                  required
+                />
+              </div>
+
+              <div className="pk-form-group">
+                <label>Descrição</label>
+                <textarea
+                  className="pk-input pk-textarea"
+                  value={form.description}
+                  onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+                  placeholder="Ex: Discutir plano de intervenção escolar e acompanhamento psicológico..."
+                />
+              </div>
+
+              <div className="pk-form-row">
+                <div className="pk-form-group" style={{ flex: 1 }}>
+                  <label>Responsável *</label>
+                  <select
+                    className="pk-input"
+                    value={form.responsible}
+                    onChange={e => setForm(p => ({ ...p, responsible: e.target.value }))}
+                    style={{ background: '#1e2235' }}
+                  >
+                    <option value="Pedagoga">Pedagoga</option>
+                    <option value="Psicóloga">Psicóloga</option>
+                  </select>
+                </div>
+                <div className="pk-form-group" style={{ flex: 1 }}>
+                  <label>Prioridade *</label>
+                  <select
+                    className="pk-input"
+                    value={form.priority}
+                    onChange={e => setForm(p => ({ ...p, priority: e.target.value }))}
+                    style={{ background: '#1e2235' }}
+                  >
+                    <option value="high">Alta</option>
+                    <option value="medium">Média</option>
+                    <option value="low">Baixa</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pk-form-row">
+                <div className="pk-form-group" style={{ flex: 1 }}>
+                  <label>Prazo Limite</label>
+                  <input
+                    type="date"
+                    className="pk-input"
+                    value={form.date}
+                    onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
+                  />
+                </div>
+                <div className="pk-form-group" style={{ flex: 1 }}>
+                  <label>Status Inicial</label>
+                  <select
+                    className="pk-input"
+                    value={form.status}
+                    onChange={e => setForm(p => ({ ...p, status: e.target.value }))}
+                    style={{ background: '#1e2235' }}
+                  >
+                    <option value="todo">A Fazer</option>
+                    <option value="inprogress">Em Andamento</option>
+                    <option value="inrevision">Em Revisão</option>
+                    <option value="completed">Concluído</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pk-form-group">
+                <label>Etiquetas (Separadas por vírgula)</label>
+                <input
+                  className="pk-input"
+                  value={form.tags}
+                  onChange={e => setForm(p => ({ ...p, tags: e.target.value }))}
+                  placeholder="Ex: Acolhimento, João, Reunião"
+                />
+              </div>
+
+              <button type="submit" className="pk-submit-btn" disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 size={16} className="pk-spinner" style={{ animation: 'spin 1s linear infinite' }} />
+                    <span>Salvando...</span>
+                  </>
+                ) : (
+                  <span>Salvar Tarefa</span>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal (Uniform style) */}
+      {showDeleteModal && deleteTarget && (
+        <div className="pk-modal-overlay" onClick={() => setShowDeleteModal(false)}>
+          <div className="pk-modal-card pk-modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="pk-modal-accent pk-accent-red" />
+            <div className="pk-modal-head">
+              <div className="pk-modal-head-left">
+                <div className="pk-modal-head-icon pk-icon-red">
+                  <AlertTriangle size={18} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#f3f4f6' }}>Confirmar Exclusão</h3>
+                </div>
+              </div>
+              <button className="pk-modal-close" onClick={() => setShowDeleteModal(false)}><X size={16} /></button>
+            </div>
+            <div className="pk-modal-body" style={{ gap: 18 }}>
+              <p style={{ fontSize: '0.875rem', color: '#9ca3af', lineHeight: 1.5, margin: 0 }}>
+                Tem certeza que deseja excluir permanentemente a tarefa <strong>"{deleteTarget.title}"</strong>? Esta ação não pode ser desfeita.
+              </p>
+              <div className="pk-modal-actions" style={{ marginTop: 6 }}>
+                <button className="pk-btn-cancel" onClick={() => setShowDeleteModal(false)}>Cancelar</button>
+                <button className="pk-btn-danger" onClick={handleDeleteTask} disabled={isSaving}>
+                  {isSaving ? 'Excluindo...' : 'Sim, Excluir'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

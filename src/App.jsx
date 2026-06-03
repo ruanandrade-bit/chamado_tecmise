@@ -15,6 +15,7 @@ import NotificationCenter from './components/NotificationCenter'
 import CameraObstruction from './components/CameraObstruction'
 import Notes from './components/Notes'
 import Deadlines from './components/Deadlines'
+import PedagogicalKanban from './components/PedagogicalKanban'
 
 export default function App() {
   const { isAuthenticated, isAuthLoading, initAuth } = useAuthStore()
@@ -32,6 +33,7 @@ export default function App() {
     || currentPage === 'devices-online'
     || currentPage === 'notes'
     || currentPage === 'deadlines'
+    || currentPage === 'pedagogical-kanban'
   )
 
   useEffect(() => {
@@ -101,6 +103,7 @@ export default function App() {
             {currentPage === 'camera-obstruction' && <CameraObstruction />}
             {currentPage === 'notes' && <Notes />}
             {currentPage === 'deadlines' && <Deadlines />}
+            {currentPage === 'pedagogical-kanban' && <PedagogicalKanban />}
           </div>
         </main>
       </div>

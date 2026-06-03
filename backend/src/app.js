@@ -14,6 +14,7 @@ import professionalsRoutes from './routes/professionals.js'
 import cameraObstructionRoutes from './routes/cameraObstruction.js'
 import notesRoutes from './routes/notes.js'
 import deadlinesRoutes from './routes/deadlines.js'
+import kanbanRoutes from './routes/kanban.js'
 
 const app = express()
 const IS_PRODUCTION = process.env.NODE_ENV === 'production'
@@ -175,6 +176,7 @@ app.use('/api/professionals', professionalsRoutes)
 app.use('/api/camera-obstructions', cameraObstructionRoutes)
 app.use('/api/notes', notesRoutes)
 app.use('/api/deadlines', deadlinesRoutes)
+app.use('/api/kanban', kanbanRoutes)
 
 app.use((err, _req, res, _next) => {
   const status = Number.isInteger(err?.status) ? err.status : 500

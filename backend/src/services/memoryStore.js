@@ -25,7 +25,8 @@ function loadFromDisk() {
           professionals: Array.isArray(data.professionals) ? data.professionals : null,
           cameraObstructions: Array.isArray(data.cameraObstructions) ? data.cameraObstructions : [],
           notes: Array.isArray(data.notes) ? data.notes : [],
-          deadlines: Array.isArray(data.deadlines) ? data.deadlines : []
+          deadlines: Array.isArray(data.deadlines) ? data.deadlines : [],
+          kanbanTasks: Array.isArray(data.kanbanTasks) ? data.kanbanTasks : []
         }
       }
     }
@@ -48,6 +49,7 @@ function saveToDisk() {
       cameraObstructions: state.cameraObstructions,
       notes: state.notes,
       deadlines: state.deadlines,
+      kanbanTasks: state.kanbanTasks,
       _savedAt: new Date().toISOString()
     }, null, 2))
   } catch (err) {
@@ -92,7 +94,8 @@ async function loadFromMongo() {
         professionals: Array.isArray(doc.professionals) ? doc.professionals : null,
         cameraObstructions: Array.isArray(doc.cameraObstructions) ? doc.cameraObstructions : [],
         notes: Array.isArray(doc.notes) ? doc.notes : [],
-        deadlines: Array.isArray(doc.deadlines) ? doc.deadlines : []
+        deadlines: Array.isArray(doc.deadlines) ? doc.deadlines : [],
+        kanbanTasks: Array.isArray(doc.kanbanTasks) ? doc.kanbanTasks : []
       }
     }
   } catch (err) {
@@ -116,6 +119,7 @@ function saveToMongo() {
       cameraObstructions: state.cameraObstructions,
       notes: state.notes,
       deadlines: state.deadlines,
+      kanbanTasks: state.kanbanTasks,
       _savedAt: new Date()
     },
     { upsert: true }
@@ -140,7 +144,8 @@ const state = {
   professionals: null,  // [{ id, name, role }], managed via admin panel
   cameraObstructions: [], // [{ id, school, devices, startTime, endTime, percentage, createdAt, createdBy }]
   notes: [],             // [{ id, title, description, category, author, authorRole, ... }]
-  deadlines: []          // [{ id, title, date, time, category, status, priority, author, createdAt }]
+  deadlines: [],         // [{ id, title, date, time, category, status, priority, author, createdAt }]
+  kanbanTasks: []        // [{ id, title, description, status, priority, date, tags, responsible, author, createdAt }]
 }
 
 const CORE_USER_EMAILS = new Set(Object.keys(USERS))
@@ -247,6 +252,9 @@ export async function initStore() {
     if (mongoData.inventory) state.inventory = mongoData.inventory
     if (mongoData.schoolData) state.schoolData = mongoData.schoolData
     if (mongoData.professionals) state.professionals = mongoData.professionals
+    if (Array.isArray(mongoData.notes)) state.notes = mongoData.notes
+    if (Array.isArray(mongoData.deadlines)) state.deadlines = mongoData.deadlines
+    if (Array.isArray(mongoData.kanbanTasks)) state.kanbanTasks = mongoData.kanbanTasks
   } else if (diskData) {
     state.tickets = diskData.tickets
     state.notifications = diskData.notifications
@@ -257,6 +265,9 @@ export async function initStore() {
     if (diskData.inventory) state.inventory = diskData.inventory
     if (diskData.schoolData) state.schoolData = diskData.schoolData
     if (diskData.professionals) state.professionals = diskData.professionals
+    if (Array.isArray(diskData.notes)) state.notes = diskData.notes
+    if (Array.isArray(diskData.deadlines)) state.deadlines = diskData.deadlines
+    if (Array.isArray(diskData.kanbanTasks)) state.kanbanTasks = diskData.kanbanTasks
     // Seed MongoDB if it's empty but connected
     if (connected) {
       console.log('[store] 🔄 Syncing disk data to MongoDB...')
@@ -264,6 +275,7 @@ export async function initStore() {
     }
   } else {
     console.log('[store] 🆕 First run — seeding with mock data.')
+    seedKanbanTasks()
     persistState()
   }
 
@@ -861,7 +873,109 @@ export const memoryStore = {
   getDeadlines() { return state.deadlines || [] },
   addDeadline(d) { if (!Array.isArray(state.deadlines)) state.deadlines = []; state.deadlines.unshift(d); persistState(); return d },
   updateDeadline(id, u) { const i = (state.deadlines||[]).findIndex(d=>d.id===id); if(i===-1) return null; state.deadlines[i]={...state.deadlines[i],...u}; persistState(); return state.deadlines[i] },
-  deleteDeadline(id) { state.deadlines=(state.deadlines||[]).filter(d=>d.id!==id); persistState() }
+  deleteDeadline(id) { state.deadlines=(state.deadlines||[]).filter(d=>d.id!==id); persistState() },
+
+  // ─── Pedagogical Kanban ───────────────────────────────────────────
+  getKanbanTasks() {
+    if (!Array.isArray(state.kanbanTasks) || state.kanbanTasks.length === 0) {
+      seedKanbanTasks()
+    }
+    return state.kanbanTasks || []
+  },
+  addKanbanTask(t) {
+    if (!Array.isArray(state.kanbanTasks)) state.kanbanTasks = []
+    state.kanbanTasks.unshift(t)
+    persistState()
+    return t
+  },
+  updateKanbanTask(id, u) {
+    const i = (state.kanbanTasks || []).findIndex(t => t.id === id)
+    if (i === -1) return null
+    state.kanbanTasks[i] = { ...state.kanbanTasks[i], ...u }
+    persistState()
+    return state.kanbanTasks[i]
+  },
+  deleteKanbanTask(id) {
+    state.kanbanTasks = (state.kanbanTasks || []).filter(t => t.id !== id)
+    persistState()
+  }
+}
+
+function seedKanbanTasks() {
+  state.kanbanTasks = [
+    {
+      id: 'KB-001',
+      title: 'Mapear jornada do aluno',
+      description: 'Documentar o fluxo completo de uso do produto, identificar pontos de atrito e oportunidades de melhoria.',
+      status: 'inprogress',
+      priority: 'medium',
+      date: new Date(Date.now() + 5*24*60*60*1000).toISOString().split('T')[0],
+      tags: ['UX', 'Research'],
+      responsible: 'Pedagoga',
+      author: 'Admin',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'KB-002',
+      title: 'Finalizar proposta pedagógica',
+      description: 'Elaborar e revisar a proposta de atendimento integrado para o aluno João Silva.',
+      status: 'inprogress',
+      priority: 'high',
+      date: new Date(Date.now() + 1*24*60*60*1000).toISOString().split('T')[0],
+      tags: ['Pedagógico', 'Acolhimento'],
+      responsible: 'Pedagoga',
+      author: 'Admin',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'KB-003',
+      title: 'Ajustar relatórios de atendimento',
+      description: 'Revisar e padronizar os feedbacks mensais enviados aos responsáveis.',
+      status: 'inprogress',
+      priority: 'low',
+      date: new Date(Date.now() + 6*24*60*60*1000).toISOString().split('T')[0],
+      tags: ['Atendimento'],
+      responsible: 'Psicóloga',
+      author: 'Admin',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'KB-004',
+      title: 'Validar calendário de entregas',
+      description: 'Revisar todas as datas de entrega do trimestre, alinhar com as equipes e ajustar cronograma conforme necessário.',
+      status: 'inrevision',
+      priority: 'medium',
+      date: new Date(Date.now() + 1*24*60*60*1000).toISOString().split('T')[0],
+      tags: ['Reuniões'],
+      responsible: 'Pedagoga',
+      author: 'Admin',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'KB-005',
+      title: 'Configurar ambiente de acolhimento',
+      description: 'Preparar a sala de recursos para o acolhimento de novos alunos com necessidades especiais.',
+      status: 'completed',
+      priority: 'medium',
+      date: new Date(Date.now() - 2*24*60*60*1000).toISOString().split('T')[0],
+      tags: ['Acolhimento'],
+      responsible: 'Psicóloga',
+      author: 'Admin',
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'KB-006',
+      title: 'Preparar apresentação institucional',
+      description: 'Criar slides com os principais resultados do projeto pedagógico para a próxima reunião de pais.',
+      status: 'completed',
+      priority: 'high',
+      date: new Date(Date.now() + 4*24*60*60*1000).toISOString().split('T')[0],
+      tags: ['Apresentação'],
+      responsible: 'Pedagoga',
+      author: 'Admin',
+      createdAt: new Date().toISOString()
+    }
+  ]
 }
 
 // ─── Default School Data (seeds once, then managed via admin panel) ──

@@ -32,6 +32,7 @@ export default function Notes() {
   const [filterType, setFilterType] = useState('')
   const [timelineMonth, setTimelineMonth] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` })
   const [tlModalMonth, setTlModalMonth] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` })
+  const [editTarget, setEditTarget] = useState(null)
 
   // Form
   const [form, setForm] = useState({ title: '', description: '', category: 'pedagoga', noteType: 'note', reminderDate: '', reminderTime: '', reminderStatus: 'agendado' })
@@ -55,12 +56,32 @@ export default function Notes() {
     if (!form.title.trim()) return setFormError('Título é obrigatório.')
     setIsSaving(true)
     try {
-      const newNote = await api.post('/notes', form)
-      setNotes(prev => [newNote, ...prev])
+      if (editTarget) {
+        const updated = await api.put(`/notes/${editTarget.id}`, form)
+        setNotes(prev => prev.map(n => n.id === updated.id ? updated : n))
+        setEditTarget(null)
+      } else {
+        const newNote = await api.post('/notes', form)
+        setNotes(prev => [newNote, ...prev])
+      }
       setForm({ title: '', description: '', category: 'pedagoga', noteType: 'note', reminderDate: '', reminderTime: '', reminderStatus: 'agendado' })
       setShowModal(false)
     } catch (err) { setFormError(err.message) }
     finally { setIsSaving(false) }
+  }
+
+  const handleEditClick = (note) => {
+    setEditTarget(note)
+    setForm({
+      title: note.title,
+      description: note.description || '',
+      category: note.category || 'pedagoga',
+      noteType: note.noteType || 'note',
+      reminderDate: note.reminderDate || '',
+      reminderTime: note.reminderTime || '',
+      reminderStatus: note.reminderStatus || 'agendado'
+    })
+    setShowModal(true)
   }
 
   const togglePin = async (note) => {
@@ -146,7 +167,7 @@ export default function Notes() {
             <input placeholder="Buscar anotações, responsáveis, turmas..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
           </div>
           {canEdit ? (
-            <button className="nt-new-btn" onClick={() => setShowModal(true)}>
+            <button className="nt-new-btn" onClick={() => { setEditTarget(null); setForm({ title: '', description: '', category: 'pedagoga', noteType: 'note', reminderDate: '', reminderTime: '', reminderStatus: 'agendado' }); setShowModal(true) }}>
               <Plus size={16} /> Nova anotação
             </button>
           ) : (
@@ -301,22 +322,29 @@ export default function Notes() {
 
       {/* Timeline */}
       {notes.length > 0 && (() => {
-        const tlNotes = sortByTime(filterByMonth(notes, timelineMonth)).slice(0, 5)
+        const getNoteDateStr = (n) => {
+          if (n.noteType === 'reminder' && n.reminderDate) {
+            return n.reminderDate
+          }
+          return new Date(n.createdAt).toISOString().split('T')[0]
+        }
+        const getTodayLocalStr = () => {
+          const d = new Date()
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        }
+        const todayStrLocal = getTodayLocalStr()
+        const todayNotes = sortByTime(notes.filter(n => getNoteDateStr(n) === todayStrLocal))
+
         return (
           <div className="nt-timeline-section">
             <div className="nt-tl-header">
-              <h2>LINHA DO TEMPO DE ACOMPANHAMENTO</h2>
-              <div className="nt-tl-month-nav">
-                <button className="nt-tl-month-btn" onClick={() => setTimelineMonth(m => shiftMonth(m, -1))}><ChevronLeft size={16} /></button>
-                <span className="nt-tl-month-label">{getMonthLabel(timelineMonth)}</span>
-                <button className="nt-tl-month-btn" onClick={() => setTimelineMonth(m => shiftMonth(m, 1))}><ChevronRight size={16} /></button>
-              </div>
+              <h2>LINHA DO TEMPO DE ACOMPANHAMENTO (HOJE)</h2>
             </div>
-            {tlNotes.length === 0 ? (
-              <p className="nt-empty-hint" style={{ textAlign: 'center', padding: 20 }}>Nenhum registro neste mês.</p>
+            {todayNotes.length === 0 ? (
+              <p className="nt-empty-hint" style={{ textAlign: 'center', padding: 20 }}>Nenhum acompanhamento ou lembrete para o dia de hoje.</p>
             ) : (
               <div className="nt-timeline-scroll">
-                {tlNotes.map((note, i) => {
+                {todayNotes.map((note, i) => {
                   const cat = CATEGORY_CONFIG[note.category] || CATEGORY_CONFIG.pedagoga
                   const time = note.reminderTime || new Date(note.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
                   return (
@@ -326,14 +354,32 @@ export default function Notes() {
                       {note.description && <p className="nt-tl-desc">{note.description}</p>}
                       <div className="nt-tl-footer">
                         <span className="nt-cat-badge-sm" style={{ background: cat.bg, color: cat.color }}>{cat.label}</span>
-                        {canEdit && <Edit3 size={12} style={{ color: '#4b5563' }} />}
+                        {canEdit && (
+                          <button
+                            className="nt-tl-edit-btn"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleEditClick(note)
+                            }}
+                            title="Editar"
+                            style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#9ca3af', borderRadius: '4px', transition: 'all 0.2s' }}
+                            onMouseOver={(e) => e.currentTarget.style.color = '#a78bfa'}
+                            onMouseOut={(e) => e.currentTarget.style.color = '#9ca3af'}
+                          >
+                            <Edit3 size={12} />
+                          </button>
+                        )}
                       </div>
                     </div>
                   )
                 })}
               </div>
             )}
-            <button className="nt-timeline-view-all" onClick={() => { setTlModalMonth(timelineMonth); setShowTimeline(true) }}>
+            <button className="nt-timeline-view-all" onClick={() => {
+              const d = new Date()
+              setTlModalMonth(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`)
+              setShowTimeline(true)
+            }}>
               Ver toda a linha do tempo <ArrowRight size={14} />
             </button>
           </div>
@@ -346,8 +392,8 @@ export default function Notes() {
           <div className="nt-modal-card" onClick={e => e.stopPropagation()}>
             <div className="nt-modal-accent" />
             <div className="nt-modal-head">
-              <h3><StickyNote size={18} /> Nova Anotação</h3>
-              <button className="nt-modal-close" onClick={() => setShowModal(false)}><X size={16} /></button>
+              <h3><StickyNote size={18} /> {editTarget ? 'Editar Registro' : 'Nova Anotação'}</h3>
+              <button className="nt-modal-close" onClick={() => { setShowModal(false); setEditTarget(null) }}><X size={16} /></button>
             </div>
             <form onSubmit={handleSubmit} className="nt-modal-body">
               {formError && <div className="nt-alert-error"><AlertCircle size={14} />{formError}</div>}
@@ -525,7 +571,25 @@ export default function Notes() {
                         {note.description && <p className="nt-tl-desc">{note.description}</p>}
                         <div className="nt-tl-footer">
                           <span className="nt-cat-badge-sm" style={{ background: cat.bg, color: cat.color }}>{cat.label}</span>
-                          <span style={{ fontSize: '0.625rem', color: '#6b7280' }}>👤 {note.author}</span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span style={{ fontSize: '0.625rem', color: '#6b7280' }}>👤 {note.author}</span>
+                            {canEdit && (
+                              <button
+                                className="nt-tl-edit-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setShowTimeline(false)
+                                  handleEditClick(note)
+                                }}
+                                title="Editar"
+                                style={{ background: 'none', border: 'none', padding: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#9ca3af', borderRadius: '4px', transition: 'all 0.2s' }}
+                                onMouseOver={(e) => e.currentTarget.style.color = '#a78bfa'}
+                                onMouseOut={(e) => e.currentTarget.style.color = '#9ca3af'}
+                              >
+                                <Edit3 size={12} />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
