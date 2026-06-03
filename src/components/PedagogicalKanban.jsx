@@ -950,33 +950,153 @@ export default function PedagogicalKanban() {
 
       {/* Archive Confirmation Modal */}
       {showArchiveModal && archiveTarget && (
-        <div className="pk-modal-overlay" onClick={() => setShowArchiveModal(false)}>
-          <div className="pk-modal-card pk-modal-sm" onClick={e => e.stopPropagation()}>
-            <div className="pk-modal-accent" style={{ background: '#10b981' }} />
-            <div className="pk-modal-head">
-              <div className="pk-modal-head-left">
-                <div className="pk-modal-head-icon" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>
-                  <Archive size={18} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#f3f4f6' }}>Confirmar Arquivamento</h3>
-                </div>
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center"
+          style={{ animation: 'fadeIn 0.2s ease-out' }}
+        >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'rgba(0, 0, 0, 0.65)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+            onClick={() => !isSaving && setShowArchiveModal(false)}
+          />
+
+          {/* Modal card */}
+          <div
+            className="relative w-full max-w-md mx-4 rounded-2xl border overflow-hidden"
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'linear-gradient(145deg, rgba(30, 35, 50, 0.97) 0%, rgba(18, 22, 34, 0.99) 100%)',
+              borderColor: 'rgba(245, 158, 11, 0.2)',
+              boxShadow: '0 25px 80px rgba(0,0,0,0.6), 0 0 60px rgba(245, 158, 11, 0.06), inset 0 1px 0 rgba(255,255,255,0.03)',
+              animation: 'slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            {/* Top amber accent bar */}
+            <div
+              style={{
+                height: '3px',
+                background: 'linear-gradient(90deg, transparent, rgba(245,158,11,0.6), rgba(245,158,11,0.8), rgba(245,158,11,0.6), transparent)',
+              }}
+            />
+
+            {/* Amber glow */}
+            <div
+              className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full"
+              style={{
+                background: 'radial-gradient(circle, rgba(245, 158, 11, 0.1) 0%, transparent 65%)',
+                pointerEvents: 'none',
+              }}
+            />
+
+            <div className="relative p-6 flex flex-col items-center text-center space-y-5">
+              {/* Animated icon */}
+              <div
+                className="w-18 h-18 rounded-2xl flex items-center justify-center"
+                style={{
+                  width: '72px',
+                  height: '72px',
+                  background: 'linear-gradient(135deg, rgba(245,158,11,0.12) 0%, rgba(217,119,6,0.08) 100%)',
+                  border: '1px solid rgba(245,158,11,0.2)',
+                  boxShadow: '0 0 30px rgba(245,158,11,0.08)',
+                }}
+              >
+                <Archive size={32} style={{ color: '#fbbf24' }} />
               </div>
-              <button className="pk-modal-close" onClick={() => setShowArchiveModal(false)}><X size={16} /></button>
-            </div>
-            <div className="pk-modal-body" style={{ gap: 18 }}>
-              <p style={{ fontSize: '0.875rem', color: '#9ca3af', lineHeight: 1.5, margin: 0 }}>
-                Tem certeza que deseja arquivar a tarefa <strong>"{archiveTarget.title}"</strong>? Ela será transferida para a tela de Kanban Resolvido.
-              </p>
-              <div className="pk-modal-actions" style={{ marginTop: 6 }}>
-                <button className="pk-btn-cancel" onClick={() => setShowArchiveModal(false)}>Cancelar</button>
-                <button 
-                  className="pk-btn-danger" 
-                  style={{ background: '#10b981', color: 'white' }} 
-                  onClick={handleArchiveTask} 
+
+              {/* Text */}
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold" style={{ color: '#f1f5f9' }}>
+                  Arquivar Chamado?
+                </h3>
+                <p className="text-sm leading-relaxed" style={{ color: '#94a3b8' }}>
+                  Tem certeza que deseja arquivar a tarefa <strong>"{archiveTarget.title}"</strong>? Essa ação <strong style={{ color: '#fbbf24' }}>será transferida para o Kanban Resolvido</strong>.
+                </p>
+              </div>
+
+              {/* Preview of task being archived */}
+              <div
+                className="w-full rounded-xl p-3 text-left"
+                style={{
+                  background: 'rgba(245, 158, 11, 0.04)',
+                  border: '1px solid rgba(245, 158, 11, 0.1)',
+                }}
+              >
+                <p className="text-xs font-medium mb-1" style={{ color: '#64748b' }}>Tarefa a ser arquivada:</p>
+                <p className="text-sm font-semibold mb-0.5" style={{ color: '#fbbf24' }}>
+                  #{archiveTarget.id}
+                </p>
+                {archiveTarget.title && (
+                  <p className="text-sm line-clamp-3" style={{ color: '#cbd5e1' }}>
+                    {archiveTarget.title.length > 120 ? archiveTarget.title.slice(0, 120) + '…' : archiveTarget.title}
+                  </p>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 w-full pt-1">
+                <button
+                  onClick={() => setShowArchiveModal(false)}
                   disabled={isSaving}
+                  className="flex-1 px-4 py-3 rounded-xl text-sm font-medium transition-all"
+                  style={{
+                    background: 'rgba(100, 116, 139, 0.1)',
+                    color: '#94a3b8',
+                    border: '1px solid rgba(100, 116, 139, 0.15)',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSaving) {
+                      e.currentTarget.style.background = 'rgba(100, 116, 139, 0.18)'
+                      e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.3)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(100, 116, 139, 0.1)'
+                    e.currentTarget.style.borderColor = 'rgba(100, 116, 139, 0.15)'
+                  }}
                 >
-                  {isSaving ? 'Arquivando...' : 'Sim, Arquivar'}
+                  Cancelar
+                </button>
+                <button
+                  className="flex-1 px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+                  onClick={handleArchiveTask}
+                  disabled={isSaving}
+                  style={{
+                    background: isSaving
+                      ? 'rgba(245, 158, 11, 0.2)'
+                      : 'linear-gradient(135deg, rgba(245,158,11,0.75) 0%, rgba(217,119,6,0.85) 100%)',
+                    color: '#fff',
+                    border: '1px solid rgba(245,158,11,0.35)',
+                    boxShadow: isSaving ? 'none' : '0 4px 20px rgba(245,158,11,0.2)',
+                    cursor: isSaving ? 'not-allowed' : 'pointer',
+                    opacity: isSaving ? 0.7 : 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSaving) {
+                      e.currentTarget.style.boxShadow = '0 6px 25px rgba(245,158,11,0.35)'
+                      e.currentTarget.style.transform = 'translateY(-1px)'
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(245,158,11,0.2)'
+                    e.currentTarget.style.transform = 'translateY(0)'
+                  }}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 size={15} className="animate-spin" />
+                      Arquivando...
+                    </>
+                  ) : (
+                    <>
+                      <Archive size={15} />
+                      Sim, arquivar
+                    </>
+                  )}
                 </button>
               </div>
             </div>

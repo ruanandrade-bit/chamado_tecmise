@@ -541,26 +541,60 @@ export default function ResolvedKanban() {
 
             {/* Content */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              {/* ID and Title */}
               <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>ID</span>
-                <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#86efac', margin: '8px 0 0 0' }}>#{selectedTask.id}</p>
+                <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#86efac', margin: '0' }}>#{selectedTask.id}</p>
+                <p style={{ fontSize: '0.875rem', color: '#9ca3af', margin: '4px 0 0 0' }}>{selectedTask.title}</p>
               </div>
 
-              <div>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Título</span>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f1f5f9', margin: '8px 0 0 0' }}>{selectedTask.title}</h2>
-              </div>
-
-              {selectedTask.description && (
+              {/* Main metadata grid - 3 columns */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
                 <div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Descrição</span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</span>
+                  <p style={{ margin: '6px 0 0 0', fontWeight: 600, color: '#86efac' }}>
+                    {selectedTask.status === 'todo' ? 'A Fazer' : selectedTask.status === 'inprogress' ? 'Em Andamento' : selectedTask.status === 'inrevision' ? 'Em Revisão' : 'Concluído'}
+                  </p>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Turma / Device</span>
+                  <p style={{ margin: '6px 0 0 0', color: '#cbd5e1' }}>{selectedTask.deviceId || 'N/A'}</p>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Período</span>
+                  <p style={{ margin: '6px 0 0 0', color: '#cbd5e1' }}>{selectedTask.period || 'N/A'}</p>
+                </div>
+              </div>
+
+              {/* Second metadata grid - 3 columns */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                <div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Responsável</span>
+                  <p style={{ margin: '6px 0 0 0', color: '#cbd5e1' }}>{selectedTask.responsible || 'N/A'}</p>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Prioridade</span>
+                  <p style={{ margin: '6px 0 0 0', fontWeight: 700, color: selectedTask.priority === 'high' ? '#fca5a5' : selectedTask.priority === 'medium' ? '#93c5fd' : '#86efac' }}>
+                    {selectedTask.priority === 'high' ? 'Alta' : selectedTask.priority === 'medium' ? 'Média' : 'Baixa'}
+                  </p>
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Criado</span>
+                  <p style={{ margin: '6px 0 0 0', color: '#cbd5e1' }}>{new Date(selectedTask.archivedAt || selectedTask.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
+                </div>
+              </div>
+
+              {/* Local do problema / Descrição */}
+              {selectedTask.description && (
+                <div style={{ paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Local do problema</span>
                   <p style={{ fontSize: '0.875rem', color: '#cbd5e1', lineHeight: 1.5, whiteSpace: 'pre-wrap', margin: '8px 0 0 0' }}>{selectedTask.description}</p>
                 </div>
               )}
 
+              {/* Tags */}
               {selectedTask.tags && selectedTask.tags.length > 0 && (
                 <div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Etiquetas</span>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Etiquetas</span>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
                     {selectedTask.tags.map((tag, idx) => (
                       <span key={idx} style={{ fontSize: '0.7rem', padding: '4px 10px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '6px', color: '#86efac', fontWeight: 500 }}>{tag}</span>
@@ -568,30 +602,6 @@ export default function ResolvedKanban() {
                   </div>
                 </div>
               )}
-
-              {/* Metadata grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                <div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Prioridade</span>
-                  <p style={{ margin: '6px 0 0 0', fontWeight: 700, color: selectedTask.priority === 'high' ? '#fca5a5' : selectedTask.priority === 'medium' ? '#93c5fd' : '#86efac' }}>
-                    {selectedTask.priority === 'high' ? 'Alta' : selectedTask.priority === 'medium' ? 'Média' : 'Baixa'}
-                  </p>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</span>
-                  <p style={{ margin: '6px 0 0 0', color: '#cbd5e1' }}>
-                    {selectedTask.status === 'todo' ? 'A Fazer' : selectedTask.status === 'inprogress' ? 'Em Andamento' : selectedTask.status === 'inrevision' ? 'Em Revisão' : 'Concluído'}
-                  </p>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Responsável</span>
-                  <p style={{ margin: '6px 0 0 0', color: '#cbd5e1' }}>{selectedTask.responsible}</p>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Arquivado Em</span>
-                  <p style={{ margin: '6px 0 0 0', color: '#cbd5e1' }}>{new Date(selectedTask.archivedAt || selectedTask.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
-                </div>
-              </div>
 
               {/* Delete button */}
               {canDeleteTask && (
