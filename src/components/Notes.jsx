@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { StickyNote, Plus, Trash2, Pin, PinOff, Calendar, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle } from 'lucide-react'
+import { StickyNote, Plus, Trash2, Pin, PinOff, Calendar, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import './Notes.css'
@@ -30,6 +30,8 @@ export default function Notes() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCategory, setFilterCategory] = useState('')
   const [filterType, setFilterType] = useState('')
+  const [timelineMonth, setTimelineMonth] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` })
+  const [tlModalMonth, setTlModalMonth] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` })
 
   // Form
   const [form, setForm] = useState({ title: '', description: '', category: 'pedagoga', noteType: 'note', reminderDate: '', reminderTime: '', reminderStatus: 'agendado' })
@@ -92,6 +94,29 @@ export default function Notes() {
   const countPsicologa = notes.filter(n => n.category === 'psicologa').length
   const activeNotes = notes.filter(n => n.noteType === 'note').length
   const pendingReminders = notes.filter(n => n.noteType === 'reminder').length
+
+  const todayStr = new Date().toISOString().split('T')[0]
+
+  // Timeline helpers
+  const getMonthLabel = (ym) => {
+    const [y, m] = ym.split('-')
+    const d = new Date(+y, +m - 1, 1)
+    return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }).replace(/^./, c => c.toUpperCase())
+  }
+  const shiftMonth = (ym, delta) => {
+    const [y, m] = ym.split('-').map(Number)
+    const d = new Date(y, m - 1 + delta, 1)
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+  }
+  const filterByMonth = (list, ym) => list.filter(n => {
+    const created = (n.createdAt || '').slice(0, 7)
+    return created === ym
+  })
+  const sortByTime = (list) => [...list].sort((a, b) => {
+    const tA = a.reminderTime || new Date(a.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const tB = b.reminderTime || new Date(b.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    return tA.localeCompare(tB)
+  })
 
   const formatDate = (iso) => {
     if (!iso) return ''
@@ -222,7 +247,7 @@ export default function Notes() {
                   const cat = CATEGORY_CONFIG[rem.category] || CATEGORY_CONFIG.pedagoga
                   const st = STATUS_CONFIG[rem.reminderStatus] || STATUS_CONFIG.agendado
                   return (
-                    <div key={rem.id} className="nt-reminder-row" style={{ animationDelay: `${i * 0.05}s` }}>
+                    <div key={rem.id} className="nt-reminder-row" style={{ animationDelay: `${i * 0.05}s`, cursor: 'pointer' }} onClick={() => setViewNote(rem)}>
                       <div className="nt-reminder-dot" style={{ background: cat.color }} />
                       <div className="nt-reminder-info">
                         <span className="nt-reminder-title">{rem.title}</span>
@@ -232,7 +257,7 @@ export default function Notes() {
                         <span className="nt-cat-badge-sm" style={{ background: cat.bg, color: cat.color }}>{cat.label}</span>
                         <span className="nt-status-badge" style={{ background: st.bg, color: st.color }}>• {st.label}</span>
                       </div>
-                      {canEdit && <button className="nt-reminder-del" onClick={() => setDeleteTarget(rem)}><Trash2 size={12} /></button>}
+                      {canEdit && <button className="nt-reminder-del" onClick={(e) => { e.stopPropagation(); setDeleteTarget(rem) }}><Trash2 size={12} /></button>}
                     </div>
                   )
                 })}
@@ -275,31 +300,45 @@ export default function Notes() {
       )}
 
       {/* Timeline */}
-      {notes.length > 0 && (
-        <div className="nt-timeline-section">
-          <div className="nt-section-header"><h2>LINHA DO TEMPO DE ACOMPANHAMENTO</h2></div>
-          <div className="nt-timeline-scroll">
-            {notes.slice(0, 5).map((note, i) => {
-              const cat = CATEGORY_CONFIG[note.category] || CATEGORY_CONFIG.pedagoga
-              const time = note.reminderTime || new Date(note.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-              return (
-                <div key={note.id} className="nt-timeline-card" style={{ animationDelay: `${i * 0.08}s` }}>
-                  <div className="nt-tl-time"><span className="nt-tl-dot" style={{ background: cat.color }} />{time}</div>
-                  <h4 className="nt-tl-title">{note.title}</h4>
-                  {note.description && <p className="nt-tl-desc">{note.description}</p>}
-                  <div className="nt-tl-footer">
-                    <span className="nt-cat-badge-sm" style={{ background: cat.bg, color: cat.color }}>{cat.label}</span>
-                    {canEdit && <Edit3 size={12} style={{ color: '#4b5563' }} />}
-                  </div>
-                </div>
-              )
-            })}
+      {notes.length > 0 && (() => {
+        const tlNotes = sortByTime(filterByMonth(notes, timelineMonth)).slice(0, 5)
+        return (
+          <div className="nt-timeline-section">
+            <div className="nt-tl-header">
+              <h2>LINHA DO TEMPO DE ACOMPANHAMENTO</h2>
+              <div className="nt-tl-month-nav">
+                <button className="nt-tl-month-btn" onClick={() => setTimelineMonth(m => shiftMonth(m, -1))}><ChevronLeft size={16} /></button>
+                <span className="nt-tl-month-label">{getMonthLabel(timelineMonth)}</span>
+                <button className="nt-tl-month-btn" onClick={() => setTimelineMonth(m => shiftMonth(m, 1))}><ChevronRight size={16} /></button>
+              </div>
+            </div>
+            {tlNotes.length === 0 ? (
+              <p className="nt-empty-hint" style={{ textAlign: 'center', padding: 20 }}>Nenhum registro neste mês.</p>
+            ) : (
+              <div className="nt-timeline-scroll">
+                {tlNotes.map((note, i) => {
+                  const cat = CATEGORY_CONFIG[note.category] || CATEGORY_CONFIG.pedagoga
+                  const time = note.reminderTime || new Date(note.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                  return (
+                    <div key={note.id} className="nt-timeline-card" style={{ animationDelay: `${i * 0.08}s`, cursor: 'pointer' }} onClick={() => setViewNote(note)}>
+                      <div className="nt-tl-time"><span className="nt-tl-dot" style={{ background: cat.color }} />{time}</div>
+                      <h4 className="nt-tl-title">{note.title}</h4>
+                      {note.description && <p className="nt-tl-desc">{note.description}</p>}
+                      <div className="nt-tl-footer">
+                        <span className="nt-cat-badge-sm" style={{ background: cat.bg, color: cat.color }}>{cat.label}</span>
+                        {canEdit && <Edit3 size={12} style={{ color: '#4b5563' }} />}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            <button className="nt-timeline-view-all" onClick={() => { setTlModalMonth(timelineMonth); setShowTimeline(true) }}>
+              Ver toda a linha do tempo <ArrowRight size={14} />
+            </button>
           </div>
-          <button className="nt-timeline-view-all" onClick={() => setShowTimeline(true)}>
-            Ver toda a linha do tempo <ArrowRight size={14} />
-          </button>
-        </div>
-      )}
+        )
+      })()}
 
       {/* New Note Modal */}
       {showModal && (
@@ -341,7 +380,7 @@ export default function Notes() {
                   <div className="nt-form-row">
                     <div className="nt-form-group" style={{ flex: 1 }}>
                       <label>Data</label>
-                      <input type="date" className="nt-input" value={form.reminderDate} onChange={e => setForm(p => ({ ...p, reminderDate: e.target.value }))} />
+                      <input type="date" className="nt-input" min={todayStr} value={form.reminderDate} onChange={e => setForm(p => ({ ...p, reminderDate: e.target.value }))} />
                     </div>
                     <div className="nt-form-group" style={{ flex: 1 }}>
                       <label>Horário</label>
@@ -445,48 +484,58 @@ export default function Notes() {
       })()}
 
       {/* Full Timeline Modal */}
-      {showTimeline && (
-        <div className="nt-modal-overlay" onClick={() => setShowTimeline(false)}>
-          <div className="nt-modal-card nt-modal-lg" onClick={e => e.stopPropagation()}>
-            <div className="nt-modal-accent" />
-            <div className="nt-modal-head">
-              <div className="nt-modal-head-left">
-                <div className="nt-modal-head-icon" style={{ background: 'rgba(167,139,250,0.12)', color: '#a78bfa' }}>
-                  <Clock size={18} />
+      {showTimeline && (() => {
+        const modalNotes = sortByTime(filterByMonth(notes, tlModalMonth))
+        return (
+          <div className="nt-modal-overlay" onClick={() => setShowTimeline(false)}>
+            <div className="nt-modal-card nt-modal-lg" onClick={e => e.stopPropagation()}>
+              <div className="nt-modal-accent" />
+              <div className="nt-modal-head">
+                <div className="nt-modal-head-left">
+                  <div className="nt-modal-head-icon" style={{ background: 'rgba(167,139,250,0.12)', color: '#a78bfa' }}>
+                    <Clock size={18} />
+                  </div>
+                  <div>
+                    <h3>Linha do Tempo Completa</h3>
+                    <p className="nt-modal-head-sub">{modalNotes.length} registro{modalNotes.length !== 1 ? 's' : ''}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3>Linha do Tempo Completa</h3>
-                  <p className="nt-modal-head-sub">{notes.length} registro{notes.length !== 1 ? 's' : ''}</p>
-                </div>
+                <button className="nt-modal-close" onClick={() => setShowTimeline(false)}><X size={16} /></button>
               </div>
-              <button className="nt-modal-close" onClick={() => setShowTimeline(false)}><X size={16} /></button>
-            </div>
-            <div className="nt-modal-body nt-timeline-modal-body">
-              {notes.map((note, i) => {
-                const cat = CATEGORY_CONFIG[note.category] || CATEGORY_CONFIG.pedagoga
-                const time = note.reminderTime || new Date(note.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-                return (
-                  <div key={note.id} className="nt-tl-modal-row">
-                    <div className="nt-tl-modal-line">
-                      <span className="nt-tl-dot" style={{ background: cat.color }} />
-                      {i < notes.length - 1 && <div className="nt-tl-connector" />}
-                    </div>
-                    <div className="nt-tl-modal-content">
-                      <div className="nt-tl-modal-time">{time} • {formatDate(note.createdAt)}</div>
-                      <h4 className="nt-tl-title">{note.title}</h4>
-                      {note.description && <p className="nt-tl-desc">{note.description}</p>}
-                      <div className="nt-tl-footer">
-                        <span className="nt-cat-badge-sm" style={{ background: cat.bg, color: cat.color }}>{cat.label}</span>
-                        <span style={{ fontSize: '0.625rem', color: '#6b7280' }}>👤 {note.author}</span>
+              <div style={{ padding: '12px 24px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                <button className="nt-tl-month-btn" onClick={() => setTlModalMonth(m => shiftMonth(m, -1))}><ChevronLeft size={16} /></button>
+                <span className="nt-tl-month-label">{getMonthLabel(tlModalMonth)}</span>
+                <button className="nt-tl-month-btn" onClick={() => setTlModalMonth(m => shiftMonth(m, 1))}><ChevronRight size={16} /></button>
+              </div>
+              <div className="nt-modal-body nt-timeline-modal-body">
+                {modalNotes.length === 0 ? (
+                  <p className="nt-empty-hint" style={{ textAlign: 'center', padding: 20 }}>Nenhum registro neste mês.</p>
+                ) : modalNotes.map((note, i) => {
+                  const cat = CATEGORY_CONFIG[note.category] || CATEGORY_CONFIG.pedagoga
+                  const time = note.reminderTime || new Date(note.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                  return (
+                    <div key={note.id} className="nt-tl-modal-row" style={{ cursor: 'pointer' }} onClick={() => { setShowTimeline(false); setViewNote(note) }}>
+                      <div className="nt-tl-modal-line">
+                        <span className="nt-tl-dot" style={{ background: cat.color }} />
+                        {i < modalNotes.length - 1 && <div className="nt-tl-connector" />}
+                      </div>
+                      <div className="nt-tl-modal-content">
+                        <div className="nt-tl-modal-time">{time} • {formatDate(note.createdAt)}</div>
+                        <h4 className="nt-tl-title">{note.title}</h4>
+                        {note.description && <p className="nt-tl-desc">{note.description}</p>}
+                        <div className="nt-tl-footer">
+                          <span className="nt-cat-badge-sm" style={{ background: cat.bg, color: cat.color }}>{cat.label}</span>
+                          <span style={{ fontSize: '0.625rem', color: '#6b7280' }}>👤 {note.author}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }

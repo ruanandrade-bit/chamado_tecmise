@@ -61,6 +61,8 @@ export default function Deadlines() {
     setFormError('')
     if (!form.title.trim()) return setFormError('Título é obrigatório.')
     if (!form.date) return setFormError('Data é obrigatória.')
+    const todayCheck = new Date().toISOString().split('T')[0]
+    if (!editTarget && form.date < todayCheck) return setFormError('Não é permitido cadastrar prazos com data no passado.')
 
     setIsSaving(true)
     try {
@@ -323,7 +325,7 @@ export default function Deadlines() {
               <div className="dl-form-row">
                 <div className="dl-form-group" style={{ flex: 1 }}>
                   <label>Data Limite *</label>
-                  <input type="date" className="dl-input" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} />
+                  <input type="date" className="dl-input" min={editTarget ? undefined : new Date().toISOString().split('T')[0]} value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} />
                 </div>
                 <div className="dl-form-group" style={{ flex: 1 }}>
                   <label>Horário</label>

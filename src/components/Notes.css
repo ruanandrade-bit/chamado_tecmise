@@ -32,8 +32,10 @@
 
 /* ── Filters Bar ── */
 .nt-filters-bar { display: flex; gap: 10px; flex-wrap: wrap; }
-.nt-filter-item { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 8px 12px; font-size: 0.8125rem; color: #9ca3af; }
-.nt-filter-item select { background: transparent; border: none; color: #e5e7eb; outline: none; cursor: pointer; font-size: 0.8125rem; }
+.nt-filter-item { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 10px; padding: 8px 12px; font-size: 0.8125rem; color: #9ca3af; transition: all 0.2s; }
+.nt-filter-item:hover { border-color: rgba(167,139,250,0.15); background: rgba(255,255,255,0.05); }
+.nt-filter-item select { background: transparent; border: none; color: #e5e7eb; outline: none; cursor: pointer; font-size: 0.8125rem; -webkit-appearance: none; -moz-appearance: none; appearance: none; padding-right: 14px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%239ca3af' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 0 center; }
+.nt-filter-item select option { background: #1e2235; color: #e5e7eb; padding: 8px; }
 
 /* ── Main Grid ── */
 .nt-main-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
@@ -96,6 +98,12 @@
 
 /* ── Timeline ── */
 .nt-timeline-section { background: rgba(15,15,30,0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 20px; padding: 24px; }
+.nt-tl-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+.nt-tl-header h2 { font-size: 0.6875rem; font-weight: 700; color: #6b7280; letter-spacing: 0.06em; text-transform: uppercase; }
+.nt-tl-month-nav { display: flex; align-items: center; gap: 8px; }
+.nt-tl-month-btn { width: 32px; height: 32px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.03); color: #9ca3af; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.nt-tl-month-btn:hover { background: rgba(167,139,250,0.1); border-color: rgba(167,139,250,0.2); color: #a78bfa; }
+.nt-tl-month-label { font-size: 0.8125rem; font-weight: 600; color: #e5e7eb; min-width: 140px; text-align: center; }
 .nt-timeline-scroll { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
 .nt-timeline-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 14px; padding: 16px; transition: all 0.2s; animation: ntCardIn 0.4s ease-out both; }
 .nt-timeline-card:hover { background: rgba(255,255,255,0.05); transform: translateY(-2px); }
