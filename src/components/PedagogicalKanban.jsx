@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Kanban as KanbanIcon, Plus, Trash2, Calendar, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronRight, ChevronLeft, ChevronDown } from 'lucide-react'
+import { Kanban as KanbanIcon, Plus, Trash2, Calendar, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronRight, ChevronLeft, ChevronDown, Archive } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import './PedagogicalKanban.css'
@@ -19,14 +19,19 @@ export default function PedagogicalKanban() {
   const [filterResp, setFilterResp] = useState('')
   const [isPriorityOpen, setIsPriorityOpen] = useState(false)
   const [isRespOpen, setIsRespOpen] = useState(false)
+  const [isFormRespOpen, setIsFormRespOpen] = useState(false)
+  const [isFormPriorityOpen, setIsFormPriorityOpen] = useState(false)
+  const [isFormStatusOpen, setIsFormStatusOpen] = useState(false)
 
   // Modals
   const [showFormModal, setShowFormModal] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showArchiveModal, setShowArchiveModal] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
   const [viewTarget, setViewTarget] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [archiveTarget, setArchiveTarget] = useState(null)
 
   // Form State
   const [form, setForm] = useState({
@@ -53,6 +58,9 @@ export default function PedagogicalKanban() {
     const handleOutsideClick = () => {
       setIsPriorityOpen(false)
       setIsRespOpen(false)
+      setIsFormRespOpen(false)
+      setIsFormPriorityOpen(false)
+      setIsFormStatusOpen(false)
     }
     window.addEventListener('click', handleOutsideClick)
     return () => window.removeEventListener('click', handleOutsideClick)
@@ -126,6 +134,28 @@ export default function PedagogicalKanban() {
       setViewTarget(null)
     } catch (err) {
       alert(`Erro ao excluir tarefa: ${err.message}`)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Handle Archive Task
+  const handleArchiveTask = async () => {
+    if (!archiveTarget) return
+    setIsSaving(true)
+    try {
+      const archivedAt = new Date().toISOString()
+      await api.put(`/kanban/${archiveTarget.id}`, { 
+        isArchived: true, 
+        archivedAt 
+      })
+      setTasks(prev => prev.map(t => t.id === archiveTarget.id ? { ...t, isArchived: true, archivedAt } : t))
+      setShowArchiveModal(false)
+      setShowDetailModal(false)
+      setArchiveTarget(null)
+      setViewTarget(null)
+    } catch (err) {
+      alert(`Erro ao arquivar tarefa: ${err.message}`)
     } finally {
       setIsSaving(false)
     }
@@ -235,6 +265,8 @@ export default function PedagogicalKanban() {
 
   // Filter Tasks
   const filteredTasks = tasks.filter(t => {
+    if (t.isArchived) return false
+
     const matchesSearch =
       t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (t.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -248,9 +280,9 @@ export default function PedagogicalKanban() {
   })
 
   // Dynamic Statistics
-  const openTasksCount = tasks.filter(t => ['todo', 'inprogress', 'inrevision'].includes(t.status)).length
-  const highPriorityCount = tasks.filter(t => t.priority === 'high' && t.status !== 'completed').length
-  const completedTasksCount = tasks.filter(t => t.status === 'completed').length
+  const openTasksCount = tasks.filter(t => !t.isArchived && ['todo', 'inprogress', 'inrevision'].includes(t.status)).length
+  const highPriorityCount = tasks.filter(t => !t.isArchived && t.priority === 'high' && t.status !== 'completed').length
+  const completedTasksCount = tasks.filter(t => !t.isArchived && t.status === 'completed').length
 
   const columns = [
     { id: 'todo', label: 'A Fazer', color: '#a78bfa' },
@@ -531,10 +563,26 @@ export default function PedagogicalKanban() {
                           )}
 
                           <div className="pk-card-footer">
-                            <div className="pk-card-meta-left">
+                            <div className="pk-card-meta-left" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                               <span className={`pk-card-priority-badge prio-${task.priority}`}>
                                 {getPriorityLabel(task.priority)}
                               </span>
+                              {task.status === 'completed' && (
+                                <button
+                                  type="button"
+                                  className="pk-card-archive-btn"
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    setArchiveTarget(task)
+                                    setShowArchiveModal(true)
+                                  }}
+                                  title="Arquivar tarefa"
+                                >
+                                  <Archive size={11} />
+                                  <span>Arquivar</span>
+                                </button>
+                              )}
                             </div>
 
                             <div className="pk-card-meta-right">
@@ -640,6 +688,15 @@ export default function PedagogicalKanban() {
 
               {canEdit && (
                 <div className="pk-modal-actions">
+                  {viewTarget.status === 'completed' && (
+                    <button 
+                      className="pk-btn-cancel" 
+                      style={{ border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', display: 'flex', alignItems: 'center', gap: 6 }} 
+                      onClick={() => { setArchiveTarget(viewTarget); setShowArchiveModal(true) }}
+                    >
+                      <Archive size={14} /> Arquivar
+                    </button>
+                  )}
                   <button className="pk-btn-cancel" onClick={() => handleEditClick(viewTarget)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <Edit3 size={14} /> Editar
                   </button>
@@ -656,7 +713,7 @@ export default function PedagogicalKanban() {
       {/* Create / Edit Form Modal */}
       {showFormModal && (
         <div className="pk-modal-overlay" onClick={() => { setShowFormModal(false); setEditTarget(null) }}>
-          <div className="pk-modal-card" onClick={e => e.stopPropagation()}>
+          <div className="pk-modal-card pk-modal-lg" onClick={e => e.stopPropagation()}>
             <div className="pk-modal-accent" />
             <div className="pk-modal-head">
               <div className="pk-modal-head-left">
@@ -700,28 +757,82 @@ export default function PedagogicalKanban() {
               <div className="pk-form-row">
                 <div className="pk-form-group" style={{ flex: 1 }}>
                   <label>Responsável *</label>
-                  <select
-                    className="pk-input"
-                    value={form.responsible}
-                    onChange={e => setForm(p => ({ ...p, responsible: e.target.value }))}
-                    style={{ background: '#1e2235' }}
-                  >
-                    <option value="Pedagoga">Pedagoga</option>
-                    <option value="Psicóloga">Psicóloga</option>
-                  </select>
+                  <div className="pk-form-select-container">
+                    <button 
+                      type="button"
+                      className={`pk-form-select-btn ${isFormRespOpen ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setIsFormRespOpen(!isFormRespOpen)
+                        setIsFormPriorityOpen(false)
+                        setIsFormStatusOpen(false)
+                      }}
+                    >
+                      <span>{form.responsible}</span>
+                      <ChevronDown size={14} className={`pk-select-chevron ${isFormRespOpen ? 'open' : ''}`} />
+                    </button>
+                    {isFormRespOpen && (
+                      <div className="pk-form-dropdown" onClick={(e) => e.stopPropagation()}>
+                        <div 
+                          className={`pk-dropdown-option ${form.responsible === 'Pedagoga' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, responsible: 'Pedagoga' })); setIsFormRespOpen(false) }}
+                        >
+                          <span className="pk-option-dot" style={{ background: '#a78bfa' }} />
+                          Pedagoga
+                        </div>
+                        <div 
+                          className={`pk-dropdown-option ${form.responsible === 'Psicóloga' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, responsible: 'Psicóloga' })); setIsFormRespOpen(false) }}
+                        >
+                          <span className="pk-option-dot" style={{ background: '#10b981' }} />
+                          Psicóloga
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="pk-form-group" style={{ flex: 1 }}>
                   <label>Prioridade *</label>
-                  <select
-                    className="pk-input"
-                    value={form.priority}
-                    onChange={e => setForm(p => ({ ...p, priority: e.target.value }))}
-                    style={{ background: '#1e2235' }}
-                  >
-                    <option value="high">Alta</option>
-                    <option value="medium">Média</option>
-                    <option value="low">Baixa</option>
-                  </select>
+                  <div className="pk-form-select-container">
+                    <button 
+                      type="button"
+                      className={`pk-form-select-btn ${isFormPriorityOpen ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setIsFormPriorityOpen(!isFormPriorityOpen)
+                        setIsFormRespOpen(false)
+                        setIsFormStatusOpen(false)
+                      }}
+                    >
+                      <span>{form.priority === 'high' ? 'Alta' : form.priority === 'medium' ? 'Média' : 'Baixa'}</span>
+                      <ChevronDown size={14} className={`pk-select-chevron ${isFormPriorityOpen ? 'open' : ''}`} />
+                    </button>
+                    {isFormPriorityOpen && (
+                      <div className="pk-form-dropdown" onClick={(e) => e.stopPropagation()}>
+                        <div 
+                          className={`pk-dropdown-option ${form.priority === 'high' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, priority: 'high' })); setIsFormPriorityOpen(false) }}
+                        >
+                          <span className="pk-option-dot" style={{ background: '#ef4444' }} />
+                          Alta
+                        </div>
+                        <div 
+                          className={`pk-dropdown-option ${form.priority === 'medium' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, priority: 'medium' })); setIsFormPriorityOpen(false) }}
+                        >
+                          <span className="pk-option-dot" style={{ background: '#3b82f6' }} />
+                          Média
+                        </div>
+                        <div 
+                          className={`pk-dropdown-option ${form.priority === 'low' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, priority: 'low' })); setIsFormPriorityOpen(false) }}
+                        >
+                          <span className="pk-option-dot" style={{ background: '#10b981' }} />
+                          Baixa
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -737,17 +848,57 @@ export default function PedagogicalKanban() {
                 </div>
                 <div className="pk-form-group" style={{ flex: 1 }}>
                   <label>Status Inicial</label>
-                  <select
-                    className="pk-input"
-                    value={form.status}
-                    onChange={e => setForm(p => ({ ...p, status: e.target.value }))}
-                    style={{ background: '#1e2235' }}
-                  >
-                    <option value="todo">A Fazer</option>
-                    <option value="inprogress">Em Andamento</option>
-                    <option value="inrevision">Em Revisão</option>
-                    <option value="completed">Concluído</option>
-                  </select>
+                  <div className="pk-form-select-container">
+                    <button 
+                      type="button"
+                      className={`pk-form-select-btn ${isFormStatusOpen ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setIsFormStatusOpen(!isFormStatusOpen)
+                        setIsFormRespOpen(false)
+                        setIsFormPriorityOpen(false)
+                      }}
+                    >
+                      <span>
+                        {form.status === 'todo' ? 'A Fazer' : 
+                         form.status === 'inprogress' ? 'Em Andamento' : 
+                         form.status === 'inrevision' ? 'Em Revisão' : 'Concluído'}
+                      </span>
+                      <ChevronDown size={14} className={`pk-select-chevron ${isFormStatusOpen ? 'open' : ''}`} />
+                    </button>
+                    {isFormStatusOpen && (
+                      <div className="pk-form-dropdown" onClick={(e) => e.stopPropagation()}>
+                        <div 
+                          className={`pk-dropdown-option ${form.status === 'todo' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, status: 'todo' })); setIsFormStatusOpen(false) }}
+                        >
+                          <span className="pk-option-dot" style={{ background: '#6b7280' }} />
+                          A Fazer
+                        </div>
+                        <div 
+                          className={`pk-dropdown-option ${form.status === 'inprogress' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, status: 'inprogress' })); setIsFormStatusOpen(false) }}
+                        >
+                          <span className="pk-option-dot" style={{ background: '#3b82f6' }} />
+                          Em Andamento
+                        </div>
+                        <div 
+                          className={`pk-dropdown-option ${form.status === 'inrevision' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, status: 'inrevision' })); setIsFormStatusOpen(false) }}
+                        >
+                          <span className="pk-option-dot" style={{ background: '#f59e0b' }} />
+                          Em Revisão
+                        </div>
+                        <div 
+                          className={`pk-dropdown-option ${form.status === 'completed' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, status: 'completed' })); setIsFormStatusOpen(false) }}
+                        >
+                          <span className="pk-option-dot" style={{ background: '#10b981' }} />
+                          Concluído
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -800,6 +951,42 @@ export default function PedagogicalKanban() {
                 <button className="pk-btn-cancel" onClick={() => setShowDeleteModal(false)}>Cancelar</button>
                 <button className="pk-btn-danger" onClick={handleDeleteTask} disabled={isSaving}>
                   {isSaving ? 'Excluindo...' : 'Sim, Excluir'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Archive Confirmation Modal */}
+      {showArchiveModal && archiveTarget && (
+        <div className="pk-modal-overlay" onClick={() => setShowArchiveModal(false)}>
+          <div className="pk-modal-card pk-modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="pk-modal-accent" style={{ background: '#10b981' }} />
+            <div className="pk-modal-head">
+              <div className="pk-modal-head-left">
+                <div className="pk-modal-head-icon" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>
+                  <Archive size={18} />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '1rem', fontWeight: 700, color: '#f3f4f6' }}>Confirmar Arquivamento</h3>
+                </div>
+              </div>
+              <button className="pk-modal-close" onClick={() => setShowArchiveModal(false)}><X size={16} /></button>
+            </div>
+            <div className="pk-modal-body" style={{ gap: 18 }}>
+              <p style={{ fontSize: '0.875rem', color: '#9ca3af', lineHeight: 1.5, margin: 0 }}>
+                Tem certeza que deseja arquivar a tarefa <strong>"{archiveTarget.title}"</strong>? Ela será transferida para a tela de Kanban Resolvido.
+              </p>
+              <div className="pk-modal-actions" style={{ marginTop: 6 }}>
+                <button className="pk-btn-cancel" onClick={() => setShowArchiveModal(false)}>Cancelar</button>
+                <button 
+                  className="pk-btn-danger" 
+                  style={{ background: '#10b981', color: 'white' }} 
+                  onClick={handleArchiveTask} 
+                  disabled={isSaving}
+                >
+                  {isSaving ? 'Arquivando...' : 'Sim, Arquivar'}
                 </button>
               </div>
             </div>

@@ -18,6 +18,7 @@ export default function Sidebar({ currentPage, onPageChange, isMobileOpen, onMob
     { id: 'pedagogical-kanban', label: 'Kanban', icon: Trello },
     { id: 'notes', label: 'Anotações', icon: StickyNote },
     { id: 'deadlines', label: 'Datas & Prazos', icon: Calendar },
+    { id: 'resolved-kanban', label: 'Kanban Resolvido', icon: Archive },
     ...(isAdmin ? [{ id: 'devices-online', label: 'Devices Online', icon: Wifi }] : []),
     ...(isAdmin ? [{ id: 'inventory', label: 'Estoque', icon: Package }] : []),
     ...(isAdmin ? [{ id: 'school-config', label: 'Configurações', icon: Settings }] : []),

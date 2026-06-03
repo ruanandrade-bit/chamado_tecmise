@@ -16,6 +16,7 @@ import CameraObstruction from './components/CameraObstruction'
 import Notes from './components/Notes'
 import Deadlines from './components/Deadlines'
 import PedagogicalKanban from './components/PedagogicalKanban'
+import ResolvedKanban from './components/ResolvedKanban'
 
 export default function App() {
   const { isAuthenticated, isAuthLoading, initAuth } = useAuthStore()
@@ -34,6 +35,7 @@ export default function App() {
     || currentPage === 'notes'
     || currentPage === 'deadlines'
     || currentPage === 'pedagogical-kanban'
+    || currentPage === 'resolved-kanban'
   )
 
   useEffect(() => {
@@ -104,6 +106,7 @@ export default function App() {
             {currentPage === 'notes' && <Notes />}
             {currentPage === 'deadlines' && <Deadlines />}
             {currentPage === 'pedagogical-kanban' && <PedagogicalKanban />}
+            {currentPage === 'resolved-kanban' && <ResolvedKanban />}
           </div>
         </main>
       </div>

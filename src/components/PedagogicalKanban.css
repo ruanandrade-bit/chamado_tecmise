@@ -164,3 +164,78 @@
 .pk-dropdown-option.selected { background: rgba(167,139,250,0.12); color: #a78bfa; font-weight: 600; }
 .pk-option-dot { width: 6px; height: 6px; border-radius: 50%; }
 
+.pk-modal-lg {
+  max-width: 680px;
+}
+
+.pk-form-select-container {
+  position: relative;
+  width: 100%;
+}
+
+.pk-form-select-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  color: #e5e7eb;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.pk-form-select-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.pk-form-select-btn:focus,
+.pk-form-select-btn.active {
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.15);
+}
+
+.pk-form-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  z-index: 1010;
+  background: linear-gradient(145deg, #1e2235, #141724);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transform-origin: top center;
+  animation: pkDropdownFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.pk-card-archive-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.15);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.6875rem;
+  color: #10b981;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pk-card-archive-btn:hover {
+  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
