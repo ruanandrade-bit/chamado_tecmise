@@ -366,8 +366,6 @@ export default function ResolvedKanban() {
         </div>
       </div>
 
-  return (
-    <div className="rk-container">
       {/* ── Year/Month filter bar ── */}
       <div className="rk-filter-bar">
         <div className="rk-filter-group">
