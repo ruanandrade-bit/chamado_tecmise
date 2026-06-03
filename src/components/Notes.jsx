@@ -22,6 +22,7 @@ export default function Notes() {
   const canEdit = role === 'pedagoga' || role === 'psicóloga' || user?.canDragDrop === true
 
   const [notes, setNotes] = useState([])
+  const [deadlines, setDeadlines] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -61,8 +62,12 @@ export default function Notes() {
   const loadNotes = async () => {
     setIsLoading(true)
     try {
-      const data = await api.get('/notes')
-      setNotes(data || [])
+      const [notesData, deadlinesData] = await Promise.all([
+        api.get('/notes'),
+        api.get('/deadlines')
+      ])
+      setNotes(notesData || [])
+      setDeadlines(deadlinesData || [])
     } catch (e) { console.error(e) }
     finally { setIsLoading(false) }
   }
@@ -74,8 +79,22 @@ export default function Notes() {
     setIsSaving(true)
     try {
       if (editTarget) {
-        const updated = await api.put(`/notes/${editTarget.id}`, form)
-        setNotes(prev => prev.map(n => n.id === updated.id ? updated : n))
+        if (editTarget.isDeadline) {
+          const deadlineForm = {
+            title: form.title,
+            description: form.description,
+            date: form.reminderDate || new Date().toISOString().split('T')[0],
+            time: form.reminderTime || '00:00',
+            category: form.category,
+            status: form.reminderStatus === 'concluido' ? 'concluido' : (editTarget.status || 'pendente'),
+            priority: editTarget.priority || 'media'
+          }
+          const updated = await api.put(`/deadlines/${editTarget.id}`, deadlineForm)
+          setDeadlines(prev => prev.map(d => d.id === updated.id ? updated : d))
+        } else {
+          const updated = await api.put(`/notes/${editTarget.id}`, form)
+          setNotes(prev => prev.map(n => n.id === updated.id ? updated : n))
+        }
         setEditTarget(null)
       } else {
         const newNote = await api.post('/notes', form)
@@ -110,8 +129,13 @@ export default function Notes() {
 
   const handleDelete = async (id) => {
     try {
-      await api.delete(`/notes/${id}`)
-      setNotes(prev => prev.filter(n => n.id !== id))
+      if (String(id).startsWith('DL-')) {
+        await api.delete(`/deadlines/${id}`)
+        setDeadlines(prev => prev.filter(d => d.id !== id))
+      } else {
+        await api.delete(`/notes/${id}`)
+        setNotes(prev => prev.filter(n => n.id !== id))
+      }
       setDeleteTarget(null)
     } catch (e) { alert('Falha ao deletar.') }
   }
@@ -127,11 +151,67 @@ export default function Notes() {
 
   const pinned = filtered.filter(n => n.isPinned)
   const recentNotes = filtered.filter(n => n.noteType === 'note' && !n.isPinned).slice(0, 6)
-  const reminders = filtered.filter(n => n.noteType === 'reminder')
-  const countPedagoga = notes.filter(n => n.category === 'pedagoga').length
-  const countPsicologa = notes.filter(n => n.category === 'psicologa').length
+
+  const matchSearch = (item, q) => !q || item.title.toLowerCase().includes(q) || (item.description || '').toLowerCase().includes(q) || (item.author || '').toLowerCase().includes(q)
+  const matchCat = (item, cat) => !cat || item.category === cat
+
+  const q = searchQuery.toLowerCase()
+
+  const notesReminders = notes
+    .filter(n => n.noteType === 'reminder')
+    .filter(n => matchSearch(n, q) && matchCat(n, filterCategory))
+
+  const mappedDeadlines = deadlines
+    .map(d => ({
+      id: d.id,
+      title: d.title,
+      description: d.description,
+      category: d.category || 'pedagoga',
+      noteType: 'reminder',
+      author: d.author,
+      reminderDate: d.date,
+      reminderTime: d.time,
+      reminderStatus: d.status === 'concluido' ? 'concluido' : 'agendado',
+      createdAt: d.createdAt,
+      isDeadline: true,
+      priority: d.priority,
+      status: d.status
+    }))
+    .filter(d => matchSearch(d, q) && matchCat(d, filterCategory))
+
+  const reminders = [...notesReminders, ...mappedDeadlines].sort((a, b) => {
+    const isCompA = a.reminderStatus === 'concluido'
+    const isCompB = b.reminderStatus === 'concluido'
+    if (isCompA && !isCompB) return 1
+    if (!isCompA && isCompB) return -1
+    const dateA = a.reminderDate || a.createdAt
+    const dateB = b.reminderDate || b.createdAt
+    return new Date(dateA) - new Date(dateB)
+  })
+
+  const countPedagoga = notes.filter(n => n.category === 'pedagoga').length + deadlines.filter(d => d.category === 'pedagoga').length
+  const countPsicologa = notes.filter(n => n.category === 'psicologa').length + deadlines.filter(d => d.category === 'psicologa').length
   const activeNotes = notes.filter(n => n.noteType === 'note').length
-  const pendingReminders = notes.filter(n => n.noteType === 'reminder').length
+  const pendingReminders = notes.filter(n => n.noteType === 'reminder').length + deadlines.filter(d => d.status !== 'concluido').length
+
+  const allNotesAndDeadlines = [
+    ...notes,
+    ...deadlines.map(d => ({
+      id: d.id,
+      title: d.title,
+      description: d.description,
+      category: d.category || 'pedagoga',
+      noteType: 'reminder',
+      author: d.author,
+      reminderDate: d.date,
+      reminderTime: d.time,
+      reminderStatus: d.status === 'concluido' ? 'concluido' : 'agendado',
+      createdAt: d.createdAt,
+      isDeadline: true,
+      priority: d.priority,
+      status: d.status
+    }))
+  ]
 
   const todayStr = new Date().toISOString().split('T')[0]
 
@@ -457,7 +537,7 @@ export default function Notes() {
       )}
 
       {/* Timeline */}
-      {notes.length > 0 && (() => {
+      {allNotesAndDeadlines.length > 0 && (() => {
         const getNoteDateStr = (n) => {
           if (n.noteType === 'reminder' && n.reminderDate) {
             return n.reminderDate
@@ -469,7 +549,7 @@ export default function Notes() {
           return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
         }
         const todayStrLocal = getTodayLocalStr()
-        const todayNotes = sortByTime(notes.filter(n => getNoteDateStr(n) === todayStrLocal))
+        const todayNotes = sortByTime(allNotesAndDeadlines.filter(n => getNoteDateStr(n) === todayStrLocal))
 
         return (
           <div className="nt-timeline-section">
@@ -849,7 +929,7 @@ export default function Notes() {
 
       {/* Full Timeline Modal */}
       {showTimeline && (() => {
-        const modalNotes = sortByTime(filterByMonth(notes, tlModalMonth))
+        const modalNotes = sortByTime(filterByMonth(allNotesAndDeadlines, tlModalMonth))
         return (
           <div className="nt-modal-overlay" onClick={() => setShowTimeline(false)}>
             <div className="nt-modal-card nt-modal-lg" onClick={e => e.stopPropagation()}>

@@ -28,6 +28,7 @@ export default function Deadlines() {
   const canEdit = role === 'pedagoga' || role === 'psicóloga' || user?.canDragDrop === true
 
   const [deadlines, setDeadlines] = useState([])
+  const [notes, setNotes] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -67,8 +68,12 @@ export default function Deadlines() {
   const loadDeadlines = async () => {
     setIsLoading(true)
     try {
-      const data = await api.get('/deadlines')
-      setDeadlines(data || [])
+      const [deadlinesData, notesData] = await Promise.all([
+        api.get('/deadlines'),
+        api.get('/notes')
+      ])
+      setDeadlines(deadlinesData || [])
+      setNotes(notesData || [])
     } catch (e) { console.error('Error fetching deadlines:', e) }
     finally { setIsLoading(false) }
   }
@@ -84,8 +89,22 @@ export default function Deadlines() {
     setIsSaving(true)
     try {
       if (editTarget) {
-        const updated = await api.put(`/deadlines/${editTarget.id}`, form)
-        setDeadlines(prev => prev.map(d => d.id === updated.id ? updated : d))
+        if (editTarget.isReminder) {
+          const noteForm = {
+            title: form.title,
+            description: form.description,
+            category: editTarget.category || 'pedagoga',
+            noteType: 'reminder',
+            reminderDate: form.date,
+            reminderTime: form.time,
+            reminderStatus: form.status === 'concluido' ? 'concluido' : 'agendado'
+          }
+          const updated = await api.put(`/notes/${editTarget.id}`, noteForm)
+          setNotes(prev => prev.map(n => n.id === updated.id ? updated : n))
+        } else {
+          const updated = await api.put(`/deadlines/${editTarget.id}`, form)
+          setDeadlines(prev => prev.map(d => d.id === updated.id ? updated : d))
+        }
         setEditTarget(null)
       } else {
         const newDeadline = await api.post('/deadlines', form)
@@ -117,8 +136,13 @@ export default function Deadlines() {
 
   const handleDelete = async (id) => {
     try {
-      await api.delete(`/deadlines/${id}`)
-      setDeadlines(prev => prev.filter(d => d.id !== id))
+      if (String(id).startsWith('AN-')) {
+        await api.delete(`/notes/${id}`)
+        setNotes(prev => prev.filter(n => n.id !== id))
+      } else {
+        await api.delete(`/deadlines/${id}`)
+        setDeadlines(prev => prev.filter(d => d.id !== id))
+      }
       setDeleteTarget(null)
     } catch (e) { alert('Falha ao deletar.') }
   }
@@ -132,13 +156,37 @@ export default function Deadlines() {
     }
     const nextStatus = nextStatusMap[d.status || 'pendente']
     try {
-      const updated = await api.put(`/deadlines/${d.id}`, { status: nextStatus })
-      setDeadlines(prev => prev.map(item => item.id === updated.id ? updated : item))
+      if (String(d.id).startsWith('AN-')) {
+        const reminderStatus = nextStatus === 'concluido' ? 'concluido' : 'agendado'
+        const updated = await api.put(`/notes/${d.id}`, { reminderStatus })
+        setNotes(prev => prev.map(item => item.id === updated.id ? updated : item))
+      } else {
+        const updated = await api.put(`/deadlines/${d.id}`, { status: nextStatus })
+        setDeadlines(prev => prev.map(item => item.id === updated.id ? updated : item))
+      }
     } catch (e) { console.error('Error changing status:', e) }
   }
 
   // Derived filter
-  const filtered = deadlines.filter(d => {
+  const mappedReminders = notes
+    .filter(n => n.noteType === 'reminder')
+    .map(n => ({
+      id: n.id,
+      title: n.title,
+      description: n.description,
+      date: n.reminderDate || n.createdAt.split('T')[0],
+      time: n.reminderTime || '00:00',
+      category: n.category || 'pedagoga',
+      status: n.reminderStatus === 'concluido' ? 'concluido' : 'pendente',
+      priority: 'media',
+      author: n.author,
+      createdAt: n.createdAt,
+      isReminder: true
+    }))
+
+  const allDeadlinesAndReminders = [...deadlines, ...mappedReminders]
+
+  const filtered = allDeadlinesAndReminders.filter(d => {
     const q = searchQuery.toLowerCase()
     const matchSearch = !q || d.title.toLowerCase().includes(q) || (d.description || '').toLowerCase().includes(q)
     const matchAuthor = !filterAuthor || d.author === filterAuthor
@@ -155,12 +203,12 @@ export default function Deadlines() {
   })
 
   // Stats
-  const total = deadlines.length
-  const pending = deadlines.filter(d => d.status !== 'concluido').length
-  const completed = deadlines.filter(d => d.status === 'concluido').length
-  const urgent = deadlines.filter(d => d.status !== 'concluido' && d.priority === 'alta').length
+  const total = allDeadlinesAndReminders.length
+  const pending = allDeadlinesAndReminders.filter(d => d.status !== 'concluido').length
+  const completed = allDeadlinesAndReminders.filter(d => d.status === 'concluido').length
+  const urgent = allDeadlinesAndReminders.filter(d => d.status !== 'concluido' && d.priority === 'alta').length
 
-  const uniqueAuthors = Array.from(new Set(deadlines.map(d => d.author).filter(Boolean)))
+  const uniqueAuthors = Array.from(new Set(allDeadlinesAndReminders.map(d => d.author).filter(Boolean)))
 
   const formatDateDisplay = (dateStr) => {
     if (!dateStr) return ''

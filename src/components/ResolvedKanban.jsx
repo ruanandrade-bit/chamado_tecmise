@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Kanban as KanbanIcon, Plus, Trash2, Calendar, Clock, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronRight, ChevronLeft, ChevronDown, Archive, History, ShieldAlert, RotateCcw } from 'lucide-react'
+import { Kanban as KanbanIcon, Plus, Trash2, Calendar, CalendarDays, Clock, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronRight, ChevronLeft, ChevronDown, Archive, History, ShieldAlert, RotateCcw } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import './PedagogicalKanban.css'
@@ -270,9 +270,11 @@ export default function ResolvedKanban() {
 
   // Build available years from task data
   const availableYears = [...new Set(tasks.filter(t => t.isArchived).map(t => {
-    const d = new Date(t.archivedAt || t.createdAt)
-    return d.getFullYear()
-  }))].sort((a, b) => b - a)
+    const val = t.archivedAt || t.createdAt
+    if (!val) return null
+    const d = new Date(val)
+    return isNaN(d.getTime()) ? null : d.getFullYear()
+  }).filter(Boolean))].sort((a, b) => b - a)
 
   // If current year has no tasks, add it anyway
   if (!availableYears.includes(currentYear)) availableYears.unshift(currentYear)
@@ -298,7 +300,11 @@ export default function ResolvedKanban() {
   const filteredTasks = tasks.filter(task => {
     if (!task.isArchived) return false
     
-    const d = new Date(task.archivedAt || task.createdAt)
+    const val = task.archivedAt || task.createdAt
+    if (!val) return false
+    const d = new Date(val)
+    if (isNaN(d.getTime())) return false
+
     const taskYear = d.getFullYear()
     const taskMonth = d.getMonth() + 1
 
@@ -449,7 +455,12 @@ export default function ResolvedKanban() {
 
                   <div className="rk-card-footer-item">
                     <span className="rk-card-date-item">
-                      {new Date(task.archivedAt || task.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                      {(() => {
+                        const val = task.archivedAt || task.createdAt
+                        if (!val) return ''
+                        const d = new Date(val)
+                        return isNaN(d.getTime()) ? '' : d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+                      })()}
                     </span>
                   </div>
                 </div>
@@ -528,7 +539,11 @@ export default function ResolvedKanban() {
                 <div className="pk-detail-info-item">
                   <span className="pk-detail-label">Prazo Limite</span>
                   <span className="pk-detail-val" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Calendar size={12} /> {selectedTask.date ? new Date(selectedTask.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Sem data definida'}
+                    <Calendar size={12} /> {(() => {
+                      if (!selectedTask.date) return 'Sem data definida'
+                      const d = new Date(selectedTask.date)
+                      return isNaN(d.getTime()) ? 'Sem data definida' : d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                    })()}
                   </span>
                 </div>
               </div>
@@ -543,8 +558,9 @@ export default function ResolvedKanban() {
                   <div className="pk-history-timeline">
                     {[...selectedTask.history].reverse().map((entry, idx) => {
                       const d = new Date(entry.date)
-                      const dateStr = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                      const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                      const isValid = !isNaN(d.getTime())
+                      const dateStr = isValid ? d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : ''
+                      const timeStr = isValid ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''
 
                       const statusLabel = (s) => {
                         if (s === 'todo' || s === 'A Fazer') return 'A Fazer'
