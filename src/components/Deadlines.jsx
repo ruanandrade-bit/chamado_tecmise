@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Plus, Trash2, CalendarDays, Clock, CheckCircle2, AlertTriangle, AlertCircle, Search, Filter, Loader2, ShieldCheck, X, Edit3, ChevronRight, Tag } from 'lucide-react'
+import { Calendar, Plus, Trash2, CalendarDays, Clock, CheckCircle2, AlertTriangle, AlertCircle, Search, Filter, Loader2, ShieldCheck, X, Edit3, ChevronRight, Tag, ChevronDown } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import './Deadlines.css'
@@ -39,6 +39,9 @@ export default function Deadlines() {
   const [filterCategory, setFilterCategory] = useState('')
   const [filterPriority, setFilterPriority] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false)
+  const [isPriorityOpen, setIsPriorityOpen] = useState(false)
+  const [isStatusOpen, setIsStatusOpen] = useState(false)
 
   // Form state
   const [form, setForm] = useState({ title: '', description: '', date: '', time: '', category: 'pedagoga', priority: 'media', status: 'pendente' })
@@ -46,6 +49,16 @@ export default function Deadlines() {
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => { loadDeadlines() }, [])
+
+  useEffect(() => {
+    const handleOutsideClick = () => {
+      setIsCategoryOpen(false)
+      setIsPriorityOpen(false)
+      setIsStatusOpen(false)
+    }
+    window.addEventListener('click', handleOutsideClick)
+    return () => window.removeEventListener('click', handleOutsideClick)
+  }, [])
 
   const loadDeadlines = async () => {
     setIsLoading(true)
@@ -199,32 +212,163 @@ export default function Deadlines() {
 
       {/* Filters */}
       <div className="dl-filters-bar">
-        <div className="dl-filter-item">
-          <Filter size={12} />
-          <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
-            <option value="">Todas categorias</option>
-            <option value="pedagoga">Pedagogia</option>
-            <option value="psicologa">Psicologia</option>
-            <option value="geral">Geral / Outros</option>
-          </select>
+        {/* Custom Category Dropdown */}
+        <div className="dl-custom-select-container">
+          <button 
+            className={`dl-filter-btn ${filterCategory ? 'active' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsCategoryOpen(!isCategoryOpen)
+              setIsPriorityOpen(false)
+              setIsStatusOpen(false)
+            }}
+          >
+            <Filter size={14} />
+            <span>
+              {filterCategory === 'pedagoga' ? 'Pedagogia' : 
+               filterCategory === 'psicologa' ? 'Psicologia' : 
+               filterCategory === 'geral' ? 'Geral / Outros' : 'Todas categorias'}
+            </span>
+            <ChevronDown size={14} className={`dl-select-chevron ${isCategoryOpen ? 'open' : ''}`} />
+          </button>
+          
+          {isCategoryOpen && (
+            <div className="dl-custom-dropdown" onClick={(e) => e.stopPropagation()}>
+              <div 
+                className={`dl-dropdown-option ${filterCategory === '' ? 'selected' : ''}`}
+                onClick={() => { setFilterCategory(''); setIsCategoryOpen(false) }}
+              >
+                Todas categorias
+              </div>
+              <div 
+                className={`dl-dropdown-option ${filterCategory === 'pedagoga' ? 'selected' : ''}`}
+                onClick={() => { setFilterCategory('pedagoga'); setIsCategoryOpen(false) }}
+              >
+                <span className="dl-option-dot" style={{ background: '#a78bfa' }} />
+                Pedagogia
+              </div>
+              <div 
+                className={`dl-dropdown-option ${filterCategory === 'psicologa' ? 'selected' : ''}`}
+                onClick={() => { setFilterCategory('psicologa'); setIsCategoryOpen(false) }}
+              >
+                <span className="dl-option-dot" style={{ background: '#34d399' }} />
+                Psicologia
+              </div>
+              <div 
+                className={`dl-dropdown-option ${filterCategory === 'geral' ? 'selected' : ''}`}
+                onClick={() => { setFilterCategory('geral'); setIsCategoryOpen(false) }}
+              >
+                <span className="dl-option-dot" style={{ background: '#60a5fa' }} />
+                Geral / Outros
+              </div>
+            </div>
+          )}
         </div>
-        <div className="dl-filter-item">
-          <Tag size={12} />
-          <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)}>
-            <option value="">Todas prioridades</option>
-            <option value="alta">Alta</option>
-            <option value="media">Média</option>
-            <option value="baixa">Baixa</option>
-          </select>
+
+        {/* Custom Priority Dropdown */}
+        <div className="dl-custom-select-container">
+          <button 
+            className={`dl-filter-btn ${filterPriority ? 'active' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsPriorityOpen(!isPriorityOpen)
+              setIsCategoryOpen(false)
+              setIsStatusOpen(false)
+            }}
+          >
+            <Tag size={14} />
+            <span>
+              {filterPriority === 'alta' ? 'Alta' : 
+               filterPriority === 'media' ? 'Média' : 
+               filterPriority === 'baixa' ? 'Baixa' : 'Todas prioridades'}
+            </span>
+            <ChevronDown size={14} className={`dl-select-chevron ${isPriorityOpen ? 'open' : ''}`} />
+          </button>
+          
+          {isPriorityOpen && (
+            <div className="dl-custom-dropdown" onClick={(e) => e.stopPropagation()}>
+              <div 
+                className={`dl-dropdown-option ${filterPriority === '' ? 'selected' : ''}`}
+                onClick={() => { setFilterPriority(''); setIsPriorityOpen(false) }}
+              >
+                Todas prioridades
+              </div>
+              <div 
+                className={`dl-dropdown-option ${filterPriority === 'alta' ? 'selected' : ''}`}
+                onClick={() => { setFilterPriority('alta'); setIsPriorityOpen(false) }}
+              >
+                <span className="dl-option-dot" style={{ background: '#f87171' }} />
+                Alta
+              </div>
+              <div 
+                className={`dl-dropdown-option ${filterPriority === 'media' ? 'selected' : ''}`}
+                onClick={() => { setFilterPriority('media'); setIsPriorityOpen(false) }}
+              >
+                <span className="dl-option-dot" style={{ background: '#fbbf24' }} />
+                Média
+              </div>
+              <div 
+                className={`dl-dropdown-option ${filterPriority === 'baixa' ? 'selected' : ''}`}
+                onClick={() => { setFilterPriority('baixa'); setIsPriorityOpen(false) }}
+              >
+                <span className="dl-option-dot" style={{ background: '#9ca3af' }} />
+                Baixa
+              </div>
+            </div>
+          )}
         </div>
-        <div className="dl-filter-item">
-          <CheckCircle2 size={12} />
-          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-            <option value="">Todos status</option>
-            <option value="pendente">Pendente</option>
-            <option value="em_andamento">Em Andamento</option>
-            <option value="concluido">Concluído</option>
-          </select>
+
+        {/* Custom Status Dropdown */}
+        <div className="dl-custom-select-container">
+          <button 
+            className={`dl-filter-btn ${filterStatus ? 'active' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsStatusOpen(!isStatusOpen)
+              setIsCategoryOpen(false)
+              setIsPriorityOpen(false)
+            }}
+          >
+            <CheckCircle2 size={14} />
+            <span>
+              {filterStatus === 'pendente' ? 'Pendente' : 
+               filterStatus === 'em_andamento' ? 'Em Andamento' : 
+               filterStatus === 'concluido' ? 'Concluído' : 'Todos status'}
+            </span>
+            <ChevronDown size={14} className={`dl-select-chevron ${isStatusOpen ? 'open' : ''}`} />
+          </button>
+          
+          {isStatusOpen && (
+            <div className="dl-custom-dropdown" onClick={(e) => e.stopPropagation()}>
+              <div 
+                className={`dl-dropdown-option ${filterStatus === '' ? 'selected' : ''}`}
+                onClick={() => { setFilterStatus(''); setIsStatusOpen(false) }}
+              >
+                Todos status
+              </div>
+              <div 
+                className={`dl-dropdown-option ${filterStatus === 'pendente' ? 'selected' : ''}`}
+                onClick={() => { setFilterStatus('pendente'); setIsStatusOpen(false) }}
+              >
+                <span className="dl-option-dot" style={{ background: '#f87171' }} />
+                Pendente
+              </div>
+              <div 
+                className={`dl-dropdown-option ${filterStatus === 'em_andamento' ? 'selected' : ''}`}
+                onClick={() => { setFilterStatus('em_andamento'); setIsStatusOpen(false) }}
+              >
+                <span className="dl-option-dot" style={{ background: '#fbbf24' }} />
+                Em Andamento
+              </div>
+              <div 
+                className={`dl-dropdown-option ${filterStatus === 'concluido' ? 'selected' : ''}`}
+                onClick={() => { setFilterStatus('concluido'); setIsStatusOpen(false) }}
+              >
+                <span className="dl-option-dot" style={{ background: '#34d399' }} />
+                Concluído
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

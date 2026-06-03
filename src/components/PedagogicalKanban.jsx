@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Kanban as KanbanIcon, Plus, Trash2, Calendar, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronRight, ChevronLeft } from 'lucide-react'
+import { Kanban as KanbanIcon, Plus, Trash2, Calendar, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronRight, ChevronLeft, ChevronDown } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import './PedagogicalKanban.css'
 
 export default function PedagogicalKanban() {
   const { user } = useAuthStore()
-  const canEdit = user?.role && ['pedagoga', 'psicologa', 'admin'].includes(user.role)
+  const role = (user?.role || '').toLowerCase()
+  const canEdit = role === 'pedagoga' || role === 'psicóloga' || user?.canDragDrop === true
 
   const [tasks, setTasks] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -16,6 +17,8 @@ export default function PedagogicalKanban() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterPriority, setFilterPriority] = useState('')
   const [filterResp, setFilterResp] = useState('')
+  const [isPriorityOpen, setIsPriorityOpen] = useState(false)
+  const [isRespOpen, setIsRespOpen] = useState(false)
 
   // Modals
   const [showFormModal, setShowFormModal] = useState(false)
@@ -44,6 +47,15 @@ export default function PedagogicalKanban() {
 
   useEffect(() => {
     fetchTasks()
+  }, [])
+
+  useEffect(() => {
+    const handleOutsideClick = () => {
+      setIsPriorityOpen(false)
+      setIsRespOpen(false)
+    }
+    window.addEventListener('click', handleOutsideClick)
+    return () => window.removeEventListener('click', handleOutsideClick)
   }, [])
 
   const fetchTasks = async () => {
@@ -287,9 +299,20 @@ export default function PedagogicalKanban() {
               <p className="pk-stat-label">Em aberto</p>
             </div>
           </div>
-          <svg className="pk-sparkline-svg" style={{ stroke: '#38bdf8' }} viewBox="0 0 100 40">
-            <path d="M 0 30 Q 20 15 40 25 T 80 10 T 100 20" />
-            <circle cx="100" cy="20" r="3" fill="#38bdf8" />
+          <svg className="pk-sparkline-svg" viewBox="0 0 100 40">
+            <defs>
+              <linearGradient id="pk-sparkline-blue" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#0ea5e9" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="#38bdf8" stopOpacity="1" />
+              </linearGradient>
+              <linearGradient id="pk-sparkline-blue-fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#38bdf8" stopOpacity="0.15" />
+                <stop offset="100%" stopColor="#38bdf8" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d="M 0 30 Q 20 15 40 25 T 80 10 T 100 20 L 100 40 L 0 40 Z" fill="url(#pk-sparkline-blue-fill)" className="pk-sparkline-fill" />
+            <path d="M 0 30 Q 20 15 40 25 T 80 10 T 100 20" stroke="url(#pk-sparkline-blue)" className="pk-sparkline-path" />
+            <circle cx="100" cy="20" r="3" fill="#38bdf8" className="pk-sparkline-circle" style={{ color: '#38bdf8' }} />
           </svg>
         </div>
         <div className="pk-stat-card">
@@ -300,9 +323,20 @@ export default function PedagogicalKanban() {
               <p className="pk-stat-label">Alta prioridade</p>
             </div>
           </div>
-          <svg className="pk-sparkline-svg" style={{ stroke: '#f87171' }} viewBox="0 0 100 40">
-            <path d="M 0 35 Q 30 10 50 28 T 100 5" />
-            <circle cx="100" cy="5" r="3" fill="#f87171" />
+          <svg className="pk-sparkline-svg" viewBox="0 0 100 40">
+            <defs>
+              <linearGradient id="pk-sparkline-red" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#ef4444" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="#f87171" stopOpacity="1" />
+              </linearGradient>
+              <linearGradient id="pk-sparkline-red-fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#f87171" stopOpacity="0.15" />
+                <stop offset="100%" stopColor="#f87171" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d="M 0 35 Q 30 10 50 28 T 100 5 L 100 40 L 0 40 Z" fill="url(#pk-sparkline-red-fill)" className="pk-sparkline-fill" />
+            <path d="M 0 35 Q 30 10 50 28 T 100 5" stroke="url(#pk-sparkline-red)" className="pk-sparkline-path" />
+            <circle cx="100" cy="5" r="3" fill="#f87171" className="pk-sparkline-circle" style={{ color: '#f87171' }} />
           </svg>
         </div>
         <div className="pk-stat-card">
@@ -313,31 +347,120 @@ export default function PedagogicalKanban() {
               <p className="pk-stat-label">Concluídas</p>
             </div>
           </div>
-          <svg className="pk-sparkline-svg" style={{ stroke: '#10b981' }} viewBox="0 0 100 40">
-            <path d="M 0 38 Q 20 30 50 15 T 80 18 T 100 2" />
-            <circle cx="100" cy="2" r="3" fill="#10b981" />
+          <svg className="pk-sparkline-svg" viewBox="0 0 100 40">
+            <defs>
+              <linearGradient id="pk-sparkline-green" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#059669" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="1" />
+              </linearGradient>
+              <linearGradient id="pk-sparkline-green-fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#10b981" stopOpacity="0.15" />
+                <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+            <path d="M 0 38 Q 20 30 50 15 T 80 18 T 100 2 L 100 40 L 0 40 Z" fill="url(#pk-sparkline-green-fill)" className="pk-sparkline-fill" />
+            <path d="M 0 38 Q 20 30 50 15 T 80 18 T 100 2" stroke="url(#pk-sparkline-green)" className="pk-sparkline-path" />
+            <circle cx="100" cy="2" r="3" fill="#10b981" className="pk-sparkline-circle" style={{ color: '#10b981' }} />
           </svg>
         </div>
       </div>
 
       {/* Filters Bar */}
       <div className="pk-filters-bar">
-        <div className="pk-filter-item">
-          <Filter size={12} />
-          <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)}>
-            <option value="">Todas as prioridades</option>
-            <option value="high">Alta prioridade</option>
-            <option value="medium">Média prioridade</option>
-            <option value="low">Baixa prioridade</option>
-          </select>
+        {/* Custom Priority Dropdown */}
+        <div className="pk-custom-select-container">
+          <button 
+            className={`pk-filter-btn ${filterPriority ? 'active' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsPriorityOpen(!isPriorityOpen)
+              setIsRespOpen(false)
+            }}
+          >
+            <Filter size={14} />
+            <span>
+              {filterPriority === 'high' ? 'Alta prioridade' : 
+               filterPriority === 'medium' ? 'Média prioridade' : 
+               filterPriority === 'low' ? 'Baixa prioridade' : 'Todas as prioridades'}
+            </span>
+            <ChevronDown size={14} className={`pk-select-chevron ${isPriorityOpen ? 'open' : ''}`} />
+          </button>
+          
+          {isPriorityOpen && (
+            <div className="pk-custom-dropdown" onClick={(e) => e.stopPropagation()}>
+              <div 
+                className={`pk-dropdown-option ${filterPriority === '' ? 'selected' : ''}`}
+                onClick={() => { setFilterPriority(''); setIsPriorityOpen(false) }}
+              >
+                Todas as prioridades
+              </div>
+              <div 
+                className={`pk-dropdown-option ${filterPriority === 'high' ? 'selected' : ''}`}
+                onClick={() => { setFilterPriority('high'); setIsPriorityOpen(false) }}
+              >
+                <span className="pk-option-dot" style={{ background: '#f87171' }} />
+                Alta prioridade
+              </div>
+              <div 
+                className={`pk-dropdown-option ${filterPriority === 'medium' ? 'selected' : ''}`}
+                onClick={() => { setFilterPriority('medium'); setIsPriorityOpen(false) }}
+              >
+                <span className="pk-option-dot" style={{ background: '#a78bfa' }} />
+                Média prioridade
+              </div>
+              <div 
+                className={`pk-dropdown-option ${filterPriority === 'low' ? 'selected' : ''}`}
+                onClick={() => { setFilterPriority('low'); setIsPriorityOpen(false) }}
+              >
+                <span className="pk-option-dot" style={{ background: '#38bdf8' }} />
+                Baixa prioridade
+              </div>
+            </div>
+          )}
         </div>
-        <div className="pk-filter-item">
-          <Brain size={12} />
-          <select value={filterResp} onChange={e => setFilterResp(e.target.value)}>
-            <option value="">Todos os responsáveis</option>
-            <option value="Pedagoga">Pedagoga</option>
-            <option value="Psicóloga">Psicóloga</option>
-          </select>
+
+        {/* Custom Responsible Dropdown */}
+        <div className="pk-custom-select-container">
+          <button 
+            className={`pk-filter-btn ${filterResp ? 'active' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsRespOpen(!isRespOpen)
+              setIsPriorityOpen(false)
+            }}
+          >
+            <Brain size={14} />
+            <span>
+              {filterResp === 'Pedagoga' ? 'Pedagoga' : 
+               filterResp === 'Psicóloga' ? 'Psicóloga' : 'Todos os responsáveis'}
+            </span>
+            <ChevronDown size={14} className={`pk-select-chevron ${isRespOpen ? 'open' : ''}`} />
+          </button>
+          
+          {isRespOpen && (
+            <div className="pk-custom-dropdown" onClick={(e) => e.stopPropagation()}>
+              <div 
+                className={`pk-dropdown-option ${filterResp === '' ? 'selected' : ''}`}
+                onClick={() => { setFilterResp(''); setIsRespOpen(false) }}
+              >
+                Todos os responsáveis
+              </div>
+              <div 
+                className={`pk-dropdown-option ${filterResp === 'Pedagoga' ? 'selected' : ''}`}
+                onClick={() => { setFilterResp('Pedagoga'); setIsRespOpen(false) }}
+              >
+                <span className="pk-option-dot" style={{ background: '#a78bfa' }} />
+                Pedagoga
+              </div>
+              <div 
+                className={`pk-dropdown-option ${filterResp === 'Psicóloga' ? 'selected' : ''}`}
+                onClick={() => { setFilterResp('Psicóloga'); setIsRespOpen(false) }}
+              >
+                <span className="pk-option-dot" style={{ background: '#10b981' }} />
+                Psicóloga
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

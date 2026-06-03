@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { StickyNote, Plus, Trash2, Pin, PinOff, Calendar, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react'
+import { StickyNote, Plus, Trash2, Pin, PinOff, Calendar, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import './Notes.css'
@@ -30,6 +30,8 @@ export default function Notes() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCategory, setFilterCategory] = useState('')
   const [filterType, setFilterType] = useState('')
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false)
+  const [isTypeOpen, setIsTypeOpen] = useState(false)
   const [timelineMonth, setTimelineMonth] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` })
   const [tlModalMonth, setTlModalMonth] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` })
   const [editTarget, setEditTarget] = useState(null)
@@ -40,6 +42,15 @@ export default function Notes() {
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => { loadNotes() }, [])
+
+  useEffect(() => {
+    const handleOutsideClick = () => {
+      setIsCategoryOpen(false)
+      setIsTypeOpen(false)
+    }
+    window.addEventListener('click', handleOutsideClick)
+    return () => window.removeEventListener('click', handleOutsideClick)
+  }, [])
 
   const loadNotes = async () => {
     setIsLoading(true)
@@ -197,21 +208,92 @@ export default function Notes() {
 
       {/* Filters */}
       <div className="nt-filters-bar">
-        <div className="nt-filter-item">
-          <Filter size={12} />
-          <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)}>
-            <option value="">Todas as categorias</option>
-            <option value="pedagoga">Pedagoga</option>
-            <option value="psicologa">Psicóloga</option>
-          </select>
+        {/* Custom Category Dropdown */}
+        <div className="nt-custom-select-container">
+          <button 
+            className={`nt-filter-btn ${filterCategory ? 'active' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsCategoryOpen(!isCategoryOpen)
+              setIsTypeOpen(false)
+            }}
+          >
+            <Filter size={14} />
+            <span>
+              {filterCategory === 'pedagoga' ? 'Pedagoga' : 
+               filterCategory === 'psicologa' ? 'Psicóloga' : 'Todas as categorias'}
+            </span>
+            <ChevronDown size={14} className={`nt-select-chevron ${isCategoryOpen ? 'open' : ''}`} />
+          </button>
+          
+          {isCategoryOpen && (
+            <div className="nt-custom-dropdown" onClick={(e) => e.stopPropagation()}>
+              <div 
+                className={`nt-dropdown-option ${filterCategory === '' ? 'selected' : ''}`}
+                onClick={() => { setFilterCategory(''); setIsCategoryOpen(false) }}
+              >
+                Todas as categorias
+              </div>
+              <div 
+                className={`nt-dropdown-option ${filterCategory === 'pedagoga' ? 'selected' : ''}`}
+                onClick={() => { setFilterCategory('pedagoga'); setIsCategoryOpen(false) }}
+              >
+                <span className="nt-option-dot" style={{ background: '#a78bfa' }} />
+                Pedagoga
+              </div>
+              <div 
+                className={`nt-dropdown-option ${filterCategory === 'psicologa' ? 'selected' : ''}`}
+                onClick={() => { setFilterCategory('psicologa'); setIsCategoryOpen(false) }}
+              >
+                <span className="nt-option-dot" style={{ background: '#34d399' }} />
+                Psicóloga
+              </div>
+            </div>
+          )}
         </div>
-        <div className="nt-filter-item">
-          <StickyNote size={12} />
-          <select value={filterType} onChange={e => setFilterType(e.target.value)}>
-            <option value="">Todos os tipos</option>
-            <option value="note">Anotações</option>
-            <option value="reminder">Lembretes</option>
-          </select>
+
+        {/* Custom Type Dropdown */}
+        <div className="nt-custom-select-container">
+          <button 
+            className={`nt-filter-btn ${filterType ? 'active' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation()
+              setIsTypeOpen(!isTypeOpen)
+              setIsCategoryOpen(false)
+            }}
+          >
+            <StickyNote size={14} />
+            <span>
+              {filterType === 'note' ? 'Anotações' : 
+               filterType === 'reminder' ? 'Lembretes' : 'Todos os tipos'}
+            </span>
+            <ChevronDown size={14} className={`nt-select-chevron ${isTypeOpen ? 'open' : ''}`} />
+          </button>
+          
+          {isTypeOpen && (
+            <div className="nt-custom-dropdown" onClick={(e) => e.stopPropagation()}>
+              <div 
+                className={`nt-dropdown-option ${filterType === '' ? 'selected' : ''}`}
+                onClick={() => { setFilterType(''); setIsTypeOpen(false) }}
+              >
+                Todos os tipos
+              </div>
+              <div 
+                className={`nt-dropdown-option ${filterType === 'note' ? 'selected' : ''}`}
+                onClick={() => { setFilterType('note'); setIsTypeOpen(false) }}
+              >
+                <span className="nt-option-dot" style={{ background: '#a78bfa' }} />
+                Anotações
+              </div>
+              <div 
+                className={`nt-dropdown-option ${filterType === 'reminder' ? 'selected' : ''}`}
+                onClick={() => { setFilterType('reminder'); setIsTypeOpen(false) }}
+              >
+                <span className="nt-option-dot" style={{ background: '#fbbf24' }} />
+                Lembretes
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
