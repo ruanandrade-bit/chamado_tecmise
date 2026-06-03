@@ -36,13 +36,12 @@ export default function Deadlines() {
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
-  const [filterCategory, setFilterCategory] = useState('')
+  const [filterAuthor, setFilterAuthor] = useState('')
   const [filterPriority, setFilterPriority] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
-  const [isCategoryOpen, setIsCategoryOpen] = useState(false)
+  const [isAuthorOpen, setIsAuthorOpen] = useState(false)
   const [isPriorityOpen, setIsPriorityOpen] = useState(false)
   const [isStatusOpen, setIsStatusOpen] = useState(false)
-  const [isFormCategoryOpen, setIsFormCategoryOpen] = useState(false)
   const [isFormPriorityOpen, setIsFormPriorityOpen] = useState(false)
   const [isFormStatusOpen, setIsFormStatusOpen] = useState(false)
 
@@ -55,10 +54,9 @@ export default function Deadlines() {
 
   useEffect(() => {
     const handleOutsideClick = () => {
-      setIsCategoryOpen(false)
+      setIsAuthorOpen(false)
       setIsPriorityOpen(false)
       setIsStatusOpen(false)
-      setIsFormCategoryOpen(false)
       setIsFormPriorityOpen(false)
       setIsFormStatusOpen(false)
     }
@@ -94,7 +92,6 @@ export default function Deadlines() {
         setDeadlines(prev => [newDeadline, ...prev])
       }
       setForm({ title: '', description: '', date: '', time: '', category: 'pedagoga', priority: 'media', status: 'pendente' })
-      setIsFormCategoryOpen(false)
       setIsFormPriorityOpen(false)
       setIsFormStatusOpen(false)
       setShowAddModal(false)
@@ -113,7 +110,6 @@ export default function Deadlines() {
       priority: d.priority || 'media',
       status: d.status || 'pendente'
     })
-    setIsFormCategoryOpen(false)
     setIsFormPriorityOpen(false)
     setIsFormStatusOpen(false)
     setShowAddModal(true)
@@ -145,10 +141,10 @@ export default function Deadlines() {
   const filtered = deadlines.filter(d => {
     const q = searchQuery.toLowerCase()
     const matchSearch = !q || d.title.toLowerCase().includes(q) || (d.description || '').toLowerCase().includes(q)
-    const matchCat = !filterCategory || d.category === filterCategory
+    const matchAuthor = !filterAuthor || d.author === filterAuthor
     const matchPriority = !filterPriority || d.priority === filterPriority
     const matchStatus = !filterStatus || d.status === filterStatus
-    return matchSearch && matchCat && matchPriority && matchStatus
+    return matchSearch && matchAuthor && matchPriority && matchStatus
   })
 
   // Sort deadlines: concluidos at the bottom, others sorted by date (closer first)
@@ -163,6 +159,8 @@ export default function Deadlines() {
   const pending = deadlines.filter(d => d.status !== 'concluido').length
   const completed = deadlines.filter(d => d.status === 'concluido').length
   const urgent = deadlines.filter(d => d.status !== 'concluido' && d.priority === 'alta').length
+
+  const uniqueAuthors = Array.from(new Set(deadlines.map(d => d.author).filter(Boolean)))
 
   const formatDateDisplay = (dateStr) => {
     if (!dateStr) return ''
@@ -196,7 +194,6 @@ export default function Deadlines() {
             <button className="dl-new-btn" onClick={() => {
               setEditTarget(null)
               setForm({ title: '', description: '', date: '', time: '', category: 'pedagoga', priority: 'media', status: 'pendente' })
-              setIsFormCategoryOpen(false)
               setIsFormPriorityOpen(false)
               setIsFormStatusOpen(false)
               setShowAddModal(true)
@@ -231,55 +228,42 @@ export default function Deadlines() {
 
       {/* Filters */}
       <div className="dl-filters-bar">
-        {/* Custom Category Dropdown */}
+        {/* Custom Author / Responsible Dropdown */}
         <div className="dl-custom-select-container">
           <button 
-            className={`dl-filter-btn ${filterCategory ? 'active' : ''}`}
+            className={`dl-filter-btn ${filterAuthor ? 'active' : ''}`}
             onClick={(e) => {
               e.stopPropagation()
-              setIsCategoryOpen(!isCategoryOpen)
+              setIsAuthorOpen(!isAuthorOpen)
               setIsPriorityOpen(false)
               setIsStatusOpen(false)
             }}
           >
             <Filter size={14} />
             <span>
-              {filterCategory === 'pedagoga' ? 'Pedagogia' : 
-               filterCategory === 'psicologa' ? 'Psicologia' : 
-               filterCategory === 'geral' ? 'Geral / Outros' : 'Todas categorias'}
+              {filterAuthor ? `Responsável: ${filterAuthor}` : 'Todos responsáveis'}
             </span>
-            <ChevronDown size={14} className={`dl-select-chevron ${isCategoryOpen ? 'open' : ''}`} />
+            <ChevronDown size={14} className={`dl-select-chevron ${isAuthorOpen ? 'open' : ''}`} />
           </button>
           
-          {isCategoryOpen && (
+          {isAuthorOpen && (
             <div className="dl-custom-dropdown" onClick={(e) => e.stopPropagation()}>
               <div 
-                className={`dl-dropdown-option ${filterCategory === '' ? 'selected' : ''}`}
-                onClick={() => { setFilterCategory(''); setIsCategoryOpen(false) }}
+                className={`dl-dropdown-option ${filterAuthor === '' ? 'selected' : ''}`}
+                onClick={() => { setFilterAuthor(''); setIsAuthorOpen(false) }}
               >
-                Todas categorias
+                Todos responsáveis
               </div>
-              <div 
-                className={`dl-dropdown-option ${filterCategory === 'pedagoga' ? 'selected' : ''}`}
-                onClick={() => { setFilterCategory('pedagoga'); setIsCategoryOpen(false) }}
-              >
-                <span className="dl-option-dot" style={{ background: '#a78bfa' }} />
-                Pedagogia
-              </div>
-              <div 
-                className={`dl-dropdown-option ${filterCategory === 'psicologa' ? 'selected' : ''}`}
-                onClick={() => { setFilterCategory('psicologa'); setIsCategoryOpen(false) }}
-              >
-                <span className="dl-option-dot" style={{ background: '#34d399' }} />
-                Psicologia
-              </div>
-              <div 
-                className={`dl-dropdown-option ${filterCategory === 'geral' ? 'selected' : ''}`}
-                onClick={() => { setFilterCategory('geral'); setIsCategoryOpen(false) }}
-              >
-                <span className="dl-option-dot" style={{ background: '#60a5fa' }} />
-                Geral / Outros
-              </div>
+              {uniqueAuthors.map(authorName => (
+                <div 
+                  key={authorName}
+                  className={`dl-dropdown-option ${filterAuthor === authorName ? 'selected' : ''}`}
+                  onClick={() => { setFilterAuthor(authorName); setIsAuthorOpen(false) }}
+                >
+                  <span className="dl-option-dot" style={{ background: '#a78bfa' }} />
+                  {authorName}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -402,7 +386,6 @@ export default function Deadlines() {
       ) : (
         <div className="dl-list-wrapper">
           {sortedDeadlines.map((dl, i) => {
-            const cat = CATEGORY_CONFIG[dl.category] || CATEGORY_CONFIG.geral
             const prio = PRIORITY_CONFIG[dl.priority] || PRIORITY_CONFIG.media
             const st = STATUS_CONFIG[dl.status] || STATUS_CONFIG.pendente
             const overdue = isOverdue(dl.date, dl.status)
@@ -440,7 +423,7 @@ export default function Deadlines() {
                 </div>
 
                 <div className="dl-badges-group">
-                  <span className="dl-tag-badge" style={{ background: cat.bg, color: cat.color, borderColor: cat.border }}>{cat.label}</span>
+                  <span className="dl-tag-badge" style={{ background: 'rgba(167, 139, 250, 0.08)', color: '#a78bfa', borderColor: 'rgba(167, 139, 250, 0.15)' }}>👤 {dl.author}</span>
                   <span className="dl-tag-badge" style={{ background: prio.bg, color: prio.color, borderColor: prio.border }}>{prio.label}</span>
                   <span className="dl-tag-badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
                 </div>
@@ -497,50 +480,19 @@ export default function Deadlines() {
               </div>
               <div className="dl-form-row">
                 <div className="dl-form-group" style={{ flex: 1 }}>
-                  <label>Categoria</label>
-                  <div className="dl-form-select-container">
-                    <button
-                      type="button"
-                      className={`dl-form-select-btn ${isFormCategoryOpen ? 'active' : ''}`}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setIsFormCategoryOpen(!isFormCategoryOpen)
-                        setIsFormPriorityOpen(false)
-                        setIsFormStatusOpen(false)
-                      }}
-                    >
-                      <span>
-                        {form.category === 'pedagoga' ? 'Pedagogia' :
-                         form.category === 'psicologa' ? 'Psicologia' : 'Geral / Outros'}
-                      </span>
-                      <ChevronDown size={14} className={`dl-select-chevron ${isFormCategoryOpen ? 'open' : ''}`} />
-                    </button>
-                    {isFormCategoryOpen && (
-                      <div className="dl-form-dropdown" onClick={(e) => e.stopPropagation()}>
-                        <div
-                          className={`dl-form-option ${form.category === 'pedagoga' ? 'selected' : ''}`}
-                          onClick={() => { setForm(p => ({ ...p, category: 'pedagoga' })); setIsFormCategoryOpen(false) }}
-                        >
-                          <span className="dl-option-dot" style={{ background: '#a78bfa' }} />
-                          Pedagogia
-                        </div>
-                        <div
-                          className={`dl-form-option ${form.category === 'psicologa' ? 'selected' : ''}`}
-                          onClick={() => { setForm(p => ({ ...p, category: 'psicologa' })); setIsFormCategoryOpen(false) }}
-                        >
-                          <span className="dl-option-dot" style={{ background: '#34d399' }} />
-                          Psicologia
-                        </div>
-                        <div
-                          className={`dl-form-option ${form.category === 'geral' ? 'selected' : ''}`}
-                          onClick={() => { setForm(p => ({ ...p, category: 'geral' })); setIsFormCategoryOpen(false) }}
-                        >
-                          <span className="dl-option-dot" style={{ background: '#60a5fa' }} />
-                          Geral / Outros
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  <label>Responsável</label>
+                  <input
+                    type="text"
+                    className="dl-input"
+                    value={editTarget ? editTarget.author : (user?.name || '')}
+                    disabled
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      color: '#9ca3af',
+                      cursor: 'not-allowed',
+                      borderColor: 'rgba(255, 255, 255, 0.05)'
+                    }}
+                  />
                 </div>
                 <div className="dl-form-group" style={{ flex: 1 }}>
                   <label>Prioridade</label>
@@ -551,7 +503,6 @@ export default function Deadlines() {
                       onClick={(e) => {
                         e.stopPropagation()
                         setIsFormPriorityOpen(!isFormPriorityOpen)
-                        setIsFormCategoryOpen(false)
                         setIsFormStatusOpen(false)
                       }}
                     >
@@ -673,7 +624,6 @@ export default function Deadlines() {
 
       {/* View Details Modal */}
       {viewDeadline && (() => {
-        const cat = CATEGORY_CONFIG[viewDeadline.category] || CATEGORY_CONFIG.geral
         const prio = PRIORITY_CONFIG[viewDeadline.priority] || PRIORITY_CONFIG.media
         const st = STATUS_CONFIG[viewDeadline.status] || STATUS_CONFIG.pendente
         return (
@@ -682,12 +632,12 @@ export default function Deadlines() {
               <div className="dl-modal-accent" />
               <div className="dl-modal-head">
                 <div className="dl-modal-head-left">
-                  <div className="dl-modal-head-icon" style={{ background: cat.bg, color: cat.color }}>
+                  <div className="dl-modal-head-icon" style={{ background: 'rgba(167, 139, 250, 0.1)', color: '#a78bfa' }}>
                     <CalendarDays size={18} />
                   </div>
                   <div>
                     <h3>{viewDeadline.title}</h3>
-                    <p className="dl-modal-head-sub">Autor: {viewDeadline.author}</p>
+                    <p className="dl-modal-head-sub">Responsável: {viewDeadline.author}</p>
                   </div>
                 </div>
                 <button className="dl-modal-close" onClick={() => setViewDeadline(null)}><X size={16} /></button>
@@ -704,8 +654,8 @@ export default function Deadlines() {
                     <span style={{ color: '#e5e7eb', fontSize: '0.8125rem' }}>📅 {formatDateDisplay(viewDeadline.date)} {viewDeadline.time && ` às ${viewDeadline.time}`}</span>
                   </div>
                   <div className="dl-detail-info-item">
-                    <span className="dl-detail-label">Categoria</span>
-                    <span className="dl-tag-badge" style={{ background: cat.bg, color: cat.color, borderColor: cat.border, alignSelf: 'flex-start' }}>{cat.label}</span>
+                    <span className="dl-detail-label">Responsável</span>
+                    <span style={{ color: '#e5e7eb', fontSize: '0.8125rem' }}>👤 {viewDeadline.author}</span>
                   </div>
                   <div className="dl-detail-info-item">
                     <span className="dl-detail-label">Prioridade</span>

@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Archive, Trash2, CalendarDays, Filter, Loader2, ShieldAlert, ChevronDown, Check, RotateCcw, X } from 'lucide-react'
+import { Kanban as KanbanIcon, Plus, Trash2, Calendar, Clock, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronRight, ChevronLeft, ChevronDown, Archive, History, ShieldAlert, RotateCcw } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
+import './PedagogicalKanban.css'
 
 function ResolvedPrettySelect({
   value,
@@ -94,39 +95,23 @@ function ConfirmDeleteModalResolved({ isOpen, onClose, onConfirm, isDeleting, ta
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center"
-      style={{ animation: 'fadeIn 0.2s ease-out' }}
+      className="pk-modal-overlay"
+      style={{ zIndex: 99999 }}
+      onClick={!isDeleting ? onClose : undefined}
       onKeyDown={handleKeyDown}
       tabIndex={-1}
     >
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: 'radial-gradient(circle at 15% 20%, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0) 35%), radial-gradient(circle at 80% 12%, rgba(56,189,248,0.08) 0%, rgba(56,189,248,0) 32%), rgba(2, 6, 23, 0.76)',
-          backdropFilter: 'blur(14px) saturate(118%)',
-          WebkitBackdropFilter: 'blur(14px) saturate(118%)',
-        }}
-        onClick={!isDeleting ? onClose : undefined}
-      />
-
       {/* Modal card */}
       <div
-        className="relative w-full max-w-md mx-4 rounded-2xl border overflow-hidden"
+        className="pk-modal-card pk-modal-sm"
+        onClick={(e) => e.stopPropagation()}
         style={{
-          background: 'linear-gradient(145deg, rgba(30, 35, 50, 0.97) 0%, rgba(18, 22, 34, 0.99) 100%)',
-          borderColor: 'rgba(239, 68, 68, 0.2)',
+          border: '1px solid rgba(239, 68, 68, 0.2)',
           boxShadow: '0 25px 80px rgba(0,0,0,0.6), 0 0 60px rgba(239, 68, 68, 0.06), inset 0 1px 0 rgba(255,255,255,0.03)',
-          animation: 'slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
         {/* Top red accent bar */}
-        <div
-          style={{
-            height: '3px',
-            background: 'linear-gradient(90deg, transparent, rgba(239,68,68,0.6), rgba(239,68,68,0.8), rgba(239,68,68,0.6), transparent)',
-          }}
-        />
+        <div className="pk-modal-accent pk-accent-red" />
 
         {/* Red glow */}
         <div
@@ -137,19 +122,20 @@ function ConfirmDeleteModalResolved({ isOpen, onClose, onConfirm, isDeleting, ta
           }}
         />
 
-        <div className="relative p-6 flex flex-col items-center text-center space-y-5">
+        <div className="pk-modal-body flex flex-col items-center text-center space-y-5" style={{ padding: '24px 20px' }}>
           {/* Animated icon */}
           <div
-            className="w-18 h-18 rounded-2xl flex items-center justify-center"
+            className="pk-modal-head-icon pk-icon-red flex items-center justify-center"
             style={{
               width: '72px',
               height: '72px',
-              background: 'linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(220,38,38,0.08) 100%)',
+              borderRadius: '18px',
               border: '1px solid rgba(239,68,68,0.2)',
               boxShadow: '0 0 30px rgba(239,68,68,0.08)',
+              margin: '0 auto'
             }}
           >
-            <ShieldAlert size={32} style={{ color: '#f87171' }} />
+            <ShieldAlert size={32} />
           </div>
 
           {/* Text */}
@@ -475,180 +461,173 @@ export default function ResolvedKanban() {
 
       {/* Details Modal */}
       {selectedTask && (
-        <div 
-          className="fixed inset-0 z-[9998] flex items-center justify-center"
-          onClick={() => setSelectedTaskId(null)}
-          style={{ animation: 'fadeIn 0.2s ease-out' }}
-        >
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0"
-            style={{
-              background: 'radial-gradient(circle at 15% 20%, rgba(34,197,94,0.1) 0%, rgba(34,197,94,0) 35%), radial-gradient(circle at 80% 12%, rgba(56,189,248,0.08) 0%, rgba(56,189,248,0) 32%), rgba(2, 6, 23, 0.76)',
-              backdropFilter: 'blur(14px) saturate(118%)',
-              WebkitBackdropFilter: 'blur(14px) saturate(118%)',
-            }}
-            onClick={() => setSelectedTaskId(null)}
-          />
-
-          {/* Modal card */}
+        <div className="pk-modal-overlay" onClick={() => setSelectedTaskId(null)}>
           <div 
-            className="relative w-full max-w-2xl mx-4 rounded-2xl border overflow-hidden"
+            className="pk-modal-card" 
             onClick={(e) => e.stopPropagation()}
-            style={{
-              background: 'linear-gradient(145deg, rgba(30, 35, 50, 0.97) 0%, rgba(18, 22, 34, 0.99) 100%)',
-              borderColor: 'rgba(34, 197, 94, 0.2)',
-              boxShadow: '0 25px 80px rgba(0,0,0,0.6), 0 0 60px rgba(34, 197, 94, 0.06), inset 0 1px 0 rgba(255,255,255,0.03)',
-              animation: 'slideInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-            }}
+            style={{ maxHeight: '90vh', overflowY: 'auto' }}
           >
             {/* Top green accent bar */}
-            <div
-              style={{
-                height: '3px',
-                background: 'linear-gradient(90deg, transparent, rgba(34,197,94,0.6), rgba(34,197,94,0.8), rgba(34,197,94,0.6), transparent)',
-              }}
-            />
-
-            {/* Green glow */}
-            <div
-              className="absolute -top-16 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full"
-              style={{
-                background: 'radial-gradient(circle, rgba(34, 197, 94, 0.1) 0%, transparent 65%)',
-                pointerEvents: 'none',
-              }}
-            />
+            <div className="pk-modal-accent" style={{ background: '#10b981' }} />
 
             {/* Close button */}
-            <button 
-              onClick={() => setSelectedTaskId(null)}
-              className="absolute top-4 right-4 z-10"
-              style={{
-                width: '32px',
-                height: '32px',
-                border: 'none',
-                background: 'rgba(255, 255, 255, 0.05)',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#94a3b8',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'
-                e.currentTarget.style.color = '#cbd5e1'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'
-                e.currentTarget.style.color = '#94a3b8'
-              }}
-            >
-              <X size={18} />
-            </button>
-
-            <div className="relative p-6">
-              {/* Header with icon */}
-              <div className="flex items-start gap-4 mb-6">
-                <div
-                  style={{
-                    width: '56px',
-                    height: '56px',
-                    borderRadius: '14px',
-                    background: 'linear-gradient(135deg, rgba(34,197,94,0.12) 0%, rgba(16,185,129,0.08) 100%)',
-                    border: '1px solid rgba(34,197,94,0.2)',
-                    boxShadow: '0 0 30px rgba(34,197,94,0.08)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Check size={28} style={{ color: '#10b981' }} />
+            <div className="pk-modal-head">
+              <div className="pk-modal-head-left">
+                <div className="pk-modal-head-icon" style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981' }}>
+                  <Check size={18} />
                 </div>
                 <div>
-                  <p style={{ fontSize: '1.5rem', fontWeight: 700, color: '#86efac', margin: '0' }}>#{selectedTask.id}</p>
-                  <p style={{ fontSize: '0.875rem', color: '#9ca3af', margin: '4px 0 0 0', lineHeight: 1.4 }}>{selectedTask.title}</p>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, color: '#f3f4f6' }}>#{selectedTask.id}</h3>
+                  <p className="pk-modal-head-sub">Criado por {selectedTask.author || 'Desconhecido'}</p>
                 </div>
               </div>
+              <button className="pk-modal-close" onClick={() => setSelectedTaskId(null)}><X size={16} /></button>
+            </div>
 
-              {/* Main metadata grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                <div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</span>
-                  <p style={{ margin: '6px 0 0 0', fontWeight: 600, color: '#86efac' }}>
-                    {selectedTask.status === 'todo' ? 'A Fazer' : selectedTask.status === 'inprogress' ? 'Em Andamento' : selectedTask.status === 'inrevision' ? 'Em Revisão' : 'Concluído'}
-                  </p>
-                </div>
+            <div className="pk-modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Título</span>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#f3f4f6', margin: 0 }}>{selectedTask.title}</h2>
               </div>
 
-              {/* Second metadata grid - 3 columns */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
-                <div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Responsável</span>
-                  <p style={{ margin: '6px 0 0 0', color: '#cbd5e1' }}>{selectedTask.responsible || 'N/A'}</p>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Prioridade</span>
-                  <p style={{ margin: '6px 0 0 0', fontWeight: 700, color: selectedTask.priority === 'high' ? '#fca5a5' : selectedTask.priority === 'medium' ? '#93c5fd' : '#86efac' }}>
-                    {selectedTask.priority === 'high' ? 'Alta' : selectedTask.priority === 'medium' ? 'Média' : 'Baixa'}
-                  </p>
-                </div>
-                <div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Criado</span>
-                  <p style={{ margin: '6px 0 0 0', color: '#cbd5e1' }}>{new Date(selectedTask.archivedAt || selectedTask.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p>
-                </div>
-              </div>
-
-              {/* Descrição */}
               {selectedTask.description && (
-                <div style={{ paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Descrição</span>
-                  <p style={{ fontSize: '0.875rem', color: '#cbd5e1', lineHeight: 1.5, whiteSpace: 'pre-wrap', margin: '8px 0 0 0' }}>{selectedTask.description}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Descrição</span>
+                  <p style={{ fontSize: '0.875rem', color: '#d1d5db', lineHeight: 1.5, whiteSpace: 'pre-wrap', margin: 0 }}>{selectedTask.description}</p>
                 </div>
               )}
 
-              {/* Tags */}
               {selectedTask.tags && selectedTask.tags.length > 0 && (
-                <div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Etiquetas</span>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Etiquetas (Tags)</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {selectedTask.tags.map((tag, idx) => (
-                      <span key={idx} style={{ fontSize: '0.7rem', padding: '4px 10px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '6px', color: '#86efac', fontWeight: 500 }}>{tag}</span>
+                      <span key={idx} className="pk-card-tag" style={{ fontSize: '0.75rem', padding: '3px 8px' }}>{tag}</span>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Delete button */}
+              <div className="pk-detail-info-grid">
+                <div className="pk-detail-info-item">
+                  <span className="pk-detail-label">Responsável</span>
+                  <span className="pk-detail-val">{selectedTask.responsible || 'N/A'}</span>
+                </div>
+                <div className="pk-detail-info-item">
+                  <span className="pk-detail-label">Prioridade</span>
+                  <span className={`pk-detail-val prio-${selectedTask.priority}`} style={{ fontWeight: 700 }}>
+                    {selectedTask.priority === 'high' ? 'Alta' : selectedTask.priority === 'medium' ? 'Média' : 'Baixa'}
+                  </span>
+                </div>
+                <div className="pk-detail-info-item">
+                  <span className="pk-detail-label">Status Atual</span>
+                  <span className="pk-detail-val" style={{ textTransform: 'capitalize' }}>
+                    {selectedTask.status === 'todo' ? 'A Fazer' : selectedTask.status === 'inprogress' ? 'Em Andamento' : selectedTask.status === 'inrevision' ? 'Em Revisão' : 'Concluído'}
+                  </span>
+                </div>
+                <div className="pk-detail-info-item">
+                  <span className="pk-detail-label">Prazo Limite</span>
+                  <span className="pk-detail-val" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Calendar size={12} /> {selectedTask.date ? new Date(selectedTask.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'Sem data definida'}
+                  </span>
+                </div>
+              </div>
+
+              {/* ── History Timeline ── */}
+              {selectedTask.history && selectedTask.history.length > 0 && (
+                <div className="pk-history-section" style={{ marginTop: 14 }}>
+                  <div className="pk-history-header">
+                    <History size={14} />
+                    <span>Histórico de Atividades</span>
+                  </div>
+                  <div className="pk-history-timeline">
+                    {[...selectedTask.history].reverse().map((entry, idx) => {
+                      const d = new Date(entry.date)
+                      const dateStr = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                      const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+
+                      const statusLabel = (s) => {
+                        if (s === 'todo' || s === 'A Fazer') return 'A Fazer'
+                        if (s === 'inprogress' || s === 'Em Andamento') return 'Em Andamento'
+                        if (s === 'inrevision' || s === 'Em Revisão') return 'Em Revisão'
+                        if (s === 'completed' || s === 'Concluído') return 'Concluído'
+                        return s
+                      }
+
+                      const getPriorityLabel = (p) => {
+                        if (p === 'high' || p === 'Alta') return 'Alta'
+                        if (p === 'medium' || p === 'Média') return 'Média'
+                        if (p === 'low' || p === 'Baixa') return 'Baixa'
+                        return p
+                      }
+
+                      let icon, color, text
+                      switch (entry.action) {
+                        case 'created':
+                          icon = <Plus size={12} />
+                          color = '#10b981'
+                          text = <><strong>{entry.user}</strong> criou a tarefa</>
+                          break
+                        case 'status_changed':
+                          icon = <ArrowRight size={12} />
+                          color = entry.to === 'completed' || entry.to === 'Concluído' ? '#10b981' : '#38bdf8'
+                          text = <><strong>{entry.user}</strong> moveu de <em>{statusLabel(entry.from)}</em> para <em>{statusLabel(entry.to)}</em></>
+                          break
+                        case 'priority_changed':
+                          icon = <AlertTriangle size={12} />
+                          color = '#fbbf24'
+                          text = <><strong>{entry.user}</strong> mudou a prioridade de <em>{getPriorityLabel(entry.from)}</em> para <em>{getPriorityLabel(entry.to)}</em></>
+                          break
+                        case 'deadline_changed':
+                          icon = <Calendar size={12} />
+                          color = '#a78bfa'
+                          text = <><strong>{entry.user}</strong> mudou o prazo de <em>{entry.from ? new Date(entry.from).toLocaleDateString('pt-BR') : 'Sem data'}</em> para <em>{entry.to ? new Date(entry.to).toLocaleDateString('pt-BR') : 'Sem data'}</em></>
+                          break
+                        case 'archived':
+                          icon = <Archive size={12} />
+                          color = '#f59e0b'
+                          text = <><strong>{entry.user}</strong> arquivou a tarefa</>
+                          break
+                        case 'unarchived':
+                          icon = <Archive size={12} />
+                          color = '#8b5cf6'
+                          text = <><strong>{entry.user}</strong> restaurou a tarefa</>
+                          break
+                        default:
+                          icon = <Clock size={12} />
+                          color = '#6b7280'
+                          text = <><strong>{entry.user}</strong> realizou uma ação</>
+                      }
+
+                      return (
+                        <div key={idx} className="pk-history-item">
+                          <div className="pk-history-dot" style={{ background: color, boxShadow: `0 0 8px ${color}44` }}>
+                            {icon}
+                          </div>
+                          <div className="pk-history-content">
+                            <p className="pk-history-text">{text}</p>
+                            <span className="pk-history-date">{dateStr} às {timeStr}</span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
               {canDeleteTask && (
-                <button
-                  onClick={() => {
-                    handleDeleteRequest(selectedTask)
-                    setSelectedTaskId(null)
-                  }}
-                  className="w-full mt-4 px-4 py-3 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
-                  style={{
-                    background: 'linear-gradient(135deg, rgba(239,68,68,0.75) 0%, rgba(185,28,28,0.85) 100%)',
-                    border: '1px solid rgba(239,68,68,0.35)',
-                    boxShadow: '0 4px 20px rgba(239,68,68,0.2)',
-                    color: '#fff',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.boxShadow = '0 6px 25px rgba(239,68,68,0.35)'
-                    e.currentTarget.style.transform = 'translateY(-1px)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(239,68,68,0.2)'
-                    e.currentTarget.style.transform = 'translateY(0)'
-                  }}
-                >
-                  <Trash2 size={16} /> Excluir Permanentemente
-                </button>
+                <div className="pk-modal-actions" style={{ marginTop: 16 }}>
+                  <button
+                    onClick={() => {
+                      handleDeleteRequest(selectedTask)
+                      setSelectedTaskId(null)
+                    }}
+                    className="pk-btn-danger"
+                    style={{ width: '100%', justifyContent: 'center' }}
+                  >
+                    <Trash2 size={16} /> Excluir Permanentemente
+                  </button>
+                </div>
               )}
             </div>
           </div>
