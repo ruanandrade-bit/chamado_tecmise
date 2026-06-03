@@ -554,28 +554,6 @@ export default function PedagogicalKanban() {
                               </span>
                             </div>
                           </div>
-
-                          {/* Column Mover buttons for viewOnly roles or mobile, styled compactly */}
-                          {canEdit && (
-                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, marginTop: 10, borderTop: '1px solid rgba(255,255,255,0.02)', paddingTop: 6 }}>
-                              <button
-                                title="Mover para esquerda"
-                                disabled={task.status === 'todo'}
-                                onClick={(e) => { e.stopPropagation(); handleMoveTaskStatus(task, -1) }}
-                                style={{ background: 'rgba(255,255,255,0.03)', border: 'none', borderRadius: 4, width: 22, height: 18, color: '#9ca3af', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                              >
-                                <ChevronLeft size={12} />
-                              </button>
-                              <button
-                                title="Mover para direita"
-                                disabled={task.status === 'completed'}
-                                onClick={(e) => { e.stopPropagation(); handleMoveTaskStatus(task, 1) }}
-                                style={{ background: 'rgba(255,255,255,0.03)', border: 'none', borderRadius: 4, width: 22, height: 18, color: '#9ca3af', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                              >
-                                <ChevronRight size={12} />
-                              </button>
-                            </div>
-                          )}
                         </div>
                       )
                     })

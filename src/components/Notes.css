@@ -188,3 +188,57 @@
 .nt-dropdown-option.selected { background: rgba(167,139,250,0.12); color: #a78bfa; font-weight: 600; }
 .nt-option-dot { width: 6px; height: 6px; border-radius: 50%; }
 
+.nt-modal-view-note {
+  max-width: 680px;
+}
+
+.nt-form-select-container {
+  position: relative;
+  width: 100%;
+}
+
+.nt-form-select-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.875rem;
+  color: #e5e7eb;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.nt-form-select-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.nt-form-select-btn:focus,
+.nt-form-select-btn.active {
+  border-color: rgba(167, 139, 250, 0.4);
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.15);
+}
+
+.nt-form-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  z-index: 1010;
+  background: linear-gradient(145deg, #1e2235, #141724);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transform-origin: top center;
+  animation: ntDropdownFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+

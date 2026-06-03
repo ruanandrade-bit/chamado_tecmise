@@ -32,6 +32,9 @@ export default function Notes() {
   const [filterType, setFilterType] = useState('')
   const [isCategoryOpen, setIsCategoryOpen] = useState(false)
   const [isTypeOpen, setIsTypeOpen] = useState(false)
+  const [isFormCategoryOpen, setIsFormCategoryOpen] = useState(false)
+  const [isFormTypeOpen, setIsFormTypeOpen] = useState(false)
+  const [isFormStatusOpen, setIsFormStatusOpen] = useState(false)
   const [timelineMonth, setTimelineMonth] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` })
   const [tlModalMonth, setTlModalMonth] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` })
   const [editTarget, setEditTarget] = useState(null)
@@ -47,6 +50,9 @@ export default function Notes() {
     const handleOutsideClick = () => {
       setIsCategoryOpen(false)
       setIsTypeOpen(false)
+      setIsFormCategoryOpen(false)
+      setIsFormTypeOpen(false)
+      setIsFormStatusOpen(false)
     }
     window.addEventListener('click', handleOutsideClick)
     return () => window.removeEventListener('click', handleOutsideClick)
@@ -221,7 +227,7 @@ export default function Notes() {
             <Filter size={14} />
             <span>
               {filterCategory === 'pedagoga' ? 'Pedagoga' : 
-               filterCategory === 'psicologa' ? 'Psicóloga' : 'Todas as categorias'}
+               filterCategory === 'psicologa' ? 'Psicóloga' : 'Todos os profissionais'}
             </span>
             <ChevronDown size={14} className={`nt-select-chevron ${isCategoryOpen ? 'open' : ''}`} />
           </button>
@@ -232,7 +238,7 @@ export default function Notes() {
                 className={`nt-dropdown-option ${filterCategory === '' ? 'selected' : ''}`}
                 onClick={() => { setFilterCategory(''); setIsCategoryOpen(false) }}
               >
-                Todas as categorias
+                Todos os profissionais
               </div>
               <div 
                 className={`nt-dropdown-option ${filterCategory === 'pedagoga' ? 'selected' : ''}`}
@@ -311,13 +317,13 @@ export default function Notes() {
                 {recentNotes.map((note, i) => {
                   const cat = CATEGORY_CONFIG[note.category] || CATEGORY_CONFIG.pedagoga
                   return (
-                    <div key={note.id} className="nt-note-card" style={{ animationDelay: `${i * 0.06}s` }}>
+                    <div key={note.id} className="nt-note-card" style={{ animationDelay: `${i * 0.06}s`, cursor: 'pointer' }} onClick={() => setViewNote(note)}>
                       <div className="nt-card-top">
                         <div className="nt-card-icon" style={{ background: cat.bg, color: cat.color }}>
                           {note.category === 'psicologa' ? <Brain size={18} /> : <BookOpen size={18} />}
                         </div>
                         {canEdit && (
-                          <button className="nt-pin-btn" onClick={() => togglePin(note)} title={note.isPinned ? 'Desafixar' : 'Fixar'}>
+                          <button className="nt-pin-btn" onClick={(e) => { e.stopPropagation(); togglePin(note); }} title={note.isPinned ? 'Desafixar' : 'Fixar'}>
                             {note.isPinned ? <PinOff size={14} /> : <Pin size={14} />}
                           </button>
                         )}
@@ -330,7 +336,7 @@ export default function Notes() {
                       </div>
                       <div className="nt-card-meta">
                         <span>📅 {formatDateTime(note.createdAt)}</span>
-                        {canEdit && <button className="nt-card-del" onClick={() => setDeleteTarget(note)}><Trash2 size={12} /></button>}
+                        {canEdit && <button className="nt-card-del" onClick={(e) => { e.stopPropagation(); setDeleteTarget(note); }}><Trash2 size={12} /></button>}
                       </div>
                     </div>
                   )
@@ -370,7 +376,7 @@ export default function Notes() {
 
           {/* Right Column — Categories + Pinned */}
           <div className="nt-col-right">
-            <div className="nt-section-header"><h2>CATEGORIAS</h2></div>
+            <div className="nt-section-header"><h2>PROFISSIONAIS</h2></div>
             <div className="nt-categories-box">
               <div className="nt-cat-row"><span className="nt-cat-dot" style={{ background: '#a78bfa' }} /> Pedagoga <span className="nt-cat-count">{countPedagoga}</span></div>
               <div className="nt-cat-row"><span className="nt-cat-dot" style={{ background: '#34d399' }} /> Psicóloga <span className="nt-cat-count">{countPsicologa}</span></div>
@@ -489,18 +495,76 @@ export default function Notes() {
               </div>
               <div className="nt-form-row">
                 <div className="nt-form-group" style={{ flex: 1 }}>
-                  <label>Categoria</label>
-                  <select className="nt-input" value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))}>
-                    <option value="pedagoga">Pedagoga</option>
-                    <option value="psicologa">Psicóloga</option>
-                  </select>
+                  <label>Profissional</label>
+                  <div className="nt-form-select-container">
+                    <button 
+                      type="button"
+                      className={`nt-form-select-btn ${isFormCategoryOpen ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setIsFormCategoryOpen(!isFormCategoryOpen)
+                        setIsFormTypeOpen(false)
+                        setIsFormStatusOpen(false)
+                      }}
+                    >
+                      <span>{form.category === 'psicologa' ? 'Psicóloga' : 'Pedagoga'}</span>
+                      <ChevronDown size={14} className={`nt-select-chevron ${isFormCategoryOpen ? 'open' : ''}`} />
+                    </button>
+                    {isFormCategoryOpen && (
+                      <div className="nt-form-dropdown" onClick={(e) => e.stopPropagation()}>
+                        <div 
+                          className={`nt-dropdown-option ${form.category === 'pedagoga' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, category: 'pedagoga' })); setIsFormCategoryOpen(false) }}
+                        >
+                          <span className="nt-option-dot" style={{ background: '#a78bfa' }} />
+                          Pedagoga
+                        </div>
+                        <div 
+                          className={`nt-dropdown-option ${form.category === 'psicologa' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, category: 'psicologa' })); setIsFormCategoryOpen(false) }}
+                        >
+                          <span className="nt-option-dot" style={{ background: '#34d399' }} />
+                          Psicóloga
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="nt-form-group" style={{ flex: 1 }}>
                   <label>Tipo</label>
-                  <select className="nt-input" value={form.noteType} onChange={e => setForm(p => ({ ...p, noteType: e.target.value }))}>
-                    <option value="note">Anotação</option>
-                    <option value="reminder">Lembrete</option>
-                  </select>
+                  <div className="nt-form-select-container">
+                    <button 
+                      type="button"
+                      className={`nt-form-select-btn ${isFormTypeOpen ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setIsFormTypeOpen(!isFormTypeOpen)
+                        setIsFormCategoryOpen(false)
+                        setIsFormStatusOpen(false)
+                      }}
+                    >
+                      <span>{form.noteType === 'reminder' ? 'Lembrete' : 'Anotação'}</span>
+                      <ChevronDown size={14} className={`nt-select-chevron ${isFormTypeOpen ? 'open' : ''}`} />
+                    </button>
+                    {isFormTypeOpen && (
+                      <div className="nt-form-dropdown" onClick={(e) => e.stopPropagation()}>
+                        <div 
+                          className={`nt-dropdown-option ${form.noteType === 'note' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, noteType: 'note' })); setIsFormTypeOpen(false) }}
+                        >
+                          <span className="nt-option-dot" style={{ background: '#a78bfa' }} />
+                          Anotação
+                        </div>
+                        <div 
+                          className={`nt-dropdown-option ${form.noteType === 'reminder' ? 'selected' : ''}`}
+                          onClick={() => { setForm(p => ({ ...p, noteType: 'reminder' })); setIsFormTypeOpen(false) }}
+                        >
+                          <span className="nt-option-dot" style={{ background: '#fbbf24' }} />
+                          Lembrete
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               {form.noteType === 'reminder' && (
@@ -517,12 +581,55 @@ export default function Notes() {
                   </div>
                   <div className="nt-form-group">
                     <label>Status</label>
-                    <select className="nt-input" value={form.reminderStatus} onChange={e => setForm(p => ({ ...p, reminderStatus: e.target.value }))}>
-                      <option value="agendado">Agendado</option>
-                      <option value="urgente">Urgente</option>
-                      <option value="hoje">Hoje</option>
-                      <option value="confirmado">Confirmado</option>
-                    </select>
+                    <div className="nt-form-select-container">
+                      <button 
+                        type="button"
+                        className={`nt-form-select-btn ${isFormStatusOpen ? 'active' : ''}`}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setIsFormStatusOpen(!isFormStatusOpen)
+                          setIsFormCategoryOpen(false)
+                          setIsFormTypeOpen(false)
+                        }}
+                      >
+                        <span style={{ textTransform: 'capitalize' }}>
+                          {form.reminderStatus === 'em_andamento' ? 'Em andamento' : form.reminderStatus}
+                        </span>
+                        <ChevronDown size={14} className={`nt-select-chevron ${isFormStatusOpen ? 'open' : ''}`} />
+                      </button>
+                      {isFormStatusOpen && (
+                        <div className="nt-form-dropdown" onClick={(e) => e.stopPropagation()}>
+                          <div 
+                            className={`nt-dropdown-option ${form.reminderStatus === 'agendado' ? 'selected' : ''}`}
+                            onClick={() => { setForm(p => ({ ...p, reminderStatus: 'agendado' })); setIsFormStatusOpen(false) }}
+                          >
+                            <span className="nt-option-dot" style={{ background: '#60a5fa' }} />
+                            Agendado
+                          </div>
+                          <div 
+                            className={`nt-dropdown-option ${form.reminderStatus === 'urgente' ? 'selected' : ''}`}
+                            onClick={() => { setForm(p => ({ ...p, reminderStatus: 'urgente' })); setIsFormStatusOpen(false) }}
+                          >
+                            <span className="nt-option-dot" style={{ background: '#f87171' }} />
+                            Urgente
+                          </div>
+                          <div 
+                            className={`nt-dropdown-option ${form.reminderStatus === 'hoje' ? 'selected' : ''}`}
+                            onClick={() => { setForm(p => ({ ...p, reminderStatus: 'hoje' })); setIsFormStatusOpen(false) }}
+                          >
+                            <span className="nt-option-dot" style={{ background: '#fbbf24' }} />
+                            Hoje
+                          </div>
+                          <div 
+                            className={`nt-dropdown-option ${form.reminderStatus === 'confirmado' ? 'selected' : ''}`}
+                            onClick={() => { setForm(p => ({ ...p, reminderStatus: 'confirmado' })); setIsFormStatusOpen(false) }}
+                          >
+                            <span className="nt-option-dot" style={{ background: '#34d399' }} />
+                            Confirmado
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </>
               )}
@@ -567,7 +674,7 @@ export default function Notes() {
         const cat = CATEGORY_CONFIG[viewNote.category] || CATEGORY_CONFIG.pedagoga
         return (
           <div className="nt-modal-overlay" onClick={() => setViewNote(null)}>
-            <div className="nt-modal-card" onClick={e => e.stopPropagation()}>
+            <div className="nt-modal-card nt-modal-view-note" onClick={e => e.stopPropagation()}>
               <div className="nt-modal-accent" />
               <div className="nt-modal-head">
                 <div className="nt-modal-head-left">
@@ -589,7 +696,7 @@ export default function Notes() {
                 )}
                 <div className="nt-detail-info-grid">
                   <div className="nt-detail-info-item">
-                    <span className="nt-detail-label">Categoria</span>
+                    <span className="nt-detail-label">Profissional</span>
                     <span className="nt-cat-badge" style={{ background: cat.bg, color: cat.color, borderColor: cat.border }}>{cat.label}</span>
                   </div>
                   <div className="nt-detail-info-item">
@@ -604,6 +711,20 @@ export default function Notes() {
                     <span className="nt-detail-label">Criado em</span>
                     <span style={{ color: '#e5e7eb', fontSize: '0.8125rem' }}>📅 {formatDateTime(viewNote.createdAt)}</span>
                   </div>
+                  {viewNote.noteType === 'reminder' && viewNote.reminderDate && (
+                    <div className="nt-detail-info-item">
+                      <span className="nt-detail-label">Data Limite</span>
+                      <span style={{ color: '#fbbf24', fontSize: '0.8125rem', fontWeight: '600' }}>📅 {formatDate(viewNote.reminderDate)}{viewNote.reminderTime ? ` às ${viewNote.reminderTime}` : ''}</span>
+                    </div>
+                  )}
+                  {viewNote.noteType === 'reminder' && viewNote.reminderStatus && (
+                    <div className="nt-detail-info-item">
+                      <span className="nt-detail-label">Status Lembrete</span>
+                      <span style={{ color: '#e5e7eb', fontSize: '0.8125rem', textTransform: 'capitalize' }}>
+                        • {viewNote.reminderStatus}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
