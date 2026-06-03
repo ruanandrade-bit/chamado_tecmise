@@ -23,7 +23,8 @@ function loadFromDisk() {
           inventory: data.inventory || null,
           schoolData: data.schoolData || null,
           professionals: Array.isArray(data.professionals) ? data.professionals : null,
-          cameraObstructions: Array.isArray(data.cameraObstructions) ? data.cameraObstructions : []
+          cameraObstructions: Array.isArray(data.cameraObstructions) ? data.cameraObstructions : [],
+          notes: Array.isArray(data.notes) ? data.notes : []
         }
       }
     }
@@ -44,6 +45,7 @@ function saveToDisk() {
       schoolData: state.schoolData,
       professionals: state.professionals,
       cameraObstructions: state.cameraObstructions,
+      notes: state.notes,
       _savedAt: new Date().toISOString()
     }, null, 2))
   } catch (err) {
@@ -86,7 +88,8 @@ async function loadFromMongo() {
         inventory: doc.inventory || null,
         schoolData: doc.schoolData || null,
         professionals: Array.isArray(doc.professionals) ? doc.professionals : null,
-        cameraObstructions: Array.isArray(doc.cameraObstructions) ? doc.cameraObstructions : []
+        cameraObstructions: Array.isArray(doc.cameraObstructions) ? doc.cameraObstructions : [],
+        notes: Array.isArray(doc.notes) ? doc.notes : []
       }
     }
   } catch (err) {
@@ -108,6 +111,7 @@ function saveToMongo() {
       schoolData: state.schoolData,
       professionals: state.professionals,
       cameraObstructions: state.cameraObstructions,
+      notes: state.notes,
       _savedAt: new Date()
     },
     { upsert: true }
@@ -130,7 +134,8 @@ const state = {
   inventory: null,      // will be initialized with defaults on first access
   schoolData: null,     // school→device→turma config, managed via admin panel
   professionals: null,  // [{ id, name, role }], managed via admin panel
-  cameraObstructions: [] // [{ id, school, devices, startTime, endTime, percentage, createdAt, createdBy }]
+  cameraObstructions: [], // [{ id, school, devices, startTime, endTime, percentage, createdAt, createdBy }]
+  notes: []              // [{ id, title, description, category, author, authorRole, ... }]
 }
 
 const CORE_USER_EMAILS = new Set(Object.keys(USERS))
@@ -819,6 +824,31 @@ export const memoryStore = {
 
   deleteCameraObstruction(id) {
     state.cameraObstructions = (state.cameraObstructions || []).filter(r => r.id !== id)
+    persistState()
+  },
+
+  // ─── Notes (Anotações) ────────────────────────────────────────────
+  getNotes() {
+    return state.notes || []
+  },
+
+  addNote(note) {
+    if (!Array.isArray(state.notes)) state.notes = []
+    state.notes.unshift(note)
+    persistState()
+    return note
+  },
+
+  updateNote(id, updates) {
+    const idx = (state.notes || []).findIndex(n => n.id === id)
+    if (idx === -1) return null
+    state.notes[idx] = { ...state.notes[idx], ...updates }
+    persistState()
+    return state.notes[idx]
+  },
+
+  deleteNote(id) {
+    state.notes = (state.notes || []).filter(n => n.id !== id)
     persistState()
   }
 }

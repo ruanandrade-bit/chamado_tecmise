@@ -403,26 +403,23 @@ export default function DevicesOnline() {
           border-radius: 999px;
           pointer-events: none;
           z-index: -1;
-          filter: blur(42px);
-          opacity: 0.28;
+          opacity: 0.25;
         }
 
         .dvo-container::before {
-          width: 320px;
-          height: 320px;
-          top: -72px;
+          width: 360px;
+          height: 360px;
+          top: -100px;
           right: 10%;
-          background: radial-gradient(circle, rgba(34, 197, 94, 0.26), rgba(34, 197, 94, 0));
-          animation: dvoGlowMove 9s ease-in-out infinite;
+          background: radial-gradient(circle, rgba(34, 197, 94, 0.09) 0%, rgba(34, 197, 94, 0.03) 45%, rgba(34, 197, 94, 0) 70%);
         }
 
         .dvo-container::after {
-          width: 280px;
-          height: 280px;
-          bottom: 8%;
+          width: 320px;
+          height: 320px;
+          bottom: 10%;
           left: 3%;
-          background: radial-gradient(circle, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0));
-          animation: dvoGlowMove 11s ease-in-out infinite reverse;
+          background: radial-gradient(circle, rgba(59, 130, 246, 0.07) 0%, rgba(59, 130, 246, 0.02) 45%, rgba(59, 130, 246, 0) 70%);
         }
 
         @keyframes dvoFadeIn {
@@ -494,9 +491,7 @@ export default function DevicesOnline() {
           align-items: center;
           gap: 12px;
           padding: 14px 20px;
-          background: linear-gradient(155deg, rgba(15, 15, 30, 0.55) 0%, rgba(11, 15, 28, 0.6) 100%);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
+          background: linear-gradient(155deg, rgba(17, 18, 36, 0.95) 0%, rgba(12, 14, 28, 0.98) 100%);
           border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 18px;
           box-shadow: 0 16px 28px rgba(0, 0, 0, 0.2);
@@ -679,9 +674,7 @@ export default function DevicesOnline() {
         }
 
         .dvo-school-card {
-          background: linear-gradient(158deg, rgba(15, 15, 30, 0.58) 0%, rgba(10, 13, 26, 0.66) 100%);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
+          background: linear-gradient(158deg, rgba(17, 18, 36, 0.95) 0%, rgba(12, 14, 28, 0.98) 100%);
           border: 1px solid rgba(255, 255, 255, 0.08);
           border-radius: 18px;
           overflow: hidden;

@@ -117,6 +117,18 @@ export function viewOnlyBlock(req, res, next) {
   next()
 }
 
+export function pedagogaOrPsicologaOnly(req, res, next) {
+  const freshUser = req.user?.email ? USERS[req.user.email] : null
+  const role = String(freshUser?.role || '').toLowerCase()
+  const isAllowed = role === 'pedagoga' || role === 'psicóloga' || Boolean(freshUser?.canDragDrop)
+
+  if (!isAllowed) {
+    return res.status(403).json({ message: 'Apenas Pedagogas e Psicólogas podem executar esta ação.' })
+  }
+
+  next()
+}
+
 export function sanitizeUser(email) {
   const user = USERS[email]
   if (!user) return null
