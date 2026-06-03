@@ -149,18 +149,18 @@ export default function Deadlines() {
 
   const toggleStatus = async (d) => {
     if (!canEdit) return
-    const nextStatusMap = {
-      pendente: 'em_andamento',
-      em_andamento: 'concluido',
-      concluido: 'pendente'
-    }
-    const nextStatus = nextStatusMap[d.status || 'pendente']
     try {
       if (String(d.id).startsWith('AN-')) {
-        const reminderStatus = nextStatus === 'concluido' ? 'concluido' : 'agendado'
-        const updated = await api.put(`/notes/${d.id}`, { reminderStatus })
+        const newStatus = d.status === 'concluido' ? 'agendado' : 'concluido'
+        const updated = await api.put(`/notes/${d.id}`, { reminderStatus: newStatus })
         setNotes(prev => prev.map(item => item.id === updated.id ? updated : item))
       } else {
+        const nextStatusMap = {
+          pendente: 'em_andamento',
+          em_andamento: 'concluido',
+          concluido: 'pendente'
+        }
+        const nextStatus = nextStatusMap[d.status || 'pendente']
         const updated = await api.put(`/deadlines/${d.id}`, { status: nextStatus })
         setDeadlines(prev => prev.map(item => item.id === updated.id ? updated : item))
       }
@@ -451,7 +451,10 @@ export default function Deadlines() {
 
                 <div className="dl-main-info">
                   <div className="dl-title-row">
-                    <span className="dl-title-text">{dl.title}</span>
+                    <span className="dl-title-text" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {!dl.isReminder && <CalendarDays size={14} style={{ color: '#fbbf24', flexShrink: 0 }} title="Data Importante" />}
+                      {dl.title}
+                    </span>
                     {overdue && <span className="dl-badge-overdue">ATRASADO</span>}
                   </div>
                   {dl.description && <p className="dl-desc-text">{dl.description}</p>}
@@ -697,6 +700,19 @@ export default function Deadlines() {
                   <p style={{ color: '#6b7280', fontSize: '0.8125rem', fontStyle: 'italic' }}>Sem descrição disponível.</p>
                 )}
                 <div className="dl-detail-info-grid">
+                  <div className="dl-detail-info-item">
+                    <span className="dl-detail-label">Tipo</span>
+                    <span style={{ color: '#e5e7eb', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {!viewDeadline.isReminder ? (
+                        <>
+                          <CalendarDays size={14} style={{ color: '#fbbf24', flexShrink: 0 }} />
+                          <span style={{ color: '#fbbf24', fontWeight: 600 }}>Data Importante</span>
+                        </>
+                      ) : (
+                        <>🔔 Lembrete</>
+                      )}
+                    </span>
+                  </div>
                   <div className="dl-detail-info-item">
                     <span className="dl-detail-label">Data</span>
                     <span style={{ color: '#e5e7eb', fontSize: '0.8125rem' }}>📅 {formatDateDisplay(viewDeadline.date)} {viewDeadline.time && ` às ${viewDeadline.time}`}</span>

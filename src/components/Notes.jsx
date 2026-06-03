@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { StickyNote, Plus, Trash2, Pin, PinOff, Calendar, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
+import { StickyNote, Plus, Trash2, Pin, PinOff, Calendar, CalendarDays, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import './Notes.css'
@@ -464,7 +464,10 @@ export default function Notes() {
                     <div key={rem.id} className="nt-reminder-row" style={{ animationDelay: `${i * 0.05}s`, cursor: 'pointer' }} onClick={() => setViewNote(rem)}>
                       <div className="nt-reminder-dot" style={{ background: cat.color }} />
                       <div className="nt-reminder-info">
-                        <span className="nt-reminder-title">{rem.title}</span>
+                        <span className="nt-reminder-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {rem.isDeadline && <CalendarDays size={14} style={{ color: '#fbbf24', flexShrink: 0 }} title="Data Importante" />}
+                          {rem.title}
+                        </span>
                         <span className="nt-reminder-date">{rem.reminderDate ? formatDate(rem.reminderDate) : formatDate(rem.createdAt)}{rem.reminderTime ? ` • ${rem.reminderTime}` : ''}</span>
                       </div>
                       <div className="nt-reminder-badges">
@@ -566,7 +569,10 @@ export default function Notes() {
                   return (
                     <div key={note.id} className="nt-timeline-card" style={{ animationDelay: `${i * 0.08}s`, cursor: 'pointer' }} onClick={() => setViewNote(note)}>
                       <div className="nt-tl-time"><span className="nt-tl-dot" style={{ background: cat.color }} />{time}</div>
-                      <h4 className="nt-tl-title">{note.title}</h4>
+                      <h4 className="nt-tl-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {note.isDeadline && <CalendarDays size={14} style={{ color: '#fbbf24', flexShrink: 0 }} title="Data Importante" />}
+                        {note.title}
+                      </h4>
                       {note.description && <p className="nt-tl-desc">{note.description}</p>}
                       <div className="nt-tl-footer">
                         <span className="nt-cat-badge-sm" style={{ background: cat.bg, color: cat.color }}>{cat.label}</span>
@@ -833,7 +839,18 @@ export default function Notes() {
                   </div>
                   <div className="nt-detail-info-item">
                     <span className="nt-detail-label">Tipo</span>
-                    <span style={{ color: '#e5e7eb', fontSize: '0.8125rem' }}>{viewNote.noteType === 'reminder' ? '🔔 Lembrete' : '📝 Anotação'}</span>
+                    <span style={{ color: '#e5e7eb', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      {viewNote.isDeadline ? (
+                        <>
+                          <CalendarDays size={14} style={{ color: '#fbbf24', flexShrink: 0 }} />
+                          <span style={{ color: '#fbbf24', fontWeight: 600 }}>Data Importante</span>
+                        </>
+                      ) : viewNote.noteType === 'reminder' ? (
+                        <>🔔 Lembrete</>
+                      ) : (
+                        <>📝 Anotação</>
+                      )}
+                    </span>
                   </div>
                   <div className="nt-detail-info-item">
                     <span className="nt-detail-label">Criado em</span>
@@ -965,7 +982,10 @@ export default function Notes() {
                       </div>
                       <div className="nt-tl-modal-content">
                         <div className="nt-tl-modal-time">{time} • {formatDate(note.createdAt)}</div>
-                        <h4 className="nt-tl-title">{note.title}</h4>
+                        <h4 className="nt-tl-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {note.isDeadline && <CalendarDays size={14} style={{ color: '#fbbf24', flexShrink: 0 }} title="Data Importante" />}
+                          {note.title}
+                        </h4>
                         {note.description && <p className="nt-tl-desc">{note.description}</p>}
                         <div className="nt-tl-footer">
                           <span className="nt-cat-badge-sm" style={{ background: cat.bg, color: cat.color }}>{cat.label}</span>
