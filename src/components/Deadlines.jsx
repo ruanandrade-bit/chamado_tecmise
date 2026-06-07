@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Plus, Trash2, CalendarDays, Clock, CheckCircle2, AlertTriangle, AlertCircle, Search, Filter, Loader2, ShieldCheck, X, Edit3, ChevronRight, Tag, ChevronDown } from 'lucide-react'
+import { Calendar, Plus, Trash2, CalendarDays, Clock, CheckCircle2, AlertTriangle, AlertCircle, Search, Filter, Loader2, ShieldCheck, X, Edit3, ChevronRight, Tag, ChevronDown, ExternalLink, UserPlus } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import './Deadlines.css'
@@ -74,7 +74,6 @@ export default function Deadlines() {
   const [deadlines, setDeadlines] = useState([])
   const [notes, setNotes] = useState([])
   const [professionals, setProfessionals] = useState([])
-  const [calendarModalData, setCalendarModalData] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -96,6 +95,14 @@ export default function Deadlines() {
   const [form, setForm] = useState({ title: '', description: '', date: '', time: '', category: 'pedagoga', priority: 'media', status: 'pendente' })
   const [formError, setFormError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+
+  // Google Calendar states
+  const [wantGoogleCalendar, setWantGoogleCalendar] = useState(false)
+  const [googleCalendarOpened, setGoogleCalendarOpened] = useState(false)
+  const [selectedGuest, setSelectedGuest] = useState('')
+  const [showCalendarConfirm, setShowCalendarConfirm] = useState(false)
+  const [pendingSaveData, setPendingSaveData] = useState(null)
+  const [isGuestDropdownOpen, setIsGuestDropdownOpen] = useState(false)
 
   useEffect(() => { loadDeadlines() }, [])
 
@@ -126,16 +133,35 @@ export default function Deadlines() {
     finally { setIsLoading(false) }
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setFormError('')
-    if (!form.title.trim()) return setFormError('Título é obrigatório.')
-    if (!form.date) return setFormError('Data é obrigatória.')
-    const todayCheck = new Date().toISOString().split('T')[0]
-    if (!editTarget && form.date < todayCheck) return setFormError('Não é permitido cadastrar prazos com data no passado.')
+  const resetCalendarStates = () => {
+    setWantGoogleCalendar(false)
+    setGoogleCalendarOpened(false)
+    setSelectedGuest('')
+    setShowCalendarConfirm(false)
+    setPendingSaveData(null)
+    setIsGuestDropdownOpen(false)
+  }
 
+  // Professionals that have a companyEmail (for guest selection)
+  const guestProfessionals = professionals.filter(p =>
+    p.companyEmail &&
+    String(p.name || '').trim().toLowerCase() !== String(user?.name || '').trim().toLowerCase()
+  )
+
+  const doSaveDeadline = async (calendarConfirmed = false) => {
+    setIsSaving(true)
     try {
-      let savedItem = null
+      const payload = { ...form }
+      if (calendarConfirmed) {
+        payload.googleCalendarConfirmed = true
+        payload.googleCalendarUser = user?.name || ''
+        payload.googleCalendarGuest = selectedGuest || ''
+      } else {
+        payload.googleCalendarConfirmed = false
+        payload.googleCalendarUser = ''
+        payload.googleCalendarGuest = ''
+      }
+
       if (editTarget) {
         if (editTarget.isReminder) {
           const noteForm = {
@@ -149,48 +175,52 @@ export default function Deadlines() {
           }
           const updated = await api.put(`/notes/${editTarget.id}`, noteForm)
           setNotes(prev => prev.map(n => n.id === updated.id ? updated : n))
-          savedItem = { ...updated, date: updated.reminderDate || updated.createdAt.split('T')[0], time: updated.reminderTime, isReminder: true }
         } else {
-          const updated = await api.put(`/deadlines/${editTarget.id}`, form)
+          const updated = await api.put(`/deadlines/${editTarget.id}`, payload)
           setDeadlines(prev => prev.map(d => d.id === updated.id ? updated : d))
-          savedItem = updated
         }
         setEditTarget(null)
       } else {
-        const newDeadline = await api.post('/deadlines', form)
+        const newDeadline = await api.post('/deadlines', payload)
         setDeadlines(prev => [newDeadline, ...prev])
-        savedItem = newDeadline
-      }
-
-      if (savedItem) {
-        const loggedInProfessional = professionals.find(p => 
-          String(p.name || '').trim().toLowerCase() === String(user?.name || '').trim().toLowerCase() ||
-          String(p.email || '').trim().toLowerCase() === String(user?.email || '').trim().toLowerCase()
-        )
-        const currentCompanyEmail = loggedInProfessional?.companyEmail || ''
-        
-        const calendarUrl = generateGoogleCalendarUrl({
-          title: savedItem.title,
-          description: savedItem.description,
-          date: savedItem.date,
-          time: savedItem.time,
-          companyEmail: currentCompanyEmail
-        })
-        
-        setCalendarModalData({
-          title: savedItem.title,
-          date: savedItem.date,
-          time: savedItem.time,
-          url: calendarUrl
-        })
       }
 
       setForm({ title: '', description: '', date: '', time: '', category: 'pedagoga', priority: 'media', status: 'pendente' })
       setIsFormPriorityOpen(false)
       setIsFormStatusOpen(false)
       setShowAddModal(false)
+      resetCalendarStates()
     } catch (err) { setFormError(err.message || 'Falha ao salvar.') }
     finally { setIsSaving(false) }
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setFormError('')
+    if (!form.title.trim()) return setFormError('Título é obrigatório.')
+    if (!form.date) return setFormError('Data é obrigatória.')
+    const todayCheck = new Date().toISOString().split('T')[0]
+    if (!editTarget && form.date < todayCheck) return setFormError('Não é permitido cadastrar prazos com data no passado.')
+
+    // Google Calendar validation
+    if (wantGoogleCalendar && !googleCalendarOpened) {
+      return setFormError('Você marcou "Agendar no Google Agenda" mas ainda não abriu a agenda. Clique no botão para abrir primeiro.')
+    }
+
+    // If calendar was used, show confirmation modal instead of saving directly
+    if (wantGoogleCalendar && googleCalendarOpened) {
+      setPendingSaveData({ date: form.date, time: form.time })
+      setShowCalendarConfirm(true)
+      return
+    }
+
+    // Normal save without calendar
+    await doSaveDeadline(false)
+  }
+
+  const handleCalendarConfirm = async (confirmed) => {
+    setShowCalendarConfirm(false)
+    await doSaveDeadline(confirmed)
   }
 
   const handleEditClick = (d) => {
@@ -205,6 +235,10 @@ export default function Deadlines() {
       priority: d.priority || 'media',
       status: d.status || 'pendente'
     })
+    // Load existing calendar state for editing
+    setWantGoogleCalendar(!!d.googleCalendarConfirmed)
+    setGoogleCalendarOpened(!!d.googleCalendarConfirmed)
+    setSelectedGuest(d.googleCalendarGuest || '')
     setIsFormPriorityOpen(false)
     setIsFormStatusOpen(false)
     setShowAddModal(true)
@@ -558,6 +592,11 @@ export default function Deadlines() {
                   <span className="dl-tag-badge" style={{ background: 'rgba(167, 139, 250, 0.08)', color: '#a78bfa', borderColor: 'rgba(167, 139, 250, 0.15)' }}>👤 {dl.author}</span>
                   <span className="dl-tag-badge" style={{ background: prio.bg, color: prio.color, borderColor: prio.border }}>{prio.label}</span>
                   <span className="dl-tag-badge" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                  {dl.googleCalendarConfirmed && (
+                    <span className="dl-tag-badge" style={{ background: 'rgba(251, 191, 36, 0.1)', color: '#fbbf24', borderColor: 'rgba(251, 191, 36, 0.2)' }}>
+                      📅 {dl.googleCalendarUser || dl.author} agendou
+                    </span>
+                  )}
                 </div>
 
                 {canModifyDeadline && (
@@ -718,10 +757,244 @@ export default function Deadlines() {
                   )}
                 </div>
               </div>
+
+              {/* Google Calendar Section */}
+              {!editTarget?.isReminder && (
+                <div style={{
+                  padding: '14px',
+                  background: wantGoogleCalendar ? 'rgba(251, 191, 36, 0.06)' : 'rgba(255, 255, 255, 0.02)',
+                  border: `1px solid ${wantGoogleCalendar ? 'rgba(251, 191, 36, 0.2)' : 'rgba(255, 255, 255, 0.06)'}`,
+                  borderRadius: '14px',
+                  display: 'flex', flexDirection: 'column', gap: '12px',
+                  transition: 'all 0.25s ease'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Calendar size={15} style={{ color: wantGoogleCalendar ? '#fbbf24' : '#6b7280' }} />
+                      <span style={{ color: wantGoogleCalendar ? '#fbbf24' : '#9ca3af', fontSize: '0.8125rem', fontWeight: 600 }}>
+                        Agendar no Google Agenda
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (wantGoogleCalendar) { resetCalendarStates() }
+                        else { setWantGoogleCalendar(true) }
+                      }}
+                      style={{
+                        width: '40px', height: '22px',
+                        borderRadius: '11px',
+                        border: 'none',
+                        background: wantGoogleCalendar
+                          ? 'linear-gradient(135deg, #fbbf24, #d97706)'
+                          : 'rgba(255, 255, 255, 0.1)',
+                        cursor: (!form.date || !form.time) ? 'not-allowed' : 'pointer',
+                        position: 'relative',
+                        transition: 'background 0.2s ease',
+                        opacity: (!form.date || !form.time) ? 0.4 : 1
+                      }}
+                      disabled={!form.date || !form.time}
+                      title={(!form.date || !form.time) ? 'Preencha data e hora primeiro' : ''}
+                    >
+                      <div style={{
+                        width: '16px', height: '16px',
+                        borderRadius: '50%',
+                        background: '#fff',
+                        position: 'absolute',
+                        top: '3px',
+                        left: wantGoogleCalendar ? '21px' : '3px',
+                        transition: 'left 0.2s ease',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.3)'
+                      }} />
+                    </button>
+                  </div>
+
+                  {(!form.date || !form.time) && (
+                    <p style={{ color: '#6b7280', fontSize: '0.7rem', margin: 0, fontStyle: 'italic' }}>
+                      Preencha a data e o horário para habilitar o Google Agenda
+                    </p>
+                  )}
+
+                  {wantGoogleCalendar && form.date && form.time && (
+                    <>
+                      {/* Show existing calendar status when editing */}
+                      {editTarget?.googleCalendarConfirmed && (
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: '8px',
+                          padding: '8px 12px',
+                          background: 'rgba(52, 211, 153, 0.08)',
+                          border: '1px solid rgba(52, 211, 153, 0.2)',
+                          borderRadius: '10px'
+                        }}>
+                          <CheckCircle2 size={14} style={{ color: '#34d399' }} />
+                          <span style={{ color: '#34d399', fontSize: '0.75rem', fontWeight: 600 }}>
+                            {editTarget.googleCalendarUser || 'Usuário'} já agendou no Google Agenda
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Guest selection */}
+                      {guestProfessionals.length > 0 && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <UserPlus size={12} /> Convidar profissional (opcional)
+                          </label>
+                          <div className="dl-form-select-container">
+                            <button
+                              type="button"
+                              className={`dl-form-select-btn ${isGuestDropdownOpen ? 'active' : ''}`}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setIsGuestDropdownOpen(!isGuestDropdownOpen)
+                              }}
+                              style={{ fontSize: '0.8125rem', padding: '8px 12px' }}
+                            >
+                              <span style={{ color: selectedGuest ? '#e5e7eb' : '#6b7280' }}>
+                                {selectedGuest
+                                  ? guestProfessionals.find(p => p.companyEmail === selectedGuest)?.name || selectedGuest
+                                  : 'Nenhum convidado'}
+                              </span>
+                              <ChevronDown size={14} className={`dl-select-chevron ${isGuestDropdownOpen ? 'open' : ''}`} />
+                            </button>
+                            {isGuestDropdownOpen && (
+                              <div className="dl-form-dropdown" onClick={(e) => e.stopPropagation()}>
+                                <div
+                                  className={`dl-form-option ${selectedGuest === '' ? 'selected' : ''}`}
+                                  onClick={() => { setSelectedGuest(''); setIsGuestDropdownOpen(false) }}
+                                >
+                                  Nenhum convidado
+                                </div>
+                                {guestProfessionals.map(p => (
+                                  <div
+                                    key={p.id}
+                                    className={`dl-form-option ${selectedGuest === p.companyEmail ? 'selected' : ''}`}
+                                    onClick={() => { setSelectedGuest(p.companyEmail); setIsGuestDropdownOpen(false) }}
+                                  >
+                                    <span>{p.name}</span>
+                                    <span style={{ fontSize: '0.7rem', color: '#6b7280', marginLeft: '6px' }}>{p.companyEmail}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Open Google Calendar button */}
+                      {(() => {
+                        const loggedInProfessional = professionals.find(p =>
+                          String(p.name || '').trim().toLowerCase() === String(user?.name || '').trim().toLowerCase() ||
+                          String(p.email || '').trim().toLowerCase() === String(user?.email || '').trim().toLowerCase()
+                        )
+                        const emails = [loggedInProfessional?.companyEmail, selectedGuest].filter(Boolean).join(',')
+                        const calUrl = generateGoogleCalendarUrl({
+                          title: form.title || 'Novo Prazo',
+                          description: form.description || '',
+                          date: form.date,
+                          time: form.time,
+                          companyEmail: emails
+                        })
+                        return (
+                          <a
+                            href={calUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => setGoogleCalendarOpened(true)}
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                              padding: '10px 16px',
+                              background: googleCalendarOpened
+                                ? 'rgba(52, 211, 153, 0.12)'
+                                : 'linear-gradient(135deg, #fbbf24, #d97706)',
+                              color: googleCalendarOpened ? '#34d399' : '#000',
+                              border: googleCalendarOpened ? '1px solid rgba(52, 211, 153, 0.3)' : 'none',
+                              borderRadius: '12px',
+                              fontSize: '0.8125rem',
+                              fontWeight: 700,
+                              textDecoration: 'none',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            {googleCalendarOpened ? (
+                              <><CheckCircle2 size={15} /> Agenda aberta — clique novamente se precisar</>
+                            ) : (
+                              <><ExternalLink size={15} /> Abrir Google Agenda</>
+                            )}
+                          </a>
+                        )
+                      })()}
+
+                      {googleCalendarOpened && (
+                        <p style={{ color: '#9ca3af', fontSize: '0.7rem', margin: 0, textAlign: 'center' }}>
+                          Após confirmar no Google Agenda, clique em "Salvar Prazo" abaixo
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
               <button type="submit" className="dl-submit-btn" disabled={isSaving}>
                 {isSaving ? <><Loader2 size={16} className="dl-spinner" /> Salvando...</> : <><Plus size={16} /> Salvar Prazo</>}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Google Calendar Confirmation Modal */}
+      {showCalendarConfirm && pendingSaveData && (
+        <div className="dl-modal-overlay" onClick={() => setShowCalendarConfirm(false)}>
+          <div className="dl-modal-card dl-modal-sm" onClick={e => e.stopPropagation()} style={{ maxWidth: '420px' }}>
+            <div className="dl-modal-accent" style={{ background: 'linear-gradient(90deg, #fbbf24, #f59e0b, #d97706)' }} />
+            <div className="dl-modal-head">
+              <div className="dl-modal-head-left">
+                <div className="dl-modal-head-icon" style={{ background: 'rgba(251, 191, 36, 0.12)', color: '#fbbf24' }}>
+                  <Calendar size={18} />
+                </div>
+                <div>
+                  <h3>Confirmar Agendamento</h3>
+                  <p className="dl-modal-head-sub">Google Agenda</p>
+                </div>
+              </div>
+              <button className="dl-modal-close" onClick={() => setShowCalendarConfirm(false)}><X size={16} /></button>
+            </div>
+            <div className="dl-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <p style={{ color: '#d1d5db', fontSize: '0.875rem', lineHeight: 1.5 }}>
+                Tem certeza que você já confirmou no <strong style={{ color: '#fbbf24' }}>Google Agenda</strong> para o dia <strong style={{ color: '#f1f5f9' }}>{formatDateDisplay(pendingSaveData.date)}</strong> às <strong style={{ color: '#f1f5f9' }}>{pendingSaveData.time}</strong>?
+              </p>
+              {selectedGuest && (
+                <p style={{ color: '#9ca3af', fontSize: '0.8125rem' }}>
+                  Convite enviado para: <strong style={{ color: '#a78bfa' }}>{selectedGuest}</strong>
+                </p>
+              )}
+              <div className="dl-modal-actions" style={{ marginTop: '6px', flexDirection: 'column', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleCalendarConfirm(true)}
+                  disabled={isSaving}
+                  style={{
+                    width: '100%', padding: '11px 16px',
+                    background: 'linear-gradient(135deg, #fbbf24, #d97706)',
+                    color: '#000', fontWeight: 700, fontSize: '0.8125rem',
+                    border: 'none', borderRadius: '12px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                  }}
+                >
+                  <CheckCircle2 size={15} /> Sim, confirmei no Google Agenda
+                </button>
+                <button
+                  type="button"
+                  className="dl-btn-cancel"
+                  onClick={() => handleCalendarConfirm(false)}
+                  disabled={isSaving}
+                  style={{ width: '100%', textAlign: 'center', justifyContent: 'center' }}
+                >
+                  Não confirmei, salvar sem agenda
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -810,66 +1083,29 @@ export default function Deadlines() {
                     <span className="dl-detail-label">Status</span>
                     <span className="dl-tag-badge" style={{ background: st.bg, color: st.color, alignSelf: 'flex-start' }}>{st.label}</span>
                   </div>
+                  <div className="dl-detail-info-item">
+                    <span className="dl-detail-label">Google Agenda</span>
+                    {viewDeadline.googleCalendarConfirmed ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span style={{ color: '#34d399', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <CheckCircle2 size={14} /> Confirmado por {viewDeadline.googleCalendarUser || viewDeadline.author}
+                        </span>
+                        {viewDeadline.googleCalendarGuest && (
+                          <span style={{ color: '#a78bfa', fontSize: '0.75rem' }}>
+                            Convidado: {viewDeadline.googleCalendarGuest}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span style={{ color: '#6b7280', fontSize: '0.8125rem' }}>❌ Não agendado</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         )
       })()}
-
-      {/* Google Calendar Modal */}
-      {calendarModalData && (
-        <div className="dl-modal-overlay" onClick={() => setCalendarModalData(null)}>
-          <div className="dl-modal-card dl-modal-sm" onClick={e => e.stopPropagation()}>
-            <div className="dl-modal-accent" style={{ background: '#fbbf24' }} />
-            <div className="dl-modal-head">
-              <div className="dl-modal-head-left">
-                <div className="dl-modal-head-icon" style={{ background: 'rgba(251, 191, 36, 0.1)', color: '#fbbf24' }}>
-                  <Calendar size={18} />
-                </div>
-                <div>
-                  <h3>Adicionar à Agenda?</h3>
-                  <p className="dl-modal-head-sub">Google Agenda</p>
-                </div>
-              </div>
-              <button className="dl-modal-close" onClick={() => setCalendarModalData(null)}><X size={16} /></button>
-            </div>
-            <div className="dl-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <p style={{ color: '#d1d5db', fontSize: '0.875rem', lineHeight: 1.5 }}>
-                O prazo/lembrete <strong style={{ color: '#f1f5f9' }}>"{calendarModalData.title}"</strong> foi salvo no sistema.
-              </p>
-              <p style={{ color: '#9ca3af', fontSize: '0.8125rem', lineHeight: 1.4 }}>
-                Deseja criar este evento em seu Google Agenda para o dia <strong style={{ color: '#fbbf24' }}>{formatDateDisplay(calendarModalData.date)}</strong>{calendarModalData.time && <> às <strong style={{ color: '#fbbf24' }}>{calendarModalData.time}</strong></>}?
-              </p>
-              <div className="dl-modal-actions" style={{ marginTop: '10px' }}>
-                <button className="dl-btn-cancel" onClick={() => setCalendarModalData(null)}>Agora Não</button>
-                <a 
-                  href={calendarModalData.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="dl-submit-btn" 
-                  style={{ 
-                    background: 'linear-gradient(135deg, #fbbf24, #d97706)',
-                    color: '#000',
-                    fontWeight: 700,
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    padding: '10px 16px',
-                    borderRadius: '10px',
-                    fontSize: '0.8125rem'
-                  }}
-                  onClick={() => setCalendarModalData(null)}
-                >
-                  <Calendar size={14} /> Sim, Adicionar
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

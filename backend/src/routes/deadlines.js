@@ -14,7 +14,7 @@ router.get('/', (_req, res) => {
 
 // POST — create deadline, persist in background (fast like tickets)
 router.post('/', pedagogaOrPsicologaOnly, (req, res) => {
-  const { title, description, date, time, category, status, priority } = req.body
+  const { title, description, date, time, category, status, priority, googleCalendarConfirmed, googleCalendarUser, googleCalendarGuest } = req.body
   if (!title?.trim()) return res.status(400).json({ message: 'Título é obrigatório.' })
   if (!date) return res.status(400).json({ message: 'Data é obrigatória.' })
 
@@ -28,6 +28,9 @@ router.post('/', pedagogaOrPsicologaOnly, (req, res) => {
     status: status || 'pendente',
     priority: priority || 'media',
     author: req.user?.name || 'Desconhecido',
+    googleCalendarConfirmed: !!googleCalendarConfirmed,
+    googleCalendarUser: googleCalendarConfirmed ? (googleCalendarUser || req.user?.name || '') : '',
+    googleCalendarGuest: googleCalendarConfirmed ? (googleCalendarGuest || '') : '',
     createdAt: new Date().toISOString()
   }
 
