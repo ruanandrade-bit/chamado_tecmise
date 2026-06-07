@@ -205,6 +205,7 @@ function hydrateProfessionalsFromUsers() {
         name,
         role,
         email,
+        companyEmail: String(item?.companyEmail || '').trim(),
         passwordHash
       }
     })
