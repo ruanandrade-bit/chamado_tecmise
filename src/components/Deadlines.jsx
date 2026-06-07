@@ -146,6 +146,14 @@ export default function Deadlines() {
     setIsGuestDropdownOpen(false)
   }
 
+  const handleCloseAddModal = () => {
+    setShowAddModal(false)
+    setEditTarget(null)
+    setForm({ title: '', description: '', date: '', time: '', category: 'pedagoga', priority: 'media', status: 'pendente' })
+    setFormError('')
+    resetCalendarStates()
+  }
+
   // Professionals that have a companyEmail (for guest selection)
   const guestProfessionals = professionals.filter(p =>
     p.companyEmail &&
@@ -372,6 +380,8 @@ export default function Deadlines() {
             <button className="dl-new-btn" onClick={() => {
               setEditTarget(null)
               setForm({ title: '', description: '', date: '', time: '', category: 'pedagoga', priority: 'media', status: 'pendente' })
+              setFormError('')
+              resetCalendarStates()
               setIsFormPriorityOpen(false)
               setIsFormStatusOpen(false)
               setShowAddModal(true)
@@ -632,7 +642,7 @@ export default function Deadlines() {
 
       {/* Add / Edit Modal */}
       {showAddModal && (
-        <div className="dl-modal-overlay" onClick={() => setShowAddModal(false)}>
+        <div className="dl-modal-overlay" onClick={handleCloseAddModal}>
           <div className="dl-modal-card dl-modal-deadline-form" onClick={e => e.stopPropagation()}>
             <div className="dl-modal-accent" />
             <div className="dl-modal-head">
@@ -645,7 +655,7 @@ export default function Deadlines() {
                   <p className="dl-modal-head-sub">Preencha as informações do cronograma</p>
                 </div>
               </div>
-              <button className="dl-modal-close" onClick={() => setShowAddModal(false)}><X size={16} /></button>
+              <button className="dl-modal-close" onClick={handleCloseAddModal}><X size={16} /></button>
             </div>
             <form onSubmit={handleSubmit} className="dl-modal-body">
               {formError && <div className="dl-alert-error"><AlertCircle size={14} />{formError}</div>}
@@ -660,7 +670,24 @@ export default function Deadlines() {
               <div className="dl-form-row">
                 <div className="dl-form-group" style={{ flex: 1 }}>
                   <label>Data *</label>
-                  <input type="date" className="dl-input" min={editTarget ? undefined : new Date().toISOString().split('T')[0]} value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} />
+                  <input
+                    type="date"
+                    className="dl-input"
+                    min={editTarget ? undefined : new Date().toISOString().split('T')[0]}
+                    max="9999-12-31"
+                    value={form.date}
+                    onChange={e => {
+                      let val = e.target.value
+                      if (val) {
+                        const parts = val.split('-')
+                        if (parts[0] && parts[0].length > 4) {
+                          parts[0] = parts[0].slice(0, 4)
+                          val = parts.join('-')
+                        }
+                      }
+                      setForm(p => ({ ...p, date: val }))
+                    }}
+                  />
                 </div>
                 <div className="dl-form-group" style={{ flex: 1 }}>
                   <label>Horário</label>

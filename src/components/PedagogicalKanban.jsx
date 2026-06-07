@@ -907,8 +907,19 @@ export default function PedagogicalKanban() {
                     type="date"
                     className="pk-input"
                     value={form.date}
-                    onChange={e => setForm(p => ({ ...p, date: e.target.value }))}
+                    onChange={e => {
+                      let val = e.target.value
+                      if (val) {
+                        const parts = val.split('-')
+                        if (parts[0] && parts[0].length > 4) {
+                          parts[0] = parts[0].slice(0, 4)
+                          val = parts.join('-')
+                        }
+                      }
+                      setForm(p => ({ ...p, date: val }))
+                    }}
                     min={minDueDate}
+                    max="9999-12-31"
                     required
                   />
                 </div>

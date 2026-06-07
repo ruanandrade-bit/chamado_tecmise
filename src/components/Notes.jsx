@@ -786,7 +786,24 @@ export default function Notes() {
                   <div className="nt-form-row">
                     <div className="nt-form-group" style={{ flex: 1 }}>
                       <label>Data</label>
-                      <input type="date" className="nt-input" min={todayStr} value={form.reminderDate} onChange={e => setForm(p => ({ ...p, reminderDate: e.target.value }))} />
+                      <input
+                        type="date"
+                        className="nt-input"
+                        min={todayStr}
+                        max="9999-12-31"
+                        value={form.reminderDate}
+                        onChange={e => {
+                          let val = e.target.value
+                          if (val) {
+                            const parts = val.split('-')
+                            if (parts[0] && parts[0].length > 4) {
+                              parts[0] = parts[0].slice(0, 4)
+                              val = parts.join('-')
+                            }
+                          }
+                          setForm(p => ({ ...p, reminderDate: val }))
+                        }}
+                      />
                     </div>
                     <div className="nt-form-group" style={{ flex: 1 }}>
                       <label>Horário</label>
