@@ -39,7 +39,7 @@
 
 /* ── Main Grid ── */
 .nt-main-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
-@media (min-width: 1024px) { .nt-main-grid { grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.65fr); } }
+@media (min-width: 1024px) { .nt-main-grid { grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1fr) minmax(0, 1fr); } }
 
 /* ── Section Headers ── */
 .nt-section-header { margin-bottom: 14px; }
@@ -67,7 +67,7 @@
 
 /* ── Reminders List ── */
 .nt-reminders-list { display: grid; grid-template-columns: 1fr; gap: 10px; max-height: 420px; overflow-y: auto; }
-@media (min-width: 1024px) { .nt-reminders-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .nt-reminders-list { grid-template-columns: 1fr; } }
 .nt-reminder-row { display: flex; align-items: center; gap: 12px; min-width: 0; padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.04); transition: all 0.2s; animation: ntCardIn 0.4s ease-out both; }
 .nt-reminder-row:hover { background: rgba(255,255,255,0.04); transform: translateY(-1px); }
 .nt-reminder-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -123,6 +123,7 @@
 .nt-modal-overlay { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.65); backdrop-filter: blur(8px); animation: ntFadeIn 0.15s ease-out; }
 .nt-modal-card { width: 100%; max-width: 520px; max-height: 85vh; margin: 0 16px; border-radius: 20px; overflow: hidden; background: linear-gradient(145deg, rgba(30,35,50,0.97), rgba(18,22,34,0.99)); border: 1px solid rgba(167,139,250,0.15); box-shadow: 0 25px 80px rgba(0,0,0,0.6); display: flex; flex-direction: column; animation: ntSlideUp 0.25s cubic-bezier(0.16,1,0.3,1); }
 .nt-modal-sm { max-width: 380px; }
+.nt-modal-note-form { max-width: 720px; }
 @keyframes ntSlideUp { from { opacity: 0; transform: translateY(20px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
 .nt-modal-accent { height: 3px; background: linear-gradient(90deg, transparent, rgba(167,139,250,0.5), rgba(139,92,246,0.7), rgba(167,139,250,0.5), transparent); }
 .nt-modal-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); }

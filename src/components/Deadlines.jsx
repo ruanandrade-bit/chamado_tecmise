@@ -73,6 +73,7 @@ export default function Deadlines() {
   const { user } = useAuthStore()
   const role = (user?.role || '').toLowerCase()
   const canEdit = role === 'pedagoga' || role === 'psicóloga' || user?.canDragDrop === true
+  const isAdmin = user?.canDragDrop === true
 
   const [deadlines, setDeadlines] = useState([])
   const [notes, setNotes] = useState([])
@@ -602,9 +603,11 @@ export default function Deadlines() {
                   )}
                 </div>
 
-                {canModifyDeadline && (
+                {((dl.status !== 'concluido' && canEdit) || (dl.status === 'concluido' && isAdmin)) && (
                   <div className="dl-actions-group" onClick={e => e.stopPropagation()}>
-                    <button className="dl-action-btn" onClick={() => handleEditClick(dl)} title="Editar prazo"><Edit3 size={14} /></button>
+                    {dl.status !== 'concluido' && canEdit && (
+                      <button className="dl-action-btn" onClick={() => handleEditClick(dl)} title="Editar prazo"><Edit3 size={14} /></button>
+                    )}
                     <button className="dl-action-btn dl-btn-del" onClick={() => setDeleteTarget(dl)} title="Excluir prazo"><Trash2 size={14} /></button>
                   </div>
                 )}
@@ -644,7 +647,7 @@ export default function Deadlines() {
               </div>
               <div className="dl-form-row">
                 <div className="dl-form-group" style={{ flex: 1 }}>
-                  <label>Data Limite *</label>
+                  <label>Data *</label>
                   <input type="date" className="dl-input" min={editTarget ? undefined : new Date().toISOString().split('T')[0]} value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} />
                 </div>
                 <div className="dl-form-group" style={{ flex: 1 }}>

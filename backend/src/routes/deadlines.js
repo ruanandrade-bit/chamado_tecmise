@@ -53,8 +53,9 @@ router.put('/:id', pedagogaOrPsicologaOnly, (req, res) => {
 // DELETE — delete deadline, persist in background (fast like tickets)
 router.delete('/:id', pedagogaOrPsicologaOnly, (req, res) => {
   const current = memoryStore.getDeadlines().find((deadline) => deadline.id === req.params.id)
-  if (current?.status === 'concluido') {
-    return res.status(403).json({ message: 'Prazos concluídos não podem ser excluídos.' })
+  const isAdmin = req.user?.canDragDrop === true
+  if (current?.status === 'concluido' && !isAdmin) {
+    return res.status(403).json({ message: 'Prazos concluídos não podem ser excluídos por não-administradores.' })
   }
 
   memoryStore.deleteDeadline(req.params.id)

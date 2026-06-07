@@ -67,6 +67,12 @@ router.put('/:id', pedagogaOrPsicologaOnly, (req, res) => {
 
 // DELETE — pedagoga/psicóloga/admin only (fast like tickets)
 router.delete('/:id', pedagogaOrPsicologaOnly, (req, res) => {
+  const current = memoryStore.getNotes().find((note) => note.id === req.params.id)
+  const isAdmin = req.user?.canDragDrop === true
+  if (current?.reminderStatus === 'concluido' && !isAdmin) {
+    return res.status(403).json({ message: 'Lembretes concluídos não podem ser excluídos por não-administradores.' })
+  }
+
   memoryStore.deleteNote(req.params.id)
   res.json({ success: true })
 })

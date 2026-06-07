@@ -20,6 +20,7 @@ export default function Notes() {
   const { user } = useAuthStore()
   const role = (user?.role || '').toLowerCase()
   const canEdit = role === 'pedagoga' || role === 'psicóloga' || user?.canDragDrop === true
+  const isAdmin = user?.canDragDrop === true
 
   const [notes, setNotes] = useState([])
   const [deadlines, setDeadlines] = useState([])
@@ -178,6 +179,26 @@ export default function Notes() {
       status: d.status
     }))
     .filter(d => matchSearch(d, q) && matchCat(d, filterCategory))
+
+  const sortedNotesReminders = [...notesReminders].sort((a, b) => {
+    const isCompA = a.reminderStatus === 'concluido'
+    const isCompB = b.reminderStatus === 'concluido'
+    if (isCompA && !isCompB) return 1
+    if (!isCompA && isCompB) return -1
+    const dateA = a.reminderDate || a.createdAt
+    const dateB = b.reminderDate || b.createdAt
+    return new Date(dateA) - new Date(dateB)
+  })
+
+  const sortedDeadlines = [...mappedDeadlines].sort((a, b) => {
+    const isCompA = a.reminderStatus === 'concluido'
+    const isCompB = b.reminderStatus === 'concluido'
+    if (isCompA && !isCompB) return 1
+    if (!isCompA && isCompB) return -1
+    const dateA = a.reminderDate || a.createdAt
+    const dateB = b.reminderDate || b.createdAt
+    return new Date(dateA) - new Date(dateB)
+  })
 
   const reminders = [...notesReminders, ...mappedDeadlines].sort((a, b) => {
     const isCompA = a.reminderStatus === 'concluido'
@@ -473,12 +494,17 @@ export default function Notes() {
 
           {/* Middle Column — Reminders */}
           <div className="nt-col-mid">
-            <div className="nt-section-header"><h2>LEMBRETES E DATAS IMPORTANTES</h2></div>
-            {reminders.length === 0 ? (
+            <div className="nt-section-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Bell size={16} style={{ color: '#a78bfa' }} />
+                <h2>LEMBRETES</h2>
+              </div>
+            </div>
+            {sortedNotesReminders.length === 0 ? (
               <p className="nt-empty-hint">Nenhum lembrete cadastrado.</p>
             ) : (
               <div className="nt-reminders-list">
-                {reminders.map((rem, i) => {
+                {sortedNotesReminders.map((rem, i) => {
                   const cat = CATEGORY_CONFIG[rem.category] || CATEGORY_CONFIG.pedagoga
                   const st = STATUS_CONFIG[rem.reminderStatus] || STATUS_CONFIG.agendado
                   return (
@@ -486,7 +512,6 @@ export default function Notes() {
                       <div className="nt-reminder-dot" style={{ background: cat.color }} />
                       <div className="nt-reminder-info">
                         <span className="nt-reminder-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          {rem.isDeadline && <CalendarDays size={14} style={{ color: '#fbbf24', flexShrink: 0 }} title="Data Importante" />}
                           {rem.title}
                         </span>
                         <span className="nt-reminder-date">{rem.reminderDate ? formatDate(rem.reminderDate) : formatDate(rem.createdAt)}{rem.reminderTime ? ` • ${rem.reminderTime}` : ''}</span>
@@ -495,18 +520,82 @@ export default function Notes() {
                         <span className="nt-cat-badge-sm" style={{ background: cat.bg, color: cat.color }}>{cat.label}</span>
                         <span className="nt-status-badge" style={{ background: st.bg, color: st.color }}>• {st.label}</span>
                       </div>
-                      {canEdit && (
+                      {((rem.reminderStatus !== 'concluido' && canEdit) || (rem.reminderStatus === 'concluido' && isAdmin)) && (
                         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          {rem.reminderStatus !== 'concluido' && canEdit && (
+                            <button
+                              className="nt-reminder-edit"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEditClick(rem)
+                              }}
+                              title="Editar"
+                            >
+                              <Edit3 size={12} />
+                            </button>
+                          )}
                           <button
-                            className="nt-reminder-edit"
+                            className="nt-reminder-del"
                             onClick={(e) => {
                               e.stopPropagation()
-                              handleEditClick(rem)
+                              setDeleteTarget(rem)
                             }}
-                            title="Editar"
+                            title="Excluir"
                           >
-                            <Edit3 size={12} />
+                            <Trash2 size={12} />
                           </button>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Right Column — Important Dates */}
+          <div className="nt-col-mid">
+            <div className="nt-section-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <CalendarDays size={16} style={{ color: '#fbbf24' }} />
+                <h2>DATAS IMPORTANTES</h2>
+              </div>
+            </div>
+            {sortedDeadlines.length === 0 ? (
+              <p className="nt-empty-hint">Nenhuma data importante cadastrada.</p>
+            ) : (
+              <div className="nt-reminders-list">
+                {sortedDeadlines.map((rem, i) => {
+                  const cat = CATEGORY_CONFIG[rem.category] || CATEGORY_CONFIG.pedagoga
+                  const st = STATUS_CONFIG[rem.reminderStatus] || STATUS_CONFIG.agendado
+                  return (
+                    <div key={rem.id} className="nt-reminder-row" style={{ animationDelay: `${i * 0.05}s`, cursor: 'pointer' }} onClick={() => setViewNote(rem)}>
+                      <div className="nt-reminder-dot" style={{ background: cat.color }} />
+                      <div className="nt-reminder-info">
+                        <span className="nt-reminder-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <CalendarDays size={14} style={{ color: '#fbbf24', flexShrink: 0 }} title="Data Importante" />
+                          {rem.title}
+                        </span>
+                        <span className="nt-reminder-date">{rem.reminderDate ? formatDate(rem.reminderDate) : formatDate(rem.createdAt)}{rem.reminderTime ? ` • ${rem.reminderTime}` : ''}</span>
+                      </div>
+                      <div className="nt-reminder-badges">
+                        <span className="nt-cat-badge-sm" style={{ background: cat.bg, color: cat.color }}>{cat.label}</span>
+                        <span className="nt-status-badge" style={{ background: st.bg, color: st.color }}>• {st.label}</span>
+                      </div>
+                      {((rem.reminderStatus !== 'concluido' && canEdit) || (rem.reminderStatus === 'concluido' && isAdmin)) && (
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          {rem.reminderStatus !== 'concluido' && canEdit && (
+                            <button
+                              className="nt-reminder-edit"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEditClick(rem)
+                              }}
+                              title="Editar"
+                            >
+                              <Edit3 size={12} />
+                            </button>
+                          )}
                           <button
                             className="nt-reminder-del"
                             onClick={(e) => {
@@ -601,7 +690,7 @@ export default function Notes() {
       {/* New Note Modal */}
       {showModal && (
         <div className="nt-modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="nt-modal-card" onClick={e => e.stopPropagation()}>
+          <div className="nt-modal-card nt-modal-note-form" onClick={e => e.stopPropagation()}>
             <div className="nt-modal-accent" />
             <div className="nt-modal-head">
               <h3><StickyNote size={18} /> {editTarget ? 'Editar Registro' : 'Nova Anotação'}</h3>
@@ -848,7 +937,7 @@ export default function Notes() {
                   </div>
                   {viewNote.noteType === 'reminder' && viewNote.reminderDate && (
                     <div className="nt-detail-info-item">
-                      <span className="nt-detail-label">Data Limite</span>
+                      <span className="nt-detail-label">Data</span>
                       <span style={{ color: '#fbbf24', fontSize: '0.8125rem', fontWeight: '600' }}>📅 {formatDate(viewNote.reminderDate)}{viewNote.reminderTime ? ` às ${viewNote.reminderTime}` : ''}</span>
                     </div>
                   )}
@@ -864,68 +953,72 @@ export default function Notes() {
 
                 {canEdit && (
                   <div className="nt-modal-actions" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 24, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                    <button
-                      className="nt-btn-cancel"
-                      onClick={() => {
-                        setViewNote(null)
-                        handleEditClick(viewNote)
-                      }}
-                      style={{
-                        background: 'rgba(167, 139, 250, 0.1)',
-                        color: '#a78bfa',
-                        border: '1px solid rgba(167, 139, 250, 0.2)',
-                        padding: '8px 16px',
-                        borderRadius: '10px',
-                        fontSize: '0.8125rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(167, 139, 250, 0.18)'
-                        e.currentTarget.style.borderColor = 'rgba(167, 139, 250, 0.3)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(167, 139, 250, 0.1)'
-                        e.currentTarget.style.borderColor = 'rgba(167, 139, 250, 0.2)'
-                      }}
-                    >
-                      <Edit3 size={14} /> Editar
-                    </button>
-                    <button
-                      className="nt-btn-danger"
-                      onClick={() => {
-                        setViewNote(null)
-                        setDeleteTarget(viewNote)
-                      }}
-                      style={{
-                        background: 'rgba(239, 68, 68, 0.1)',
-                        color: '#f87171',
-                        border: '1px solid rgba(239, 68, 68, 0.2)',
-                        padding: '8px 16px',
-                        borderRadius: '10px',
-                        fontSize: '0.8125rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 6,
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)'
-                        e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)'
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
-                        e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.2)'
-                      }}
-                    >
-                      <Trash2 size={14} /> Excluir
-                    </button>
+                    {viewNote.reminderStatus !== 'concluido' && (
+                      <button
+                        className="nt-btn-cancel"
+                        onClick={() => {
+                          setViewNote(null)
+                          handleEditClick(viewNote)
+                        }}
+                        style={{
+                          background: 'rgba(167, 139, 250, 0.1)',
+                          color: '#a78bfa',
+                          border: '1px solid rgba(167, 139, 250, 0.2)',
+                          padding: '8px 16px',
+                          borderRadius: '10px',
+                          fontSize: '0.8125rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(167, 139, 250, 0.18)'
+                          e.currentTarget.style.borderColor = 'rgba(167, 139, 250, 0.3)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(167, 139, 250, 0.1)'
+                          e.currentTarget.style.borderColor = 'rgba(167, 139, 250, 0.2)'
+                        }}
+                      >
+                        <Edit3 size={14} /> Editar
+                      </button>
+                    )}
+                    {(viewNote.reminderStatus !== 'concluido' || isAdmin) && (
+                      <button
+                        className="nt-btn-danger"
+                        onClick={() => {
+                          setViewNote(null)
+                          setDeleteTarget(viewNote)
+                        }}
+                        style={{
+                          background: 'rgba(239, 68, 68, 0.1)',
+                          color: '#f87171',
+                          border: '1px solid rgba(239, 68, 68, 0.2)',
+                          padding: '8px 16px',
+                          borderRadius: '10px',
+                          fontSize: '0.8125rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.18)'
+                          e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)'
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'
+                          e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.2)'
+                        }}
+                      >
+                        <Trash2 size={14} /> Excluir
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
