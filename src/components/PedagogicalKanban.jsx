@@ -524,7 +524,7 @@ export default function PedagogicalKanban() {
         </div>
       </div>
 
-      {isLoading ? (
+      {isLoading && tasks.length === 0 ? (
         <div className="pk-loading" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: 80, color: '#9ca3af' }}>
           <Loader2 size={32} className="pk-spinner" style={{ animation: 'spin 1s linear infinite' }} />
           <p style={{ marginTop: 12 }}>Carregando quadro...</p>

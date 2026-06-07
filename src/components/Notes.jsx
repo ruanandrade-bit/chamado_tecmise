@@ -163,6 +163,7 @@ export default function Notes() {
     .filter(n => matchSearch(n, q) && matchCat(n, filterCategory))
 
   const mappedDeadlines = deadlines
+    .filter(d => d.status !== 'concluido')
     .map(d => ({
       id: d.id,
       title: d.title,

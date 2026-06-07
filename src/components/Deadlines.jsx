@@ -152,6 +152,18 @@ export default function Deadlines() {
     String(p.name || '').trim().toLowerCase() !== String(user?.name || '').trim().toLowerCase()
   )
 
+  const selectedGuestList = selectedGuest ? selectedGuest.split(',').filter(Boolean) : []
+
+  const toggleGuest = (email) => {
+    let list = selectedGuest ? selectedGuest.split(',').filter(Boolean) : []
+    if (list.includes(email)) {
+      list = list.filter(e => e !== email)
+    } else {
+      list.push(email)
+    }
+    setSelectedGuest(list.join(','))
+  }
+
   const doSaveDeadline = async (calendarConfirmed = false) => {
     setIsSaving(true)
     try {
@@ -853,33 +865,68 @@ export default function Deadlines() {
                                 e.stopPropagation()
                                 setIsGuestDropdownOpen(!isGuestDropdownOpen)
                               }}
-                              style={{ fontSize: '0.8125rem', padding: '8px 12px' }}
+                              style={{ fontSize: '0.8125rem', padding: '6px 12px', minHeight: '38px', height: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}
                             >
-                              <span style={{ color: selectedGuest ? '#e5e7eb' : '#6b7280' }}>
-                                {selectedGuest
-                                  ? guestProfessionals.find(p => p.companyEmail === selectedGuest)?.name || selectedGuest
-                                  : 'Nenhum convidado'}
-                              </span>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center', textAlign: 'left' }}>
+                                {selectedGuestList.length === 0 ? (
+                                  <span style={{ color: '#6b7280' }}>Nenhum convidado</span>
+                                ) : (
+                                  selectedGuestList.map(email => {
+                                    const prof = guestProfessionals.find(p => p.companyEmail === email)
+                                    return (
+                                      <span
+                                        key={email}
+                                        style={{
+                                          background: 'rgba(251, 191, 36, 0.15)',
+                                          color: '#fbbf24',
+                                          padding: '2px 8px',
+                                          borderRadius: '6px',
+                                          fontSize: '0.75rem',
+                                          display: 'inline-flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          border: '1px solid rgba(251, 191, 36, 0.25)'
+                                        }}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          toggleGuest(email)
+                                        }}
+                                      >
+                                        {prof ? prof.name : email}
+                                        <X size={10} style={{ cursor: 'pointer', opacity: 0.8 }} />
+                                      </span>
+                                    )
+                                  })
+                                )}
+                              </div>
                               <ChevronDown size={14} className={`dl-select-chevron ${isGuestDropdownOpen ? 'open' : ''}`} />
                             </button>
                             {isGuestDropdownOpen && (
                               <div className="dl-form-dropdown up" onClick={(e) => e.stopPropagation()}>
                                 <div
-                                  className={`dl-form-option ${selectedGuest === '' ? 'selected' : ''}`}
-                                  onClick={() => { setSelectedGuest(''); setIsGuestDropdownOpen(false) }}
+                                  className="dl-form-option"
+                                  onClick={() => setSelectedGuest('')}
+                                  style={{ color: '#ef4444', fontWeight: '500' }}
                                 >
-                                  Nenhum convidado
+                                  Limpar todos
                                 </div>
-                                {guestProfessionals.map(p => (
-                                  <div
-                                    key={p.id}
-                                    className={`dl-form-option ${selectedGuest === p.companyEmail ? 'selected' : ''}`}
-                                    onClick={() => { setSelectedGuest(p.companyEmail); setIsGuestDropdownOpen(false) }}
-                                  >
-                                    <span>{p.name}</span>
-                                    <span style={{ fontSize: '0.7rem', color: '#6b7280', marginLeft: '6px' }}>{p.companyEmail}</span>
-                                  </div>
-                                ))}
+                                {guestProfessionals.map(p => {
+                                  const isSelected = selectedGuestList.includes(p.companyEmail)
+                                  return (
+                                    <div
+                                      key={p.id}
+                                      className={`dl-form-option ${isSelected ? 'selected' : ''}`}
+                                      onClick={() => toggleGuest(p.companyEmail)}
+                                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}
+                                    >
+                                      <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                                        <span>{p.name}</span>
+                                        <span style={{ fontSize: '0.7rem', color: '#6b7280' }}>{p.companyEmail}</span>
+                                      </div>
+                                      {isSelected && <Check size={14} style={{ color: '#fbbf24' }} />}
+                                    </div>
+                                  )
+                                })}
                               </div>
                             )}
                           </div>
@@ -972,7 +1019,13 @@ export default function Deadlines() {
               </p>
               {selectedGuest && (
                 <p style={{ color: '#9ca3af', fontSize: '0.8125rem' }}>
-                  Convite enviado para: <strong style={{ color: '#a78bfa' }}>{selectedGuest}</strong>
+                  Convites enviados para:{' '}
+                  <strong style={{ color: '#a78bfa' }}>
+                    {selectedGuest
+                      .split(',')
+                      .map(email => guestProfessionals.find(p => p.companyEmail === email)?.name || email)
+                      .join(', ')}
+                  </strong>
                 </p>
               )}
               <div className="dl-modal-actions" style={{ marginTop: '6px', flexDirection: 'column', gap: '8px' }}>
@@ -1098,7 +1151,11 @@ export default function Deadlines() {
                         </span>
                         {viewDeadline.googleCalendarGuest && (
                           <span style={{ color: '#a78bfa', fontSize: '0.75rem' }}>
-                            Convidado: {viewDeadline.googleCalendarGuest}
+                            Convidados:{' '}
+                            {viewDeadline.googleCalendarGuest
+                              .split(',')
+                              .map(email => professionals.find(p => p.companyEmail === email)?.name || email)
+                              .join(', ')}
                           </span>
                         )}
                       </div>
