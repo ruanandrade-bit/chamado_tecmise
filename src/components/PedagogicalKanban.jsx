@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Kanban as KanbanIcon, Plus, Trash2, Calendar, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronRight, ChevronLeft, ChevronDown, Archive, History } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
+import { useKanbanStore } from '../stores/kanbanStore'
 import './PedagogicalKanban.css'
 
 const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/
@@ -34,9 +35,7 @@ export default function PedagogicalKanban() {
   const currentUserName = (user?.name || '').trim() || 'Usuário'
   const minDueDate = getTodayIsoLocal()
 
-  const [tasks, setTasks] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState('')
+  const { tasks, isLoading, error, loadTasks, setTasks } = useKanbanStore()
 
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
@@ -75,8 +74,8 @@ export default function PedagogicalKanban() {
   const [dragOverColumn, setDragOverColumn] = useState(null)
 
   useEffect(() => {
-    fetchTasks()
-  }, [])
+    loadTasks()
+  }, [loadTasks])
 
   useEffect(() => {
     const handleOutsideClick = () => {
@@ -89,18 +88,7 @@ export default function PedagogicalKanban() {
     return () => window.removeEventListener('click', handleOutsideClick)
   }, [])
 
-  const fetchTasks = async () => {
-    setIsLoading(true)
-    setError('')
-    try {
-      const data = await api.get('/kanban')
-      setTasks(data || [])
-    } catch (err) {
-      setError(err.message)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const fetchTasks = loadTasks
 
   // Handle Form Submission (Create or Edit)
   const handleFormSubmit = async (e) => {

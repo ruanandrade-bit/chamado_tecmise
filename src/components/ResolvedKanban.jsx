@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { Kanban as KanbanIcon, Plus, Trash2, Calendar, CalendarDays, Clock, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronRight, ChevronLeft, ChevronDown, Archive, History, ShieldAlert, RotateCcw } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
+import { useKanbanStore } from '../stores/kanbanStore'
 import './PedagogicalKanban.css'
 
 function ResolvedPrettySelect({
@@ -237,8 +238,7 @@ function ConfirmDeleteModalResolved({ isOpen, onClose, onConfirm, isDeleting, ta
 /* ─── Main Component ──────────────────────────────────────────────── */
 export default function ResolvedKanban() {
   const { user } = useAuthStore()
-  const [tasks, setTasks] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
+  const { tasks, isLoading, loadTasks, setTasks } = useKanbanStore()
   const [isDeleting, setIsDeleting] = useState(false)
   const [taskToDelete, setTaskToDelete] = useState(null)
   const [selectedTaskId, setSelectedTaskId] = useState(null)
@@ -254,20 +254,10 @@ export default function ResolvedKanban() {
 
   // Fetch tasks
   useEffect(() => {
-    fetchTasks()
-  }, [])
+    loadTasks()
+  }, [loadTasks])
 
-  const fetchTasks = async () => {
-    setIsLoading(true)
-    try {
-      const data = await api.get('/kanban')
-      setTasks(data || [])
-    } catch (err) {
-      console.error('Erro ao buscar tarefas resolvidas:', err)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const fetchTasks = loadTasks
 
   // Build available years from task data
   const availableYears = [...new Set(tasks.filter(t => t.isArchived).map(t => {

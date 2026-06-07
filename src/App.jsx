@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuthStore } from './stores/authStore'
 import { useTicketsStore } from './stores/ticketsStore'
+import { useKanbanStore } from './stores/kanbanStore'
 import Login from './components/Login'
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
@@ -21,6 +22,7 @@ import ResolvedKanban from './components/ResolvedKanban'
 export default function App() {
   const { isAuthenticated, isAuthLoading, initAuth } = useAuthStore()
   const { bootstrap, loadTickets } = useTicketsStore()
+  const { loadTasks } = useKanbanStore()
   const [currentPage, setCurrentPage] = useState('kanban')
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const isKanbanPage = currentPage === 'kanban'
@@ -45,17 +47,19 @@ export default function App() {
   useEffect(() => {
     if (isAuthenticated) {
       bootstrap()
+      loadTasks()
     }
-  }, [isAuthenticated, bootstrap])
+  }, [isAuthenticated, bootstrap, loadTasks])
 
   // Polling: sync tickets every 5 seconds across tabs/users
   useEffect(() => {
     if (!isAuthenticated) return
     const interval = setInterval(() => {
       loadTickets()
+      loadTasks()
     }, 5000)
     return () => clearInterval(interval)
-  }, [isAuthenticated, loadTickets])
+  }, [isAuthenticated, loadTickets, loadTasks])
 
   useEffect(() => {
     // Close sidebar when page changes

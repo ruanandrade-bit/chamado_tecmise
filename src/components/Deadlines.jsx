@@ -621,7 +621,7 @@ export default function Deadlines() {
       {/* Add / Edit Modal */}
       {showAddModal && (
         <div className="dl-modal-overlay" onClick={() => setShowAddModal(false)}>
-          <div className="dl-modal-card" onClick={e => e.stopPropagation()}>
+          <div className="dl-modal-card dl-modal-deadline-form" onClick={e => e.stopPropagation()}>
             <div className="dl-modal-accent" />
             <div className="dl-modal-head">
               <div className="dl-modal-head-left">
@@ -863,7 +863,7 @@ export default function Deadlines() {
                               <ChevronDown size={14} className={`dl-select-chevron ${isGuestDropdownOpen ? 'open' : ''}`} />
                             </button>
                             {isGuestDropdownOpen && (
-                              <div className="dl-form-dropdown" onClick={(e) => e.stopPropagation()}>
+                              <div className="dl-form-dropdown up" onClick={(e) => e.stopPropagation()}>
                                 <div
                                   className={`dl-form-option ${selectedGuest === '' ? 'selected' : ''}`}
                                   onClick={() => { setSelectedGuest(''); setIsGuestDropdownOpen(false) }}

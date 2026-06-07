@@ -1,11 +1,14 @@
 import { LayoutDashboard, Kanban, Archive, FileText, Wifi, Package, Settings, X, EyeOff, StickyNote, Calendar, Trello } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
+import { useKanbanStore } from '../stores/kanbanStore'
 
 export default function Sidebar({ currentPage, onPageChange, isMobileOpen, onMobileClose }) {
   const { getStatistics } = useTicketsStore()
   const { user } = useAuthStore()
+  const { tasks } = useKanbanStore()
   const stats = getStatistics()
+  const openKanbanCount = tasks.filter(t => !t.isArchived && t.status !== 'completed').length
   const uniqueResponsibles = Object.keys(stats.byResponsible).length
   const isAdmin = user?.canDragDrop === true
 
@@ -77,7 +80,7 @@ export default function Sidebar({ currentPage, onPageChange, isMobileOpen, onMob
             <p className="font-semibold text-dark-300 mb-3">INFORMAÇÕES</p>
             <div className="space-y-2 text-dark-500 text-xs">
               <p>📋 <strong>Total:</strong> {stats.total} chamado{stats.total !== 1 ? 's' : ''}</p>
-              <p>✅ <strong>Concluídos:</strong> {stats.completed}</p>
+              <p>📋 <strong>Kanban:</strong> {openKanbanCount} aberto{openKanbanCount !== 1 ? 's' : ''}</p>
             </div>
           </div>
         </div>
