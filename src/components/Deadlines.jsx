@@ -43,7 +43,10 @@ const generateGoogleCalendarUrl = (item) => {
   
   let url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${description}&dates=${datesParam}`
   if (item.companyEmail) {
-    url += `&add=${encodeURIComponent(item.companyEmail)}`
+    const emails = String(item.companyEmail).split(',').map(e => e.trim()).filter(Boolean)
+    emails.forEach(email => {
+      url += `&add=${encodeURIComponent(email)}`
+    })
   }
   return url
 }
