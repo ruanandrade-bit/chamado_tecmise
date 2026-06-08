@@ -77,6 +77,12 @@ function PrettySelect({ value, options, placeholder, selectKey, openSelectKey, s
   )
 }
 
+function formatDayMonthInput(value) {
+  const digits = String(value || '').replace(/\D/g, '').slice(0, 4)
+  if (digits.length <= 2) return digits
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`
+}
+
 export default function Children() {
   const { user } = useAuthStore()
   const role = normalizeRole(user?.role)
@@ -447,13 +453,14 @@ export default function Children() {
                   readOnly={Boolean(editTarget)}
                   onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
                   className={editTarget ? 'ch-readonly-input' : ''}
+                  title={editTarget ? 'Nome bloqueado após criação' : ''}
                   placeholder="Digite o nome da criança"
                 />
               </label>
 
               <label>
                 Usuário
-                <input value={loggedUserName} readOnly className="ch-readonly-input" />
+                <input value={loggedUserName} readOnly className="ch-readonly-input" title="Campo bloqueado" />
               </label>
 
               <label>
@@ -473,17 +480,21 @@ export default function Children() {
                 Período realizado
                 <div className="ch-period-grid">
                   <input
-                    type="date"
+                    type="text"
                     value={form.periodStart}
-                    max="9999-12-31"
-                    onChange={(event) => setForm((prev) => ({ ...prev, periodStart: event.target.value }))}
+                    inputMode="numeric"
+                    maxLength={5}
+                    onChange={(event) => setForm((prev) => ({ ...prev, periodStart: formatDayMonthInput(event.target.value) }))}
+                    placeholder="dd/mm"
                     aria-label="Data inicial"
                   />
                   <input
-                    type="date"
+                    type="text"
                     value={form.periodEnd}
-                    max="9999-12-31"
-                    onChange={(event) => setForm((prev) => ({ ...prev, periodEnd: event.target.value }))}
+                    inputMode="numeric"
+                    maxLength={5}
+                    onChange={(event) => setForm((prev) => ({ ...prev, periodEnd: formatDayMonthInput(event.target.value) }))}
+                    placeholder="dd/mm"
                     aria-label="Data de término"
                   />
                 </div>
