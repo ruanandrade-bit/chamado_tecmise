@@ -15,6 +15,7 @@ const emptyForm = {
 
 const analysisOptions = ['SIM', 'NÃO', 'TIRAR/ NÃO TEM DADOS', 'NÃO TEM DADOS', 'Desligada a Camera']
 const completedOptions = ['SIM', 'NÃO', 'X', 'NÃO TEM DADOS', '-']
+const ALL_TURMAS_OPTION = 'Todas as turmas'
 
 function normalizeRole(value) {
   return String(value || '')
@@ -128,11 +129,12 @@ export default function Children() {
 
   const turmaOptions = useMemo(() => {
     const devices = schoolData[selectedSchool] || {}
-    return Array.from(new Set(
+    const turmas = Array.from(new Set(
       Object.values(devices)
         .flatMap((turmas) => Array.isArray(turmas) ? turmas : [])
         .filter(Boolean)
     )).sort((a, b) => a.localeCompare(b))
+    return selectedSchool ? [ALL_TURMAS_OPTION, ...turmas] : turmas
   }, [schoolData, selectedSchool])
 
   useEffect(() => {
@@ -152,7 +154,10 @@ export default function Children() {
     const q = searchQuery.trim().toLowerCase()
 
     return children
-      .filter((child) => child.school === selectedSchool && child.turma === selectedTurma)
+      .filter((child) => (
+        child.school === selectedSchool
+        && (selectedTurma === ALL_TURMAS_OPTION || child.turma === selectedTurma)
+      ))
       .filter((child) => {
         if (!q) return true
         return (
@@ -209,6 +214,7 @@ export default function Children() {
     setFormError('')
 
     if (!selectedSchool || !selectedTurma) return setFormError('Selecione uma escola e uma turma antes de salvar.')
+    if (selectedTurma === ALL_TURMAS_OPTION) return setFormError('Para cadastrar, selecione uma turma específica.')
     if (!form.name.trim()) return setFormError('Nome da criança é obrigatório.')
 
     setIsSaving(true)
@@ -301,7 +307,7 @@ export default function Children() {
               <PrettySelect
                 value={selectedTurma}
                 options={turmaOptions}
-                placeholder={selectedSchool ? 'Selecione uma turma' : 'Selecione a escola primeiro'}
+                placeholder={selectedSchool ? 'Selecione uma turma ou todas' : 'Selecione a escola primeiro'}
                 selectKey="turma"
                 openSelectKey={openSelectKey}
                 setOpenSelectKey={setOpenSelectKey}
@@ -339,7 +345,7 @@ export default function Children() {
             ) : visibleChildren.length === 0 ? (
               <div className="ch-empty-state">
                 <UserRound size={44} />
-                <p>Nenhuma criança encontrada para esta turma.</p>
+                <p>{selectedTurma === ALL_TURMAS_OPTION ? 'Nenhuma criança encontrada para este colégio.' : 'Nenhuma criança encontrada para esta turma.'}</p>
               </div>
             ) : (
               <>
