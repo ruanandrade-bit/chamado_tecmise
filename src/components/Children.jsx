@@ -106,6 +106,7 @@ export default function Children() {
   const isAdmin = user?.canDragDrop === true || user?.email === 'ruan@s4s.com'
   const loggedUserName = user?.name || 'Usuário'
 
+  const [selectedCategory, setSelectedCategory] = useState('Criança Psicóloga')
   const [schoolData, setSchoolData] = useState({})
   const [children, setChildren] = useState([])
   const [selectedSchool, setSelectedSchool] = useState('')
@@ -194,7 +195,7 @@ export default function Children() {
     }
   }, [selectedSchool, selectedTurma, turmaOptions])
 
-  useEffect(() => { setPage(1) }, [selectedSchool, selectedTurma, searchQuery])
+  useEffect(() => { setPage(1) }, [selectedSchool, selectedTurma, searchQuery, selectedCategory])
 
   const filteredChildren = useMemo(() => {
     if (!selectedSchool || !selectedTurma) return []
@@ -204,6 +205,7 @@ export default function Children() {
       .filter((child) => (
         child.school === selectedSchool
         && (selectedTurma === ALL_TURMAS_OPTION || child.turma === selectedTurma)
+        && (child.category || 'Criança Psicóloga') === selectedCategory
       ))
       .filter((child) => {
         if (!q) return true
@@ -227,7 +229,7 @@ export default function Children() {
           String(child.observations || '').toLowerCase().includes(q)
         )
       })
-  }, [children, searchQuery, selectedSchool, selectedTurma])
+  }, [children, searchQuery, selectedSchool, selectedTurma, selectedCategory])
 
   const pageSize = 8
   const totalPages = Math.max(1, Math.ceil(filteredChildren.length / pageSize))
@@ -296,7 +298,8 @@ export default function Children() {
         observations: form.observations.trim(),
         userName: loggedUserName,
         school: selectedSchool,
-        turma: selectedTurma
+        turma: selectedTurma,
+        category: editTarget ? (editTarget.category || 'Criança Psicóloga') : selectedCategory
       }
 
       if (editTarget) {
@@ -349,6 +352,18 @@ export default function Children() {
         <button className="ch-primary-btn" onClick={openCreateForm} disabled={!canCreateChild} title={!canCreateChild ? 'Selecione uma turma específica para cadastrar' : 'Nova criança'}>
           <Plus size={15} /> Nova criança
         </button>
+      </div>
+
+      <div className="ch-categories-tabbar">
+        {['Criança Psicóloga', 'Gabi', 'Jessica', 'Beatriz'].map((cat) => (
+          <button
+            key={cat}
+            className={`ch-category-tab ${selectedCategory === cat ? 'active' : ''}`}
+            onClick={() => setSelectedCategory(cat)}
+          >
+            {cat}
+          </button>
+        ))}
       </div>
 
       <div className="ch-workspace">
@@ -533,9 +548,9 @@ export default function Children() {
               </div>
 
               <form className="ch-form ch-form-scrollable" onSubmit={handleSubmit}>
-                {formError && <div className="ch-error"><AlertCircle size={14} /> {formError}</div>}
+                {formError && <div className="ch-error ch-full-width"><AlertCircle size={14} /> {formError}</div>}
 
-                <label>
+                <label className="ch-full-width">
                   Nome da criança
                   <input
                     value={form.name}
@@ -652,24 +667,22 @@ export default function Children() {
                   />
                 </label>
 
-                <div className="ch-schedule-grid">
-                  <label>
-                    Data do agendamento
-                    <input
-                      type="date"
-                      value={form.scheduledDate}
-                      onChange={(event) => setForm((prev) => ({ ...prev, scheduledDate: event.target.value }))}
-                    />
-                  </label>
-                  <label>
-                    Hora do agendamento
-                    <input
-                      type="time"
-                      value={form.scheduledTime}
-                      onChange={(event) => setForm((prev) => ({ ...prev, scheduledTime: event.target.value }))}
-                    />
-                  </label>
-                </div>
+                <label>
+                  Data do agendamento
+                  <input
+                    type="date"
+                    value={form.scheduledDate}
+                    onChange={(event) => setForm((prev) => ({ ...prev, scheduledDate: event.target.value }))}
+                  />
+                </label>
+                <label>
+                  Hora do agendamento
+                  <input
+                    type="time"
+                    value={form.scheduledTime}
+                    onChange={(event) => setForm((prev) => ({ ...prev, scheduledTime: event.target.value }))}
+                  />
+                </label>
 
                 <label>
                   Entregue
@@ -697,7 +710,7 @@ export default function Children() {
                   />
                 </label>
 
-                <label>
+                <label className="ch-full-width">
                   Observações
                   <textarea
                     value={form.observations}
@@ -707,7 +720,7 @@ export default function Children() {
                   />
                 </label>
 
-                <div className="ch-form-actions">
+                <div className="ch-form-actions ch-full-width">
                   <button type="button" className="ch-secondary-btn" onClick={closeForm}>Cancelar</button>
                   <button type="submit" className="ch-save-btn" disabled={isSaving}>
                     {isSaving ? <><Loader2 size={14} className="ch-spin" /> Salvando...</> : 'Salvar'}
@@ -727,7 +740,7 @@ export default function Children() {
                 <div className="ch-detail-icon"><UserRound size={18} /></div>
                 <div>
                   <h3>{viewTarget.name}</h3>
-                  <p>{viewTarget.school} - {viewTarget.turma} - Usuário: {viewTarget.userName || viewTarget.responsible || viewTarget.createdBy || '-'}</p>
+                  <p>{viewTarget.school} - {viewTarget.turma} - Usuário: {viewTarget.userName || viewTarget.responsible || viewTarget.createdBy || '-'}{viewTarget.category ? ` - Categoria: ${viewTarget.category}` : ''}</p>
                 </div>
               </div>
               <button className="ch-form-close" onClick={() => setViewTarget(null)}><X size={15} /></button>

@@ -41,6 +41,7 @@ function validateChildPayload(payload) {
   const name = normalizeText(payload?.name)
   const school = normalizeText(payload?.school)
   const turma = normalizeText(payload?.turma)
+  const category = normalizeText(payload?.category) || 'Criança Psicóloga'
   const reportType = normalizeText(payload?.reportType)
   const caseOrigin = normalizeText(payload?.caseOrigin)
   const priorityType = normalizeText(payload?.priorityType)
@@ -62,6 +63,9 @@ function validateChildPayload(payload) {
   if (!turma) return { ok: false, message: 'Turma é obrigatória.' }
   if (!reportType) return { ok: false, message: 'Tipo de relatório é obrigatório.' }
   if (!reportTypeOptions.includes(reportType)) return { ok: false, message: 'Tipo de relatório inválido.' }
+  if (!['Criança Psicóloga', 'Gabi', 'Jessica', 'Beatriz'].includes(category)) {
+    return { ok: false, message: 'Categoria inválida.' }
+  }
 
   const schoolData = memoryStore.getSchoolData()
   if (!schoolData?.[school]) return { ok: false, message: 'Escola não encontrada.' }
@@ -84,6 +88,7 @@ function validateChildPayload(payload) {
       name,
       school,
       turma,
+      category,
       reportType,
       caseOrigin,
       priorityType,
