@@ -333,7 +333,7 @@ export default function Children() {
         </button>
       </div>
 
-      <div className={`ch-workspace ${showForm ? 'ch-workspace-with-form' : ''}`}>
+      <div className="ch-workspace">
         <section className="ch-main-panel">
           <div className="ch-filters">
             <div className="ch-filter-group">
@@ -413,7 +413,6 @@ export default function Children() {
                         <th>Origem do caso</th>
                         <th>Prioridade</th>
                         <th>Status do parecer</th>
-                        <th>Requer análise individualizada</th>
                         <th>Período realizado</th>
                         <th>Finalizado em</th>
                         <th>Situação da entrega</th>
@@ -452,7 +451,6 @@ export default function Children() {
                           <td>{child.caseOrigin || '-'}</td>
                           <td><span className={`ch-status-pill ${child.priorityType === 'Urgente' ? 'ch-pill-danger' : child.priorityType === 'Prioridade' ? 'ch-pill-warn' : 'ch-pill-muted'}`}>{child.priorityType || '-'}</span></td>
                           <td>{child.parecerStatus || '-'}</td>
-                          <td><span className={`ch-status-pill ${child.analysisRequired === 'SIM' ? 'ch-pill-ok' : child.analysisRequired === 'NÃO' ? 'ch-pill-danger' : 'ch-pill-muted'}`}>{child.analysisRequired || '-'}</span></td>
                           <td>{formatPeriod(child)}</td>
                           <td>{formatFullDate(child.finalizedAt)}</td>
                           <td>{child.deliverySituation || '-'}</td>
@@ -494,209 +492,200 @@ export default function Children() {
         </section>
 
         {showForm && (
-          <aside className="ch-form-panel">
-            <div className="ch-form-head">
-              <div>
-                <h2>{editTarget ? 'Editar criança' : 'Nova criança'}</h2>
-                <p>{selectedSchool && selectedTurma ? `${selectedSchool} - ${selectedTurma}` : 'Selecione escola e turma'}</p>
-              </div>
-              <button className="ch-form-close" onClick={closeForm}><X size={15} /></button>
-            </div>
-
-            <form className="ch-form" onSubmit={handleSubmit}>
-              {formError && <div className="ch-error"><AlertCircle size={14} /> {formError}</div>}
-
-              <label>
-                Nome da criança
-                <input
-                  value={form.name}
-                  readOnly={Boolean(editTarget)}
-                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                  className={editTarget ? 'ch-readonly-input' : ''}
-                  title={editTarget ? 'Nome bloqueado após criação' : ''}
-                  placeholder="Digite o nome da criança"
-                />
-              </label>
-
-              <label>
-                Usuário
-                <input value={loggedUserName} readOnly className="ch-readonly-input" title="Campo bloqueado" />
-              </label>
-
-              <label>
-                Tipo de relatório
-                <PrettySelect
-                  value={form.reportType}
-                  options={reportTypeOptions}
-                  placeholder="Selecione uma opção"
-                  selectKey="reportType"
-                  openSelectKey={openSelectKey}
-                  setOpenSelectKey={setOpenSelectKey}
-                  onChange={(value) => setForm((prev) => ({ ...prev, reportType: value }))}
-                />
-              </label>
-
-              <label>
-                Origem do caso
-                <PrettySelect
-                  value={form.caseOrigin}
-                  options={caseOriginOptions}
-                  placeholder="Selecione uma opção"
-                  selectKey="caseOrigin"
-                  openSelectKey={openSelectKey}
-                  setOpenSelectKey={setOpenSelectKey}
-                  onChange={(value) => setForm((prev) => ({ ...prev, caseOrigin: value }))}
-                />
-              </label>
-
-              <label>
-                Tipo de prioridade
-                <PrettySelect
-                  value={form.priorityType}
-                  options={priorityTypeOptions}
-                  placeholder="Selecione uma opção"
-                  selectKey="priorityType"
-                  openSelectKey={openSelectKey}
-                  setOpenSelectKey={setOpenSelectKey}
-                  onChange={(value) => setForm((prev) => ({ ...prev, priorityType: value }))}
-                />
-              </label>
-
-              <label>
-                Status do parecer
-                <PrettySelect
-                  value={form.parecerStatus}
-                  options={parecerStatusOptions}
-                  placeholder="Selecione uma opção"
-                  selectKey="parecerStatus"
-                  openSelectKey={openSelectKey}
-                  setOpenSelectKey={setOpenSelectKey}
-                  onChange={(value) => setForm((prev) => ({ ...prev, parecerStatus: value }))}
-                />
-              </label>
-
-              <label>
-                Requer análise individualizada
-                <PrettySelect
-                  value={form.analysisRequired}
-                  options={analysisOptions}
-                  placeholder="Selecione uma opção"
-                  selectKey="analysisRequired"
-                  openSelectKey={openSelectKey}
-                  setOpenSelectKey={setOpenSelectKey}
-                  onChange={(value) => setForm((prev) => ({ ...prev, analysisRequired: value }))}
-                />
-              </label>
-
-              <label>
-                Período realizado
-                <div className="ch-period-grid">
-                  <input
-                    type="text"
-                    value={form.periodStart}
-                    inputMode="numeric"
-                    maxLength={5}
-                    onChange={(event) => setForm((prev) => ({ ...prev, periodStart: formatDayMonthInput(event.target.value) }))}
-                    placeholder="dd/mm"
-                    aria-label="Data inicial"
-                  />
-                  <input
-                    type="text"
-                    value={form.periodEnd}
-                    inputMode="numeric"
-                    maxLength={5}
-                    onChange={(event) => setForm((prev) => ({ ...prev, periodEnd: formatDayMonthInput(event.target.value) }))}
-                    placeholder="dd/mm"
-                    aria-label="Data de término"
-                  />
+          <div className="ch-modal-overlay" onClick={closeForm}>
+            <aside className="ch-form-modal-card" onClick={(event) => event.stopPropagation()}>
+              <div className="ch-form-head">
+                <div>
+                  <h2>{editTarget ? 'Editar criança' : 'Nova criança'}</h2>
+                  <p>{selectedSchool && selectedTurma ? `${selectedSchool} - ${selectedTurma}` : 'Selecione escola e turma'}</p>
                 </div>
-              </label>
+                <button className="ch-form-close" onClick={closeForm}><X size={15} /></button>
+              </div>
 
-              <label>
-                Finalizado em
-                <input
-                  type="date"
-                  value={form.finalizedAt}
-                  onChange={(event) => setForm((prev) => ({ ...prev, finalizedAt: event.target.value }))}
-                />
-              </label>
+              <form className="ch-form ch-form-scrollable" onSubmit={handleSubmit}>
+                {formError && <div className="ch-error"><AlertCircle size={14} /> {formError}</div>}
 
-              <label>
-                Situação da entrega
-                <PrettySelect
-                  value={form.deliverySituation}
-                  options={deliverySituationOptions}
-                  placeholder="Selecione uma opção"
-                  selectKey="deliverySituation"
-                  openSelectKey={openSelectKey}
-                  setOpenSelectKey={setOpenSelectKey}
-                  onChange={(value) => setForm((prev) => ({ ...prev, deliverySituation: value }))}
-                />
-              </label>
-
-              <div className="ch-schedule-grid">
                 <label>
-                  Data do agendamento
+                  Nome da criança
+                  <input
+                    value={form.name}
+                    readOnly={Boolean(editTarget)}
+                    onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                    className={editTarget ? 'ch-readonly-input' : ''}
+                    title={editTarget ? 'Nome bloqueado após criação' : ''}
+                    placeholder="Digite o nome da criança"
+                  />
+                </label>
+
+                <label>
+                  Usuário
+                  <input value={loggedUserName} readOnly className="ch-readonly-input" title="Campo bloqueado" />
+                </label>
+
+                <label>
+                  Tipo de relatório
+                  <PrettySelect
+                    value={form.reportType}
+                    options={reportTypeOptions}
+                    placeholder="Selecione uma opção"
+                    selectKey="reportType"
+                    openSelectKey={openSelectKey}
+                    setOpenSelectKey={setOpenSelectKey}
+                    onChange={(value) => setForm((prev) => ({ ...prev, reportType: value }))}
+                  />
+                </label>
+
+                <label>
+                  Origem do caso
+                  <PrettySelect
+                    value={form.caseOrigin}
+                    options={caseOriginOptions}
+                    placeholder="Selecione uma opção"
+                    selectKey="caseOrigin"
+                    openSelectKey={openSelectKey}
+                    setOpenSelectKey={setOpenSelectKey}
+                    onChange={(value) => setForm((prev) => ({ ...prev, caseOrigin: value }))}
+                  />
+                </label>
+
+                <label>
+                  Tipo de prioridade
+                  <PrettySelect
+                    value={form.priorityType}
+                    options={priorityTypeOptions}
+                    placeholder="Selecione uma opção"
+                    selectKey="priorityType"
+                    openSelectKey={openSelectKey}
+                    setOpenSelectKey={setOpenSelectKey}
+                    onChange={(value) => setForm((prev) => ({ ...prev, priorityType: value }))}
+                  />
+                </label>
+
+                <label>
+                  Status do parecer
+                  <PrettySelect
+                    value={form.parecerStatus}
+                    options={parecerStatusOptions}
+                    placeholder="Selecione uma opção"
+                    selectKey="parecerStatus"
+                    openSelectKey={openSelectKey}
+                    setOpenSelectKey={setOpenSelectKey}
+                    onChange={(value) => setForm((prev) => ({ ...prev, parecerStatus: value }))}
+                  />
+                </label>
+
+
+
+                <label>
+                  Período realizado
+                  <div className="ch-period-grid">
+                    <input
+                      type="text"
+                      value={form.periodStart}
+                      inputMode="numeric"
+                      maxLength={5}
+                      onChange={(event) => setForm((prev) => ({ ...prev, periodStart: formatDayMonthInput(event.target.value) }))}
+                      placeholder="dd/mm"
+                      aria-label="Data inicial"
+                    />
+                    <input
+                      type="text"
+                      value={form.periodEnd}
+                      inputMode="numeric"
+                      maxLength={5}
+                      onChange={(event) => setForm((prev) => ({ ...prev, periodEnd: formatDayMonthInput(event.target.value) }))}
+                      placeholder="dd/mm"
+                      aria-label="Data de término"
+                    />
+                  </div>
+                </label>
+
+                <label>
+                  Finalizado em
                   <input
                     type="date"
-                    value={form.scheduledDate}
-                    onChange={(event) => setForm((prev) => ({ ...prev, scheduledDate: event.target.value }))}
+                    value={form.finalizedAt}
+                    onChange={(event) => setForm((prev) => ({ ...prev, finalizedAt: event.target.value }))}
                   />
                 </label>
+
                 <label>
-                  Hora do agendamento
-                  <input
-                    type="time"
-                    value={form.scheduledTime}
-                    onChange={(event) => setForm((prev) => ({ ...prev, scheduledTime: event.target.value }))}
+                  Situação da entrega
+                  <PrettySelect
+                    value={form.deliverySituation}
+                    options={deliverySituationOptions}
+                    placeholder="Selecione uma opção"
+                    selectKey="deliverySituation"
+                    openSelectKey={openSelectKey}
+                    setOpenSelectKey={setOpenSelectKey}
+                    onChange={(value) => setForm((prev) => ({ ...prev, deliverySituation: value }))}
                   />
                 </label>
-              </div>
 
-              <label>
-                Entregue
-                <PrettySelect
-                  value={form.delivered}
-                  options={deliveredOptions}
-                  placeholder="Selecione uma opção"
-                  selectKey="delivered"
-                  openSelectKey={openSelectKey}
-                  setOpenSelectKey={setOpenSelectKey}
-                  onChange={(value) => setForm((prev) => ({ ...prev, delivered: value }))}
-                />
-              </label>
+                <div className="ch-schedule-grid">
+                  <label>
+                    Data do agendamento
+                    <input
+                      type="date"
+                      value={form.scheduledDate}
+                      onChange={(event) => setForm((prev) => ({ ...prev, scheduledDate: event.target.value }))}
+                    />
+                  </label>
+                  <label>
+                    Hora do agendamento
+                    <input
+                      type="time"
+                      value={form.scheduledTime}
+                      onChange={(event) => setForm((prev) => ({ ...prev, scheduledTime: event.target.value }))}
+                    />
+                  </label>
+                </div>
 
-              <label>
-                Concluído
-                <PrettySelect
-                  value={form.completedStatus}
-                  options={completedOptions}
-                  placeholder="Selecione uma opção"
-                  selectKey="completedStatus"
-                  openSelectKey={openSelectKey}
-                  setOpenSelectKey={setOpenSelectKey}
-                  onChange={(value) => setForm((prev) => ({ ...prev, completedStatus: value }))}
-                />
-              </label>
+                <label>
+                  Entregue
+                  <PrettySelect
+                    value={form.delivered}
+                    options={deliveredOptions}
+                    placeholder="Selecione uma opção"
+                    selectKey="delivered"
+                    openSelectKey={openSelectKey}
+                    setOpenSelectKey={setOpenSelectKey}
+                    onChange={(value) => setForm((prev) => ({ ...prev, delivered: value }))}
+                  />
+                </label>
 
-              <label>
-                Observações
-                <textarea
-                  value={form.observations}
-                  onChange={(event) => setForm((prev) => ({ ...prev, observations: event.target.value }))}
-                  placeholder="Digite observações..."
-                  rows={5}
-                />
-              </label>
+                <label>
+                  Concluído
+                  <PrettySelect
+                    value={form.completedStatus}
+                    options={completedOptions}
+                    placeholder="Selecione uma opção"
+                    selectKey="completedStatus"
+                    openSelectKey={openSelectKey}
+                    setOpenSelectKey={setOpenSelectKey}
+                    onChange={(value) => setForm((prev) => ({ ...prev, completedStatus: value }))}
+                  />
+                </label>
 
-              <div className="ch-form-actions">
-                <button type="button" className="ch-secondary-btn" onClick={closeForm}>Cancelar</button>
-                <button type="submit" className="ch-save-btn" disabled={isSaving}>
-                  {isSaving ? <><Loader2 size={14} className="ch-spin" /> Salvando...</> : 'Salvar'}
-                </button>
-              </div>
-            </form>
-          </aside>
+                <label>
+                  Observações
+                  <textarea
+                    value={form.observations}
+                    onChange={(event) => setForm((prev) => ({ ...prev, observations: event.target.value }))}
+                    placeholder="Digite observações..."
+                    rows={5}
+                  />
+                </label>
+
+                <div className="ch-form-actions">
+                  <button type="button" className="ch-secondary-btn" onClick={closeForm}>Cancelar</button>
+                  <button type="submit" className="ch-save-btn" disabled={isSaving}>
+                    {isSaving ? <><Loader2 size={14} className="ch-spin" /> Salvando...</> : 'Salvar'}
+                  </button>
+                </div>
+              </form>
+            </aside>
+          </div>
         )}
       </div>
 
@@ -720,10 +709,7 @@ export default function Children() {
                   <span>Usuário</span>
                   <strong>{viewTarget.userName || viewTarget.responsible || viewTarget.createdBy || '-'}</strong>
                 </div>
-                <div className="ch-detail-item">
-                  <span>Requer análise individualizada</span>
-                  <strong>{viewTarget.analysisRequired || '-'}</strong>
-                </div>
+
                 <div className="ch-detail-item">
                   <span>Tipo de relatório</span>
                   <strong>{viewTarget.reportType || '-'}</strong>

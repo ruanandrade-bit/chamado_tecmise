@@ -480,6 +480,29 @@
   animation: chPanelIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+.ch-form-modal-card {
+  width: min(600px, 100%);
+  max-height: 85vh;
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background:
+    radial-gradient(circle at 25% 0%, rgba(88, 28, 135, 0.2), transparent 42%),
+    linear-gradient(145deg, rgba(20, 15, 39, 0.95), rgba(12, 10, 24, 0.98));
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65);
+  animation: chFloatIn 0.26s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.ch-form-scrollable {
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .ch-form-head {
   padding: 18px 18px 14px;
   display: flex;
@@ -509,6 +532,9 @@
   background: rgba(255, 255, 255, 0.05);
   color: #94a3b8;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ch-form {
