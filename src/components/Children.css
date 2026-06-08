@@ -286,7 +286,7 @@
 
 .ch-table {
   width: 100%;
-  min-width: 860px;
+  min-width: 1260px;
   border-collapse: collapse;
 }
 
@@ -336,11 +336,43 @@
 }
 
 .ch-observation-cell {
-  max-width: 260px;
+  max-width: 220px;
   color: #cbd5e1;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.ch-status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  max-width: 180px;
+  min-height: 24px;
+  padding: 4px 9px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.ch-pill-ok {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.ch-pill-danger {
+  color: #fb7185;
+  background: rgba(244, 63, 94, 0.13);
+  border: 1px solid rgba(244, 63, 94, 0.22);
+}
+
+.ch-pill-muted {
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.11);
+  border: 1px solid rgba(59, 130, 246, 0.18);
 }
 
 .ch-actions {
@@ -505,6 +537,13 @@
 .ch-form input::placeholder,
 .ch-form textarea::placeholder {
   color: #64748b;
+}
+
+.ch-form input.ch-readonly-input {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.08);
+  border-color: rgba(16, 185, 129, 0.18);
+  cursor: default;
 }
 
 .ch-date-input {

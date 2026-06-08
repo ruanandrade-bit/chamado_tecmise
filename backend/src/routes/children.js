@@ -27,7 +27,9 @@ function validateChildPayload(payload) {
   const school = normalizeText(payload?.school)
   const turma = normalizeText(payload?.turma)
   const birthDate = normalizeText(payload?.birthDate)
-  const responsible = normalizeText(payload?.responsible)
+  const analysisRequired = normalizeText(payload?.analysisRequired)
+  const periodDone = normalizeText(payload?.periodDone)
+  const completedStatus = normalizeText(payload?.completedStatus)
   const observations = normalizeText(payload?.observations)
 
   if (!name) return { ok: false, message: 'Nome da criança é obrigatório.' }
@@ -42,7 +44,7 @@ function validateChildPayload(payload) {
 
   return {
     ok: true,
-    value: { name, school, turma, birthDate, responsible, observations }
+    value: { name, school, turma, birthDate, analysisRequired, periodDone, completedStatus, observations }
   }
 }
 
@@ -58,6 +60,8 @@ router.post('/', (req, res) => {
   const child = {
     id: `CH-${crypto.randomBytes(4).toString('hex')}`,
     ...validation.value,
+    userName: req.user?.name || 'Desconhecido',
+    userEmail: req.user?.email || '',
     createdBy: req.user?.name || 'Desconhecido',
     createdByEmail: req.user?.email || '',
     createdAt: new Date().toISOString()
@@ -74,7 +78,11 @@ router.put('/:id', (req, res) => {
   const validation = validateChildPayload({ ...current, ...req.body })
   if (!validation.ok) return res.status(400).json({ message: validation.message })
 
-  const updated = memoryStore.updateChild(req.params.id, validation.value)
+  const updated = memoryStore.updateChild(req.params.id, {
+    ...validation.value,
+    userName: req.user?.name || current.userName || current.responsible || 'Desconhecido',
+    userEmail: req.user?.email || current.userEmail || current.createdByEmail || ''
+  })
   res.json(updated)
 })
 

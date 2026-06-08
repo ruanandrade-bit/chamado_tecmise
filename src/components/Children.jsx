@@ -7,9 +7,14 @@ import './Children.css'
 const emptyForm = {
   name: '',
   birthDate: '',
-  responsible: '',
+  analysisRequired: '',
+  periodDone: '',
+  completedStatus: '',
   observations: ''
 }
+
+const analysisOptions = ['SIM', 'NÃO', 'TIRAR/ NÃO TEM DADOS', 'NÃO TEM DADOS', 'Desligada a Camera']
+const completedOptions = ['SIM', 'NÃO', 'X', 'NÃO TEM DADOS', '-']
 
 function normalizeRole(value) {
   return String(value || '')
@@ -82,6 +87,7 @@ export default function Children() {
   const { user } = useAuthStore()
   const role = normalizeRole(user?.role)
   const canAccess = user?.canDragDrop === true || role === 'pedagoga' || role === 'psicologa'
+  const loggedUserName = user?.name || 'Usuário'
 
   const [schoolData, setSchoolData] = useState({})
   const [children, setChildren] = useState([])
@@ -150,7 +156,10 @@ export default function Children() {
         if (!q) return true
         return (
           String(child.name || '').toLowerCase().includes(q) ||
-          String(child.responsible || '').toLowerCase().includes(q) ||
+          String(child.userName || child.responsible || child.createdBy || '').toLowerCase().includes(q) ||
+          String(child.analysisRequired || '').toLowerCase().includes(q) ||
+          String(child.periodDone || '').toLowerCase().includes(q) ||
+          String(child.completedStatus || '').toLowerCase().includes(q) ||
           String(child.observations || '').toLowerCase().includes(q)
         )
       })
@@ -176,7 +185,9 @@ export default function Children() {
     setForm({
       name: child.name || '',
       birthDate: child.birthDate || '',
-      responsible: child.responsible || '',
+      analysisRequired: child.analysisRequired || '',
+      periodDone: child.periodDone || '',
+      completedStatus: child.completedStatus || '',
       observations: child.observations || ''
     })
     setFormError('')
@@ -202,8 +213,9 @@ export default function Children() {
       const payload = {
         ...form,
         name: form.name.trim(),
-        responsible: form.responsible.trim(),
+        periodDone: form.periodDone.trim(),
         observations: form.observations.trim(),
+        userName: loggedUserName,
         school: selectedSchool,
         turma: selectedTurma
       }
@@ -335,8 +347,11 @@ export default function Children() {
                       <tr>
                         <th>Criança</th>
                         <th>Turma</th>
-                        <th>Responsável</th>
+                        <th>Usuário</th>
                         <th>Data de Nascimento</th>
+                        <th>Requer análise individualizada</th>
+                        <th>Período realizado</th>
+                        <th>Concluído</th>
                         <th>Observações</th>
                         <th>Ações</th>
                       </tr>
@@ -351,8 +366,11 @@ export default function Children() {
                             </div>
                           </td>
                           <td>{child.turma}</td>
-                          <td>{child.responsible || '-'}</td>
+                          <td>{child.userName || child.responsible || child.createdBy || '-'}</td>
                           <td>{formatDate(child.birthDate)}</td>
+                          <td><span className={`ch-status-pill ${child.analysisRequired === 'SIM' ? 'ch-pill-ok' : child.analysisRequired === 'NÃO' ? 'ch-pill-danger' : 'ch-pill-muted'}`}>{child.analysisRequired || '-'}</span></td>
+                          <td>{child.periodDone || '-'}</td>
+                          <td><span className={`ch-status-pill ${child.completedStatus === 'SIM' ? 'ch-pill-ok' : child.completedStatus === 'X' || child.completedStatus === 'NÃO' ? 'ch-pill-danger' : 'ch-pill-muted'}`}>{child.completedStatus || '-'}</span></td>
                           <td className="ch-observation-cell">{child.observations || '-'}</td>
                           <td>
                             <div className="ch-actions">
@@ -406,34 +424,55 @@ export default function Children() {
               </label>
 
               <label>
+                Usuário
+                <input value={loggedUserName} readOnly className="ch-readonly-input" />
+              </label>
+
+              <label>
                 Data de nascimento
                 <div className="ch-date-input">
                   <input
                     type="date"
                     value={form.birthDate}
                     max="9999-12-31"
-                    onChange={(event) => {
-                      let val = event.target.value
-                      if (val) {
-                        const parts = val.split('-')
-                        if (parts[0] && parts[0].length > 4) {
-                          parts[0] = parts[0].slice(0, 4)
-                          val = parts.join('-')
-                        }
-                      }
-                      setForm((prev) => ({ ...prev, birthDate: val }))
-                    }}
+                    onChange={(event) => setForm((prev) => ({ ...prev, birthDate: event.target.value }))}
                   />
                   <CalendarDays size={14} />
                 </div>
               </label>
 
               <label>
-                Responsável
+                Requer análise individualizada
+                <PrettySelect
+                  value={form.analysisRequired}
+                  options={analysisOptions}
+                  placeholder="Selecione uma opção"
+                  selectKey="analysisRequired"
+                  openSelectKey={openSelectKey}
+                  setOpenSelectKey={setOpenSelectKey}
+                  onChange={(value) => setForm((prev) => ({ ...prev, analysisRequired: value }))}
+                />
+              </label>
+
+              <label>
+                Período realizado
                 <input
-                  value={form.responsible}
-                  onChange={(event) => setForm((prev) => ({ ...prev, responsible: event.target.value }))}
-                  placeholder="Nome do responsável"
+                  value={form.periodDone}
+                  onChange={(event) => setForm((prev) => ({ ...prev, periodDone: event.target.value }))}
+                  placeholder="Ex: 20/04 ate 24/04"
+                />
+              </label>
+
+              <label>
+                Concluído
+                <PrettySelect
+                  value={form.completedStatus}
+                  options={completedOptions}
+                  placeholder="Selecione uma opção"
+                  selectKey="completedStatus"
+                  openSelectKey={openSelectKey}
+                  setOpenSelectKey={setOpenSelectKey}
+                  onChange={(value) => setForm((prev) => ({ ...prev, completedStatus: value }))}
                 />
               </label>
 

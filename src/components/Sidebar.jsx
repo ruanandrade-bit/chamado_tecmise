@@ -11,6 +11,11 @@ export default function Sidebar({ currentPage, onPageChange, isMobileOpen, onMob
   const openKanbanCount = tasks.filter(t => !t.isArchived && t.status !== 'completed').length
   const uniqueResponsibles = Object.keys(stats.byResponsible).length
   const isAdmin = user?.canDragDrop === true
+  const normalizedRole = String(user?.role || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+  const canAccessChildren = isAdmin || normalizedRole === 'pedagoga' || normalizedRole === 'psicologa'
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -22,7 +27,7 @@ export default function Sidebar({ currentPage, onPageChange, isMobileOpen, onMob
     { id: 'notes', label: 'Anotações', icon: StickyNote },
     { id: 'deadlines', label: 'Datas & Prazos', icon: Calendar },
     { id: 'resolved-kanban', label: 'Kanban Resolvido', icon: Archive },
-    { id: 'children', label: 'Crianças', icon: Users },
+    ...(canAccessChildren ? [{ id: 'children', label: 'Crianças', icon: Users }] : []),
     ...(isAdmin ? [{ id: 'devices-online', label: 'Devices Online', icon: Wifi }] : []),
     ...(isAdmin ? [{ id: 'inventory', label: 'Estoque', icon: Package }] : []),
     ...(isAdmin ? [{ id: 'school-config', label: 'Configurações', icon: Settings }] : []),
