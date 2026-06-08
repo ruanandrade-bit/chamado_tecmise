@@ -26,8 +26,9 @@ function validateChildPayload(payload) {
   const name = normalizeText(payload?.name)
   const school = normalizeText(payload?.school)
   const turma = normalizeText(payload?.turma)
-  const birthDate = normalizeText(payload?.birthDate)
   const analysisRequired = normalizeText(payload?.analysisRequired)
+  const periodStart = normalizeText(payload?.periodStart)
+  const periodEnd = normalizeText(payload?.periodEnd)
   const periodDone = normalizeText(payload?.periodDone)
   const completedStatus = normalizeText(payload?.completedStatus)
   const observations = normalizeText(payload?.observations)
@@ -44,7 +45,7 @@ function validateChildPayload(payload) {
 
   return {
     ok: true,
-    value: { name, school, turma, birthDate, analysisRequired, periodDone, completedStatus, observations }
+    value: { name, school, turma, analysisRequired, periodStart, periodEnd, periodDone, completedStatus, observations }
   }
 }
 

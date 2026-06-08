@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, ArrowLeft, ArrowRight, BookOpen, CalendarDays, Check, ChevronDown, Edit3, Loader2, Plus, Search, ShieldAlert, Trash2, UserRound, Users, X } from 'lucide-react'
+import { AlertCircle, ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, Edit3, Loader2, Plus, Search, ShieldAlert, Trash2, UserRound, Users, X } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import './Children.css'
 
 const emptyForm = {
   name: '',
-  birthDate: '',
   analysisRequired: '',
-  periodDone: '',
+  periodStart: '',
+  periodEnd: '',
   completedStatus: '',
   observations: ''
 }
@@ -76,13 +76,6 @@ function PrettySelect({ value, options, placeholder, selectKey, openSelectKey, s
   )
 }
 
-function formatDate(value) {
-  if (!value) return '-'
-  const date = new Date(`${value}T00:00:00`)
-  if (Number.isNaN(date.getTime())) return '-'
-  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
-
 export default function Children() {
   const { user } = useAuthStore()
   const role = normalizeRole(user?.role)
@@ -100,9 +93,17 @@ export default function Children() {
   const [formError, setFormError] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
+  const [viewTarget, setViewTarget] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [page, setPage] = useState(1)
+
+  const formatPeriod = (child) => {
+    if (child.periodStart || child.periodEnd) {
+      return `${child.periodStart || '-'} ate ${child.periodEnd || '-'}`
+    }
+    return child.periodDone || '-'
+  }
 
   const loadData = useCallback(async () => {
     if (!canAccess) return
@@ -158,6 +159,8 @@ export default function Children() {
           String(child.name || '').toLowerCase().includes(q) ||
           String(child.userName || child.responsible || child.createdBy || '').toLowerCase().includes(q) ||
           String(child.analysisRequired || '').toLowerCase().includes(q) ||
+          String(child.periodStart || '').toLowerCase().includes(q) ||
+          String(child.periodEnd || '').toLowerCase().includes(q) ||
           String(child.periodDone || '').toLowerCase().includes(q) ||
           String(child.completedStatus || '').toLowerCase().includes(q) ||
           String(child.observations || '').toLowerCase().includes(q)
@@ -184,9 +187,9 @@ export default function Children() {
     setEditTarget(child)
     setForm({
       name: child.name || '',
-      birthDate: child.birthDate || '',
       analysisRequired: child.analysisRequired || '',
-      periodDone: child.periodDone || '',
+      periodStart: child.periodStart || '',
+      periodEnd: child.periodEnd || '',
       completedStatus: child.completedStatus || '',
       observations: child.observations || ''
     })
@@ -213,7 +216,6 @@ export default function Children() {
       const payload = {
         ...form,
         name: form.name.trim(),
-        periodDone: form.periodDone.trim(),
         observations: form.observations.trim(),
         userName: loggedUserName,
         school: selectedSchool,
@@ -348,7 +350,6 @@ export default function Children() {
                         <th>Criança</th>
                         <th>Turma</th>
                         <th>Usuário</th>
-                        <th>Data de Nascimento</th>
                         <th>Requer análise individualizada</th>
                         <th>Período realizado</th>
                         <th>Concluído</th>
@@ -358,7 +359,20 @@ export default function Children() {
                     </thead>
                     <tbody>
                       {visibleChildren.map((child, index) => (
-                        <tr key={child.id} style={{ '--ch-row-index': index }}>
+                        <tr
+                          key={child.id}
+                          className="ch-clickable-row"
+                          style={{ '--ch-row-index': index }}
+                          onClick={() => setViewTarget(child)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault()
+                              setViewTarget(child)
+                            }
+                          }}
+                          tabIndex={0}
+                          role="button"
+                        >
                           <td>
                             <div className="ch-child-cell">
                               <span className="ch-avatar"><UserRound size={14} /></span>
@@ -367,17 +381,30 @@ export default function Children() {
                           </td>
                           <td>{child.turma}</td>
                           <td>{child.userName || child.responsible || child.createdBy || '-'}</td>
-                          <td>{formatDate(child.birthDate)}</td>
                           <td><span className={`ch-status-pill ${child.analysisRequired === 'SIM' ? 'ch-pill-ok' : child.analysisRequired === 'NÃO' ? 'ch-pill-danger' : 'ch-pill-muted'}`}>{child.analysisRequired || '-'}</span></td>
-                          <td>{child.periodDone || '-'}</td>
+                          <td>{formatPeriod(child)}</td>
                           <td><span className={`ch-status-pill ${child.completedStatus === 'SIM' ? 'ch-pill-ok' : child.completedStatus === 'X' || child.completedStatus === 'NÃO' ? 'ch-pill-danger' : 'ch-pill-muted'}`}>{child.completedStatus || '-'}</span></td>
                           <td className="ch-observation-cell">{child.observations || '-'}</td>
                           <td>
                             <div className="ch-actions">
-                              <button className="ch-action-btn ch-edit-btn" onClick={() => openEditForm(child)} title="Editar criança">
+                              <button
+                                className="ch-action-btn ch-edit-btn"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  openEditForm(child)
+                                }}
+                                title="Editar criança"
+                              >
                                 <Edit3 size={14} />
                               </button>
-                              <button className="ch-action-btn ch-delete-btn" onClick={() => setDeleteTarget(child)} title="Excluir criança">
+                              <button
+                                className="ch-action-btn ch-delete-btn"
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  setDeleteTarget(child)
+                                }}
+                                title="Excluir criança"
+                              >
                                 <Trash2 size={14} />
                               </button>
                             </div>
@@ -429,19 +456,6 @@ export default function Children() {
               </label>
 
               <label>
-                Data de nascimento
-                <div className="ch-date-input">
-                  <input
-                    type="date"
-                    value={form.birthDate}
-                    max="9999-12-31"
-                    onChange={(event) => setForm((prev) => ({ ...prev, birthDate: event.target.value }))}
-                  />
-                  <CalendarDays size={14} />
-                </div>
-              </label>
-
-              <label>
                 Requer análise individualizada
                 <PrettySelect
                   value={form.analysisRequired}
@@ -456,11 +470,22 @@ export default function Children() {
 
               <label>
                 Período realizado
-                <input
-                  value={form.periodDone}
-                  onChange={(event) => setForm((prev) => ({ ...prev, periodDone: event.target.value }))}
-                  placeholder="Ex: 20/04 ate 24/04"
-                />
+                <div className="ch-period-grid">
+                  <input
+                    type="date"
+                    value={form.periodStart}
+                    max="9999-12-31"
+                    onChange={(event) => setForm((prev) => ({ ...prev, periodStart: event.target.value }))}
+                    aria-label="Data inicial"
+                  />
+                  <input
+                    type="date"
+                    value={form.periodEnd}
+                    max="9999-12-31"
+                    onChange={(event) => setForm((prev) => ({ ...prev, periodEnd: event.target.value }))}
+                    aria-label="Data de término"
+                  />
+                </div>
               </label>
 
               <label>
@@ -508,6 +533,62 @@ export default function Children() {
               <button className="ch-danger-btn" onClick={handleDelete} disabled={isSaving}>
                 {isSaving ? 'Excluindo...' : 'Excluir'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewTarget && (
+        <div className="ch-modal-overlay" onClick={() => setViewTarget(null)}>
+          <div className="ch-detail-card" onClick={(event) => event.stopPropagation()}>
+            <div className="ch-detail-head">
+              <div className="ch-detail-title-row">
+                <div className="ch-detail-icon"><UserRound size={18} /></div>
+                <div>
+                  <h3>{viewTarget.name}</h3>
+                  <p>{viewTarget.school} - {viewTarget.turma}</p>
+                </div>
+              </div>
+              <button className="ch-form-close" onClick={() => setViewTarget(null)}><X size={15} /></button>
+            </div>
+
+            <div className="ch-detail-body">
+              <div className="ch-detail-grid">
+                <div className="ch-detail-item">
+                  <span>Usuário</span>
+                  <strong>{viewTarget.userName || viewTarget.responsible || viewTarget.createdBy || '-'}</strong>
+                </div>
+                <div className="ch-detail-item">
+                  <span>Requer análise individualizada</span>
+                  <strong>{viewTarget.analysisRequired || '-'}</strong>
+                </div>
+                <div className="ch-detail-item">
+                  <span>Período realizado</span>
+                  <strong>{formatPeriod(viewTarget)}</strong>
+                </div>
+                <div className="ch-detail-item">
+                  <span>Concluído</span>
+                  <strong>{viewTarget.completedStatus || '-'}</strong>
+                </div>
+              </div>
+
+              <div className="ch-detail-observations">
+                <span>Observações</span>
+                <p>{viewTarget.observations || 'Nenhuma observação registrada.'}</p>
+              </div>
+
+              <div className="ch-detail-actions">
+                <button
+                  className="ch-secondary-btn"
+                  onClick={() => {
+                    setViewTarget(null)
+                    openEditForm(viewTarget)
+                  }}
+                >
+                  <Edit3 size={14} /> Editar
+                </button>
+                <button className="ch-secondary-btn" onClick={() => setViewTarget(null)}>Fechar</button>
+              </div>
             </div>
           </div>
         </div>

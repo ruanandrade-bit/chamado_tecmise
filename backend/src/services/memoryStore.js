@@ -153,7 +153,7 @@ const state = {
   schoolData: null,     // school→device→turma config, managed via admin panel
   professionals: null,  // [{ id, name, role }], managed via admin panel
   cameraObstructions: [], // [{ id, school, devices, startTime, endTime, percentage, createdAt, createdBy }]
-  children: [],           // [{ id, name, school, turma, userName, birthDate, analysisRequired, periodDone, completedStatus, observations, createdAt }]
+  children: [],           // [{ id, name, school, turma, userName, analysisRequired, periodStart, periodEnd, completedStatus, observations, createdAt }]
   notes: [],             // [{ id, title, description, category, author, authorRole, ... }]
   deadlines: [],         // [{ id, title, date, time, category, status, priority, author, createdAt }]
   kanbanTasks: []        // [{ id, title, description, status, priority, date, tags, responsible, author, createdAt }]
