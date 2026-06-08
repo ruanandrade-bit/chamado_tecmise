@@ -1,10 +1,11 @@
 import { Router } from 'express'
-import { authRequired, pedagogaOrPsicologaOnly } from '../middleware/auth.js'
+import { authRequired, adminOnly } from '../middleware/auth.js'
 import { memoryStore } from '../services/memoryStore.js'
 import crypto from 'node:crypto'
 
 const router = Router()
 router.use(authRequired)
+router.use(adminOnly)
 
 const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/
 
@@ -49,7 +50,7 @@ router.get('/', (_req, res) => {
 })
 
 // POST — create task, persist in background (fast like tickets)
-router.post('/', pedagogaOrPsicologaOnly, (req, res) => {
+router.post('/', (req, res) => {
   const { title, description, status, priority, date, tags } = req.body
   if (!title?.trim()) return res.status(400).json({ message: 'Título é obrigatório.' })
 
@@ -82,7 +83,7 @@ router.post('/', pedagogaOrPsicologaOnly, (req, res) => {
 })
 
 // PUT — update task, persist in background (fast like tickets)
-router.put('/:id', pedagogaOrPsicologaOnly, (req, res) => {
+router.put('/:id', (req, res) => {
   const updates = { ...req.body }
   delete updates.responsible
 
@@ -160,7 +161,7 @@ router.put('/:id', pedagogaOrPsicologaOnly, (req, res) => {
 })
 
 // DELETE — only the creator can remove the task
-router.delete('/:id', pedagogaOrPsicologaOnly, (req, res) => {
+router.delete('/:id', (req, res) => {
   const current = memoryStore.getKanbanTasks().find((task) => task.id === req.params.id)
   if (!current) return res.status(404).json({ message: 'Tarefa não encontrada.' })
   if (!isCreatedByCurrentUser(current, req.user)) return res.status(403).json({ message: 'Apenas o criador pode excluir esta tarefa.' })

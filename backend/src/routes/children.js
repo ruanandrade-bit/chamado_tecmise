@@ -1,11 +1,11 @@
 import { Router } from 'express'
-import { authRequired, pedagogaOrPsicologaOnly } from '../middleware/auth.js'
+import { authRequired, adminOnly } from '../middleware/auth.js'
 import { memoryStore } from '../services/memoryStore.js'
 import crypto from 'node:crypto'
 
 const router = Router()
 router.use(authRequired)
-router.use(pedagogaOrPsicologaOnly)
+router.use(adminOnly)
 
 const reportTypeOptions = ['Resumo mensal', 'Individual']
 const caseOriginOptions = ['Identificação interna', 'Solicitado pela escola']

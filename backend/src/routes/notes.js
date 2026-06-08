@@ -1,12 +1,13 @@
 import { Router } from 'express'
-import { authRequired, pedagogaOrPsicologaOnly } from '../middleware/auth.js'
+import { authRequired, adminOnly } from '../middleware/auth.js'
 import { memoryStore } from '../services/memoryStore.js'
 import crypto from 'node:crypto'
 
 const router = Router()
 
-// All routes require authentication
+// All routes require authentication and admin permission
 router.use(authRequired)
+router.use(adminOnly)
 
 function normalizeOwner(value) {
   return String(value || '').trim().toLowerCase()
@@ -24,8 +25,8 @@ router.get('/', (_req, res) => {
   memoryStore.refreshCollaborativeData().catch(() => {})
 })
 
-// POST — pedagoga/psicóloga/admin only (fast like tickets)
-router.post('/', pedagogaOrPsicologaOnly, (req, res) => {
+// POST — admin only (fast like tickets)
+router.post('/', (req, res) => {
   const { title, description, category, noteType, reminderDate, reminderTime, reminderStatus } = req.body
 
   if (!title || typeof title !== 'string' || !title.trim()) {
@@ -55,8 +56,8 @@ router.post('/', pedagogaOrPsicologaOnly, (req, res) => {
   res.status(201).json(note)
 })
 
-// PUT — pedagoga/psicóloga/admin only (fast like tickets)
-router.put('/:id', pedagogaOrPsicologaOnly, (req, res) => {
+// PUT — admin only (fast like tickets)
+router.put('/:id', (req, res) => {
   const { title, description, category, noteType, isPinned, reminderDate, reminderTime, reminderStatus } = req.body
   const updates = {}
 
@@ -77,7 +78,7 @@ router.put('/:id', pedagogaOrPsicologaOnly, (req, res) => {
 })
 
 // DELETE — only the creator can delete a note/reminder
-router.delete('/:id', pedagogaOrPsicologaOnly, (req, res) => {
+router.delete('/:id', (req, res) => {
   const current = memoryStore.getNotes().find((note) => note.id === req.params.id)
   if (!current) return res.status(404).json({ message: 'Anotação não encontrada.' })
   if (!isCreatedByCurrentUser(current, req.user)) return res.status(403).json({ message: 'Apenas o criador pode excluir esta anotação.' })
