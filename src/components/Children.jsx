@@ -6,15 +6,30 @@ import './Children.css'
 
 const emptyForm = {
   name: '',
+  reportType: '',
+  caseOrigin: '',
+  priorityType: '',
+  parecerStatus: '',
   analysisRequired: '',
   periodStart: '',
   periodEnd: '',
+  finalizedAt: '',
+  deliverySituation: '',
+  scheduledDate: '',
+  scheduledTime: '',
+  delivered: '',
   completedStatus: '',
   observations: ''
 }
 
 const analysisOptions = ['SIM', 'NÃO', 'TIRAR/ NÃO TEM DADOS', 'NÃO TEM DADOS', 'Desligada a Camera']
 const completedOptions = ['SIM', 'NÃO', 'X', 'NÃO TEM DADOS', '-']
+const reportTypeOptions = ['Resumo mensal', 'Individual']
+const caseOriginOptions = ['Identificação interna', 'Solicitado pela escola']
+const priorityTypeOptions = ['Normal', 'Prioridade', 'Urgente']
+const parecerStatusOptions = ['Pendente', 'Em Análise', 'Concluído']
+const deliverySituationOptions = ['Aguardando escola', 'Reunião agendada', 'Reagendado']
+const deliveredOptions = ['SIM', 'NÃO']
 const ALL_TURMAS_OPTION = 'Todas as turmas'
 
 function normalizeRole(value) {
@@ -124,6 +139,16 @@ export default function Children() {
     return child.periodDone || '-'
   }
 
+  const formatFullDate = (value) => {
+    const raw = String(value || '').trim()
+    if (!raw) return '-'
+
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    if (isoMatch) return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`
+
+    return raw
+  }
+
   const loadData = useCallback(async () => {
     if (!canAccess) return
     setIsLoading(true)
@@ -185,6 +210,15 @@ export default function Children() {
           String(child.periodStart || '').toLowerCase().includes(q) ||
           String(child.periodEnd || '').toLowerCase().includes(q) ||
           String(child.periodDone || '').toLowerCase().includes(q) ||
+          String(child.reportType || '').toLowerCase().includes(q) ||
+          String(child.caseOrigin || '').toLowerCase().includes(q) ||
+          String(child.priorityType || '').toLowerCase().includes(q) ||
+          String(child.parecerStatus || '').toLowerCase().includes(q) ||
+          String(child.finalizedAt || '').toLowerCase().includes(q) ||
+          String(child.deliverySituation || '').toLowerCase().includes(q) ||
+          String(child.scheduledDate || '').toLowerCase().includes(q) ||
+          String(child.scheduledTime || '').toLowerCase().includes(q) ||
+          String(child.delivered || '').toLowerCase().includes(q) ||
           String(child.completedStatus || '').toLowerCase().includes(q) ||
           String(child.observations || '').toLowerCase().includes(q)
         )
@@ -215,9 +249,18 @@ export default function Children() {
     setEditTarget(child)
     setForm({
       name: child.name || '',
+      reportType: child.reportType || '',
+      caseOrigin: child.caseOrigin || '',
+      priorityType: child.priorityType || '',
+      parecerStatus: child.parecerStatus || '',
       analysisRequired: child.analysisRequired || '',
       periodStart: child.periodStart || '',
       periodEnd: child.periodEnd || '',
+      finalizedAt: child.finalizedAt || '',
+      deliverySituation: child.deliverySituation || '',
+      scheduledDate: child.scheduledDate || '',
+      scheduledTime: child.scheduledTime || '',
+      delivered: child.delivered || '',
       completedStatus: child.completedStatus || '',
       observations: child.observations || ''
     })
@@ -239,6 +282,7 @@ export default function Children() {
     if (!selectedSchool || !selectedTurma) return setFormError('Selecione uma escola e uma turma antes de salvar.')
     if (selectedTurma === ALL_TURMAS_OPTION) return setFormError('Para cadastrar, selecione uma turma específica.')
     if (!form.name.trim()) return setFormError('Nome da criança é obrigatório.')
+    if (!form.reportType) return setFormError('Tipo de relatório é obrigatório.')
 
     setIsSaving(true)
     try {
@@ -365,8 +409,16 @@ export default function Children() {
                         <th>Criança</th>
                         <th>Turma</th>
                         <th>Usuário</th>
+                        <th>Tipo de relatório</th>
+                        <th>Origem do caso</th>
+                        <th>Prioridade</th>
+                        <th>Status do parecer</th>
                         <th>Requer análise individualizada</th>
                         <th>Período realizado</th>
+                        <th>Finalizado em</th>
+                        <th>Situação da entrega</th>
+                        <th>Agendamento</th>
+                        <th>Entregue</th>
                         <th>Concluído</th>
                         <th>Observações</th>
                         <th>Ação</th>
@@ -396,8 +448,16 @@ export default function Children() {
                           </td>
                           <td>{child.turma}</td>
                           <td>{child.userName || child.responsible || child.createdBy || '-'}</td>
+                          <td>{child.reportType || '-'}</td>
+                          <td>{child.caseOrigin || '-'}</td>
+                          <td><span className={`ch-status-pill ${child.priorityType === 'Urgente' ? 'ch-pill-danger' : child.priorityType === 'Prioridade' ? 'ch-pill-warn' : 'ch-pill-muted'}`}>{child.priorityType || '-'}</span></td>
+                          <td>{child.parecerStatus || '-'}</td>
                           <td><span className={`ch-status-pill ${child.analysisRequired === 'SIM' ? 'ch-pill-ok' : child.analysisRequired === 'NÃO' ? 'ch-pill-danger' : 'ch-pill-muted'}`}>{child.analysisRequired || '-'}</span></td>
                           <td>{formatPeriod(child)}</td>
+                          <td>{formatFullDate(child.finalizedAt)}</td>
+                          <td>{child.deliverySituation || '-'}</td>
+                          <td>{[formatFullDate(child.scheduledDate), child.scheduledTime].filter((item) => item && item !== '-').join(' - ') || '-'}</td>
+                          <td>{child.delivered || '-'}</td>
                           <td><span className={`ch-status-pill ${child.completedStatus === 'SIM' ? 'ch-pill-ok' : child.completedStatus === 'X' || child.completedStatus === 'NÃO' ? 'ch-pill-danger' : 'ch-pill-muted'}`}>{child.completedStatus || '-'}</span></td>
                           <td className="ch-observation-cell">{child.observations || '-'}</td>
                           <td>
@@ -464,6 +524,58 @@ export default function Children() {
               </label>
 
               <label>
+                Tipo de relatório
+                <PrettySelect
+                  value={form.reportType}
+                  options={reportTypeOptions}
+                  placeholder="Selecione uma opção"
+                  selectKey="reportType"
+                  openSelectKey={openSelectKey}
+                  setOpenSelectKey={setOpenSelectKey}
+                  onChange={(value) => setForm((prev) => ({ ...prev, reportType: value }))}
+                />
+              </label>
+
+              <label>
+                Origem do caso
+                <PrettySelect
+                  value={form.caseOrigin}
+                  options={caseOriginOptions}
+                  placeholder="Selecione uma opção"
+                  selectKey="caseOrigin"
+                  openSelectKey={openSelectKey}
+                  setOpenSelectKey={setOpenSelectKey}
+                  onChange={(value) => setForm((prev) => ({ ...prev, caseOrigin: value }))}
+                />
+              </label>
+
+              <label>
+                Tipo de prioridade
+                <PrettySelect
+                  value={form.priorityType}
+                  options={priorityTypeOptions}
+                  placeholder="Selecione uma opção"
+                  selectKey="priorityType"
+                  openSelectKey={openSelectKey}
+                  setOpenSelectKey={setOpenSelectKey}
+                  onChange={(value) => setForm((prev) => ({ ...prev, priorityType: value }))}
+                />
+              </label>
+
+              <label>
+                Status do parecer
+                <PrettySelect
+                  value={form.parecerStatus}
+                  options={parecerStatusOptions}
+                  placeholder="Selecione uma opção"
+                  selectKey="parecerStatus"
+                  openSelectKey={openSelectKey}
+                  setOpenSelectKey={setOpenSelectKey}
+                  onChange={(value) => setForm((prev) => ({ ...prev, parecerStatus: value }))}
+                />
+              </label>
+
+              <label>
                 Requer análise individualizada
                 <PrettySelect
                   value={form.analysisRequired}
@@ -498,6 +610,60 @@ export default function Children() {
                     aria-label="Data de término"
                   />
                 </div>
+              </label>
+
+              <label>
+                Finalizado em
+                <input
+                  type="date"
+                  value={form.finalizedAt}
+                  onChange={(event) => setForm((prev) => ({ ...prev, finalizedAt: event.target.value }))}
+                />
+              </label>
+
+              <label>
+                Situação da entrega
+                <PrettySelect
+                  value={form.deliverySituation}
+                  options={deliverySituationOptions}
+                  placeholder="Selecione uma opção"
+                  selectKey="deliverySituation"
+                  openSelectKey={openSelectKey}
+                  setOpenSelectKey={setOpenSelectKey}
+                  onChange={(value) => setForm((prev) => ({ ...prev, deliverySituation: value }))}
+                />
+              </label>
+
+              <div className="ch-schedule-grid">
+                <label>
+                  Data do agendamento
+                  <input
+                    type="date"
+                    value={form.scheduledDate}
+                    onChange={(event) => setForm((prev) => ({ ...prev, scheduledDate: event.target.value }))}
+                  />
+                </label>
+                <label>
+                  Hora do agendamento
+                  <input
+                    type="time"
+                    value={form.scheduledTime}
+                    onChange={(event) => setForm((prev) => ({ ...prev, scheduledTime: event.target.value }))}
+                  />
+                </label>
+              </div>
+
+              <label>
+                Entregue
+                <PrettySelect
+                  value={form.delivered}
+                  options={deliveredOptions}
+                  placeholder="Selecione uma opção"
+                  selectKey="delivered"
+                  openSelectKey={openSelectKey}
+                  setOpenSelectKey={setOpenSelectKey}
+                  onChange={(value) => setForm((prev) => ({ ...prev, delivered: value }))}
+                />
               </label>
 
               <label>
@@ -559,8 +725,40 @@ export default function Children() {
                   <strong>{viewTarget.analysisRequired || '-'}</strong>
                 </div>
                 <div className="ch-detail-item">
+                  <span>Tipo de relatório</span>
+                  <strong>{viewTarget.reportType || '-'}</strong>
+                </div>
+                <div className="ch-detail-item">
+                  <span>Origem do caso</span>
+                  <strong>{viewTarget.caseOrigin || '-'}</strong>
+                </div>
+                <div className="ch-detail-item">
+                  <span>Tipo de prioridade</span>
+                  <strong>{viewTarget.priorityType || '-'}</strong>
+                </div>
+                <div className="ch-detail-item">
+                  <span>Status do parecer</span>
+                  <strong>{viewTarget.parecerStatus || '-'}</strong>
+                </div>
+                <div className="ch-detail-item">
                   <span>Período realizado</span>
                   <strong>{formatPeriod(viewTarget)}</strong>
+                </div>
+                <div className="ch-detail-item">
+                  <span>Finalizado em</span>
+                  <strong>{formatFullDate(viewTarget.finalizedAt)}</strong>
+                </div>
+                <div className="ch-detail-item">
+                  <span>Situação da entrega</span>
+                  <strong>{viewTarget.deliverySituation || '-'}</strong>
+                </div>
+                <div className="ch-detail-item">
+                  <span>Agendamento</span>
+                  <strong>{[formatFullDate(viewTarget.scheduledDate), viewTarget.scheduledTime].filter((item) => item && item !== '-').join(' - ') || '-'}</strong>
+                </div>
+                <div className="ch-detail-item">
+                  <span>Entregue</span>
+                  <strong>{viewTarget.delivered || '-'}</strong>
                 </div>
                 <div className="ch-detail-item">
                   <span>Concluído</span>
