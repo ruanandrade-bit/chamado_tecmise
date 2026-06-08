@@ -81,6 +81,7 @@ router.put('/:id', (req, res) => {
 
   const updated = memoryStore.updateChild(req.params.id, {
     ...validation.value,
+    name: current.name,
     userName: req.user?.name || current.userName || current.responsible || 'Desconhecido',
     userEmail: req.user?.email || current.userEmail || current.createdByEmail || ''
   })
@@ -88,9 +89,7 @@ router.put('/:id', (req, res) => {
 })
 
 router.delete('/:id', (req, res) => {
-  const deleted = memoryStore.deleteChild(req.params.id)
-  if (!deleted) return res.status(404).json({ message: 'Criança não encontrada.' })
-  res.json({ success: true })
+  return res.status(403).json({ message: 'Exclusão de crianças está desabilitada.' })
 })
 
 export default router

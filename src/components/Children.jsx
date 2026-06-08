@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, Edit3, Loader2, Plus, Search, ShieldAlert, Trash2, UserRound, Users, X } from 'lucide-react'
+import { AlertCircle, ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, Edit3, Loader2, Plus, Search, ShieldAlert, UserRound, Users, X } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import './Children.css'
@@ -95,13 +95,25 @@ export default function Children() {
   const [showForm, setShowForm] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
   const [viewTarget, setViewTarget] = useState(null)
-  const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [page, setPage] = useState(1)
 
+  const formatShortDate = (value) => {
+    const raw = String(value || '').trim()
+    if (!raw) return '-'
+
+    const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    if (isoMatch) return `${isoMatch[3]}/${isoMatch[2]}`
+
+    const brMatch = raw.match(/^(\d{2})\/(\d{2})\/\d{4}$/)
+    if (brMatch) return `${brMatch[1]}/${brMatch[2]}`
+
+    return raw
+  }
+
   const formatPeriod = (child) => {
     if (child.periodStart || child.periodEnd) {
-      return `${child.periodStart || '-'} ate ${child.periodEnd || '-'}`
+      return `${formatShortDate(child.periodStart)} ate ${formatShortDate(child.periodEnd)}`
     }
     return child.periodDone || '-'
   }
@@ -178,8 +190,13 @@ export default function Children() {
   const visibleChildren = filteredChildren.slice((page - 1) * pageSize, page * pageSize)
   const rangeStart = filteredChildren.length === 0 ? 0 : (page - 1) * pageSize + 1
   const rangeEnd = Math.min(page * pageSize, filteredChildren.length)
+  const canCreateChild = Boolean(selectedSchool) && Boolean(selectedTurma) && selectedTurma !== ALL_TURMAS_OPTION
 
   const openCreateForm = () => {
+    if (!canCreateChild) {
+      setFormError('Para cadastrar nova criança, selecione uma turma específica.')
+      return
+    }
     setEditTarget(null)
     setForm(emptyForm)
     setFormError('')
@@ -243,20 +260,6 @@ export default function Children() {
     }
   }
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return
-    setIsSaving(true)
-    try {
-      await api.delete(`/children/${deleteTarget.id}`)
-      setChildren((prev) => prev.filter((child) => child.id !== deleteTarget.id))
-      setDeleteTarget(null)
-    } catch (err) {
-      alert(err.message || 'Erro ao excluir criança.')
-    } finally {
-      setIsSaving(false)
-    }
-  }
-
   if (!canAccess) {
     return (
       <div className="ch-access-denied">
@@ -275,7 +278,7 @@ export default function Children() {
           <h1>Crianças</h1>
           <p>Gerencie as crianças cadastradas nas escolas</p>
         </div>
-        <button className="ch-primary-btn" onClick={openCreateForm}>
+        <button className="ch-primary-btn" onClick={openCreateForm} disabled={!canCreateChild} title={!canCreateChild ? 'Selecione uma turma específica para cadastrar' : 'Nova criança'}>
           <Plus size={15} /> Nova criança
         </button>
       </div>
@@ -360,7 +363,7 @@ export default function Children() {
                         <th>Período realizado</th>
                         <th>Concluído</th>
                         <th>Observações</th>
-                        <th>Ações</th>
+                        <th>Ação</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -403,16 +406,6 @@ export default function Children() {
                               >
                                 <Edit3 size={14} />
                               </button>
-                              <button
-                                className="ch-action-btn ch-delete-btn"
-                                onClick={(event) => {
-                                  event.stopPropagation()
-                                  setDeleteTarget(child)
-                                }}
-                                title="Excluir criança"
-                              >
-                                <Trash2 size={14} />
-                              </button>
                             </div>
                           </td>
                         </tr>
@@ -451,7 +444,9 @@ export default function Children() {
                 Nome da criança
                 <input
                   value={form.name}
+                  readOnly={Boolean(editTarget)}
                   onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                  className={editTarget ? 'ch-readonly-input' : ''}
                   placeholder="Digite o nome da criança"
                 />
               </label>
@@ -528,24 +523,8 @@ export default function Children() {
         )}
       </div>
 
-      {deleteTarget && (
-        <div className="ch-modal-overlay" onClick={() => setDeleteTarget(null)}>
-          <div className="ch-confirm-card" onClick={(event) => event.stopPropagation()}>
-            <div className="ch-confirm-icon"><Trash2 size={18} /></div>
-            <h3>Excluir criança?</h3>
-            <p>Tem certeza que deseja remover <strong>{deleteTarget.name}</strong>? Esta ação não pode ser desfeita.</p>
-            <div className="ch-confirm-actions">
-              <button className="ch-secondary-btn" onClick={() => setDeleteTarget(null)}>Cancelar</button>
-              <button className="ch-danger-btn" onClick={handleDelete} disabled={isSaving}>
-                {isSaving ? 'Excluindo...' : 'Excluir'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {viewTarget && (
-        <div className="ch-modal-overlay" onClick={() => setViewTarget(null)}>
+        <div className="ch-modal-overlay ch-detail-overlay" onClick={() => setViewTarget(null)}>
           <div className="ch-detail-card" onClick={(event) => event.stopPropagation()}>
             <div className="ch-detail-head">
               <div className="ch-detail-title-row">
@@ -581,19 +560,6 @@ export default function Children() {
               <div className="ch-detail-observations">
                 <span>Observações</span>
                 <p>{viewTarget.observations || 'Nenhuma observação registrada.'}</p>
-              </div>
-
-              <div className="ch-detail-actions">
-                <button
-                  className="ch-secondary-btn"
-                  onClick={() => {
-                    setViewTarget(null)
-                    openEditForm(viewTarget)
-                  }}
-                >
-                  <Edit3 size={14} /> Editar
-                </button>
-                <button className="ch-secondary-btn" onClick={() => setViewTarget(null)}>Fechar</button>
               </div>
             </div>
           </div>

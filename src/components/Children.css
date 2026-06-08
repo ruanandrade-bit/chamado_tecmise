@@ -621,6 +621,11 @@
   animation: chFadeIn 0.16s ease-out both;
 }
 
+.ch-detail-overlay {
+  background: rgba(3, 6, 20, 0.72);
+  backdrop-filter: blur(14px) saturate(110%);
+}
+
 .ch-confirm-card {
   width: min(390px, 100%);
   border-radius: 16px;
