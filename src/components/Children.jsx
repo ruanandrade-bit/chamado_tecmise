@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { AlertCircle, ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, Edit3, Loader2, Plus, Search, ShieldAlert, UserRound, Users, X } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { AlertCircle, ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, Edit3, Loader2, Plus, Search, ShieldAlert, Trash2, UserRound, Users, X } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import './Children.css'
@@ -102,6 +103,7 @@ export default function Children() {
   const { user } = useAuthStore()
   const role = normalizeRole(user?.role)
   const canAccess = user?.canDragDrop === true || role === 'pedagoga' || role === 'psicologa'
+  const isAdmin = user?.canDragDrop === true || user?.email === 'ruan@s4s.com'
   const loggedUserName = user?.name || 'Usuário'
 
   const [schoolData, setSchoolData] = useState({})
@@ -112,10 +114,12 @@ export default function Children() {
   const [openSelectKey, setOpenSelectKey] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [formError, setFormError] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editTarget, setEditTarget] = useState(null)
   const [viewTarget, setViewTarget] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [page, setPage] = useState(1)
 
@@ -310,6 +314,20 @@ export default function Children() {
     }
   }
 
+  const handleDelete = async (id) => {
+    setIsDeleting(true)
+    try {
+      await api.delete(`/children/${id}`)
+      setChildren((prev) => prev.filter((item) => item.id !== id))
+      setDeleteTarget(null)
+    } catch (error) {
+      console.error('Error deleting child:', error)
+      alert(error.response?.data?.message || 'Erro ao excluir criança')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   if (!canAccess) {
     return (
       <div className="ch-access-denied">
@@ -470,6 +488,18 @@ export default function Children() {
                               >
                                 <Edit3 size={14} />
                               </button>
+                              {isAdmin && (
+                                <button
+                                  className="ch-action-btn ch-delete-btn"
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    setDeleteTarget(child)
+                                  }}
+                                  title="Excluir criança"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -491,7 +521,7 @@ export default function Children() {
           </div>
         </section>
 
-        {showForm && (
+        {showForm && createPortal((
           <div className="ch-modal-overlay" onClick={closeForm}>
             <aside className="ch-form-modal-card" onClick={(event) => event.stopPropagation()}>
               <div className="ch-form-head">
@@ -686,10 +716,10 @@ export default function Children() {
               </form>
             </aside>
           </div>
-        )}
+        ), document.body)}
       </div>
 
-      {viewTarget && (
+      {viewTarget && createPortal((
         <div className="ch-modal-overlay ch-detail-overlay" onClick={() => setViewTarget(null)}>
           <div className="ch-detail-card" onClick={(event) => event.stopPropagation()}>
             <div className="ch-detail-head">
@@ -697,7 +727,7 @@ export default function Children() {
                 <div className="ch-detail-icon"><UserRound size={18} /></div>
                 <div>
                   <h3>{viewTarget.name}</h3>
-                  <p>{viewTarget.school} - {viewTarget.turma}</p>
+                  <p>{viewTarget.school} - {viewTarget.turma} - Usuário: {viewTarget.userName || viewTarget.responsible || viewTarget.createdBy || '-'}</p>
                 </div>
               </div>
               <button className="ch-form-close" onClick={() => setViewTarget(null)}><X size={15} /></button>
@@ -705,10 +735,6 @@ export default function Children() {
 
             <div className="ch-detail-body">
               <div className="ch-detail-grid">
-                <div className="ch-detail-item">
-                  <span>Usuário</span>
-                  <strong>{viewTarget.userName || viewTarget.responsible || viewTarget.createdBy || '-'}</strong>
-                </div>
 
                 <div className="ch-detail-item">
                   <span>Tipo de relatório</span>
@@ -759,7 +785,40 @@ export default function Children() {
             </div>
           </div>
         </div>
-      )}
+      ), document.body)}
+
+      {deleteTarget && createPortal((
+        <div className="ch-modal-overlay" onClick={() => setDeleteTarget(null)}>
+          <div className="ch-confirm-card" onClick={(event) => event.stopPropagation()}>
+            <div className="ch-confirm-icon">
+              <ShieldAlert size={20} />
+            </div>
+            <h3>Confirmar Exclusão</h3>
+            <p>
+              Tem certeza que deseja excluir a criança{' '}
+              <strong>"{deleteTarget.name}"</strong>? Esta ação é irreversível.
+            </p>
+            <div className="ch-confirm-actions">
+              <button
+                type="button"
+                className="ch-secondary-btn"
+                onClick={() => setDeleteTarget(null)}
+                disabled={isDeleting}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                className="ch-danger-btn"
+                onClick={() => handleDelete(deleteTarget.id)}
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Excluindo...' : 'Excluir'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ), document.body)}
     </div>
   )
 }

@@ -143,7 +143,13 @@ router.put('/:id', (req, res) => {
 })
 
 router.delete('/:id', (req, res) => {
-  return res.status(403).json({ message: 'Exclusão de crianças está desabilitada.' })
+  const isRuan = req.user?.email === 'ruan@s4s.com' || req.user?.canDragDrop === true
+  if (!isRuan) {
+    return res.status(403).json({ message: 'Apenas a conta de administrador (Ruan) pode excluir crianças.' })
+  }
+  const deleted = memoryStore.deleteChild(req.params.id)
+  if (!deleted) return res.status(404).json({ message: 'Criança não encontrada.' })
+  res.json({ success: true })
 })
 
 export default router
