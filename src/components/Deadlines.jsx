@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Calendar, Plus, Trash2, CalendarDays, Clock, CheckCircle2, AlertTriangle, AlertCircle, Search, Filter, Loader2, ShieldCheck, X, Edit3, ChevronRight, Tag, ChevronDown, ExternalLink, UserPlus, Check } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
@@ -73,7 +73,14 @@ export default function Deadlines() {
   const { user } = useAuthStore()
   const role = (user?.role || '').toLowerCase()
   const canEdit = role === 'pedagoga' || role === 'psicóloga' || user?.canDragDrop === true
-  const isAdmin = user?.canDragDrop === true
+  const currentUserName = String(user?.name || '').trim().toLowerCase()
+  const currentUserEmail = String(user?.email || '').trim().toLowerCase()
+
+  const isCreatedByCurrentUser = (item) => {
+    if (!item) return false
+    if (item.authorEmail) return String(item.authorEmail).trim().toLowerCase() === currentUserEmail
+    return String(item.author || '').trim().toLowerCase() === currentUserName
+  }
 
   const [deadlines, setDeadlines] = useState([])
   const [notes, setNotes] = useState([])
@@ -99,6 +106,7 @@ export default function Deadlines() {
   const [form, setForm] = useState({ title: '', description: '', date: '', time: '', category: 'pedagoga', priority: 'media', status: 'pendente' })
   const [formError, setFormError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const guestDropdownRef = useRef(null)
 
   // Google Calendar states
   const [wantGoogleCalendar, setWantGoogleCalendar] = useState(false)
@@ -120,6 +128,17 @@ export default function Deadlines() {
     }
     window.addEventListener('click', handleOutsideClick)
     return () => window.removeEventListener('click', handleOutsideClick)
+  }, [])
+
+  useEffect(() => {
+    const handleGuestOutsideClick = (event) => {
+      if (guestDropdownRef.current && !guestDropdownRef.current.contains(event.target)) {
+        setIsGuestDropdownOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleGuestOutsideClick, true)
+    return () => document.removeEventListener('mousedown', handleGuestOutsideClick, true)
   }, [])
 
   const loadDeadlines = async () => {
@@ -271,7 +290,10 @@ export default function Deadlines() {
   const handleDelete = async (id) => {
     try {
       const target = allDeadlinesAndReminders.find(d => d.id === id)
-      if (target?.status === 'concluido') return
+      if (!isCreatedByCurrentUser(target)) {
+        alert('Apenas o criador pode excluir este item.')
+        return
+      }
 
       if (String(id).startsWith('AN-')) {
         await api.delete(`/notes/${id}`)
@@ -318,6 +340,7 @@ export default function Deadlines() {
       status: n.reminderStatus === 'concluido' ? 'concluido' : 'pendente',
       priority: 'media',
       author: n.author,
+      authorEmail: n.authorEmail,
       createdAt: n.createdAt,
       isReminder: true
     }))
@@ -625,12 +648,14 @@ export default function Deadlines() {
                   )}
                 </div>
 
-                {((dl.status !== 'concluido' && canEdit) || (dl.status === 'concluido' && isAdmin)) && (
+                {((dl.status !== 'concluido' && canEdit) || isCreatedByCurrentUser(dl)) && (
                   <div className="dl-actions-group" onClick={e => e.stopPropagation()}>
                     {dl.status !== 'concluido' && canEdit && (
                       <button className="dl-action-btn" onClick={() => handleEditClick(dl)} title="Editar prazo"><Edit3 size={14} /></button>
                     )}
-                    <button className="dl-action-btn dl-btn-del" onClick={() => setDeleteTarget(dl)} title="Excluir prazo"><Trash2 size={14} /></button>
+                    {isCreatedByCurrentUser(dl) && (
+                      <button className="dl-action-btn dl-btn-del" onClick={() => setDeleteTarget(dl)} title="Excluir prazo"><Trash2 size={14} /></button>
+                    )}
                   </div>
                 )}
                 <ChevronRight size={16} className="dl-chevron" />
@@ -884,7 +909,7 @@ export default function Deadlines() {
                           <label style={{ fontSize: '0.75rem', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: '4px' }}>
                             <UserPlus size={12} /> Convidar profissional (opcional)
                           </label>
-                          <div className="dl-form-select-container">
+                          <div className="dl-form-select-container dl-guest-select-container" ref={guestDropdownRef}>
                             <button
                               type="button"
                               className={`dl-form-select-btn ${isGuestDropdownOpen ? 'active' : ''}`}
@@ -929,7 +954,7 @@ export default function Deadlines() {
                               <ChevronDown size={14} className={`dl-select-chevron ${isGuestDropdownOpen ? 'open' : ''}`} />
                             </button>
                             {isGuestDropdownOpen && (
-                              <div className="dl-form-dropdown up" onClick={(e) => e.stopPropagation()}>
+                              <div className="dl-form-dropdown dl-guest-dropdown" onClick={(e) => e.stopPropagation()}>
                                 <div
                                   className="dl-form-option"
                                   onClick={() => setSelectedGuest('')}

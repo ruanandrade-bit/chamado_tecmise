@@ -33,7 +33,14 @@ export default function PedagogicalKanban() {
   const role = (user?.role || '').toLowerCase()
   const canEdit = role === 'pedagoga' || role === 'psicóloga' || user?.canDragDrop === true
   const currentUserName = (user?.name || '').trim() || 'Usuário'
+  const currentUserEmail = String(user?.email || '').trim().toLowerCase()
   const minDueDate = getTodayIsoLocal()
+
+  const isCreatedByCurrentUser = (item) => {
+    if (!item) return false
+    if (item.authorEmail) return String(item.authorEmail).trim().toLowerCase() === currentUserEmail
+    return String(item.author || '').trim().toLowerCase() === currentUserName.toLowerCase()
+  }
 
   const { tasks, isLoading, error, loadTasks, setTasks } = useKanbanStore()
 
@@ -149,6 +156,10 @@ export default function PedagogicalKanban() {
   // Handle Delete Task
   const handleDeleteTask = async () => {
     if (!deleteTarget) return
+    if (!isCreatedByCurrentUser(deleteTarget)) {
+      alert('Apenas o criador pode excluir esta tarefa.')
+      return
+    }
     setIsSaving(true)
     try {
       await api.delete(`/kanban/${deleteTarget.id}`)
@@ -793,9 +804,11 @@ export default function PedagogicalKanban() {
                   <button className="pk-btn-cancel" onClick={() => handleEditClick(viewTarget)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <Edit3 size={14} /> Editar
                   </button>
-                  <button className="pk-btn-danger" onClick={() => { setDeleteTarget(viewTarget); setShowDeleteModal(true) }}>
-                    <Trash2 size={14} /> Excluir
-                  </button>
+                  {isCreatedByCurrentUser(viewTarget) && (
+                    <button className="pk-btn-danger" onClick={() => { setDeleteTarget(viewTarget); setShowDeleteModal(true) }}>
+                      <Trash2 size={14} /> Excluir
+                    </button>
+                  )}
                 </div>
               )}
             </div>

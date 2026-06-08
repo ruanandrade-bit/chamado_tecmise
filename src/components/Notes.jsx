@@ -20,7 +20,14 @@ export default function Notes() {
   const { user } = useAuthStore()
   const role = (user?.role || '').toLowerCase()
   const canEdit = role === 'pedagoga' || role === 'psicóloga' || user?.canDragDrop === true
-  const isAdmin = user?.canDragDrop === true
+  const currentUserName = String(user?.name || '').trim().toLowerCase()
+  const currentUserEmail = String(user?.email || '').trim().toLowerCase()
+
+  const isCreatedByCurrentUser = (item) => {
+    if (!item) return false
+    if (item.authorEmail) return String(item.authorEmail).trim().toLowerCase() === currentUserEmail
+    return String(item.author || '').trim().toLowerCase() === currentUserName
+  }
 
   const [notes, setNotes] = useState([])
   const [deadlines, setDeadlines] = useState([])
@@ -130,6 +137,15 @@ export default function Notes() {
 
   const handleDelete = async (id) => {
     try {
+      const target = String(id).startsWith('DL-')
+        ? deadlines.find(d => d.id === id)
+        : notes.find(n => n.id === id)
+
+      if (!isCreatedByCurrentUser(target)) {
+        alert('Apenas o criador pode excluir este item.')
+        return
+      }
+
       if (String(id).startsWith('DL-')) {
         await api.delete(`/deadlines/${id}`)
         setDeadlines(prev => prev.filter(d => d.id !== id))
@@ -171,6 +187,7 @@ export default function Notes() {
       category: d.category || 'pedagoga',
       noteType: 'reminder',
       author: d.author,
+      authorEmail: d.authorEmail,
       reminderDate: d.date,
       reminderTime: d.time,
       reminderStatus: d.status === 'concluido' ? 'concluido' : 'agendado',
@@ -223,6 +240,7 @@ export default function Notes() {
       category: d.category || 'pedagoga',
       noteType: 'reminder',
       author: d.author,
+      authorEmail: d.authorEmail,
       reminderDate: d.date,
       reminderTime: d.time,
       reminderStatus: d.status === 'concluido' ? 'concluido' : 'agendado',
@@ -449,7 +467,7 @@ export default function Notes() {
                               <Edit3 size={12} />
                             </button>
                           )}
-                          {canEdit && (
+                          {canEdit && isCreatedByCurrentUser(note) && (
                             <button
                               className="nt-card-del"
                               onClick={(e) => {
@@ -521,7 +539,7 @@ export default function Notes() {
                         <span className="nt-cat-badge-sm" style={{ background: cat.bg, color: cat.color }}>{cat.label}</span>
                         <span className="nt-status-badge" style={{ background: st.bg, color: st.color }}>• {st.label}</span>
                       </div>
-                      {((rem.reminderStatus !== 'concluido' && canEdit) || (rem.reminderStatus === 'concluido' && isAdmin)) && (
+                      {((rem.reminderStatus !== 'concluido' && canEdit) || isCreatedByCurrentUser(rem)) && (
                         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                           {rem.reminderStatus !== 'concluido' && canEdit && (
                             <button
@@ -535,16 +553,18 @@ export default function Notes() {
                               <Edit3 size={12} />
                             </button>
                           )}
-                          <button
-                            className="nt-reminder-del"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setDeleteTarget(rem)
-                            }}
-                            title="Excluir"
-                          >
-                            <Trash2 size={12} />
-                          </button>
+                          {isCreatedByCurrentUser(rem) && (
+                            <button
+                              className="nt-reminder-del"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setDeleteTarget(rem)
+                              }}
+                              title="Excluir"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -583,7 +603,7 @@ export default function Notes() {
                         <span className="nt-cat-badge-sm" style={{ background: cat.bg, color: cat.color }}>{cat.label}</span>
                         <span className="nt-status-badge" style={{ background: st.bg, color: st.color }}>• {st.label}</span>
                       </div>
-                      {((rem.reminderStatus !== 'concluido' && canEdit) || (rem.reminderStatus === 'concluido' && isAdmin)) && (
+                      {((rem.reminderStatus !== 'concluido' && canEdit) || isCreatedByCurrentUser(rem)) && (
                         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                           {rem.reminderStatus !== 'concluido' && canEdit && (
                             <button
@@ -597,16 +617,18 @@ export default function Notes() {
                               <Edit3 size={12} />
                             </button>
                           )}
-                          <button
-                            className="nt-reminder-del"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setDeleteTarget(rem)
-                            }}
-                            title="Excluir"
-                          >
-                            <Trash2 size={12} />
-                          </button>
+                          {isCreatedByCurrentUser(rem) && (
+                            <button
+                              className="nt-reminder-del"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setDeleteTarget(rem)
+                              }}
+                              title="Excluir"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1004,7 +1026,7 @@ export default function Notes() {
                         <Edit3 size={14} /> Editar
                       </button>
                     )}
-                    {(viewNote.reminderStatus !== 'concluido' || isAdmin) && (
+                    {isCreatedByCurrentUser(viewNote) && (
                       <button
                         className="nt-btn-danger"
                         onClick={() => {

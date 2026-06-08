@@ -6,6 +6,16 @@ import crypto from 'node:crypto'
 const router = Router()
 router.use(authRequired)
 
+function normalizeOwner(value) {
+  return String(value || '').trim().toLowerCase()
+}
+
+function isCreatedByCurrentUser(item, user) {
+  if (!item || !user) return false
+  if (item.authorEmail) return normalizeOwner(item.authorEmail) === normalizeOwner(user.email)
+  return normalizeOwner(item.author) === normalizeOwner(user.name)
+}
+
 // GET — return instantly from memory, trigger sync in the background
 router.get('/', (_req, res) => {
   res.json(memoryStore.getDeadlines())
@@ -28,6 +38,7 @@ router.post('/', pedagogaOrPsicologaOnly, (req, res) => {
     status: status || 'pendente',
     priority: priority || 'media',
     author: req.user?.name || 'Desconhecido',
+    authorEmail: req.user?.email || '',
     googleCalendarConfirmed: !!googleCalendarConfirmed,
     googleCalendarUser: googleCalendarConfirmed ? (googleCalendarUser || req.user?.name || '') : '',
     googleCalendarGuest: googleCalendarConfirmed ? (googleCalendarGuest || '') : '',
@@ -50,13 +61,11 @@ router.put('/:id', pedagogaOrPsicologaOnly, (req, res) => {
   res.json(updated)
 })
 
-// DELETE — delete deadline, persist in background (fast like tickets)
+// DELETE — only the creator can delete a deadline
 router.delete('/:id', pedagogaOrPsicologaOnly, (req, res) => {
   const current = memoryStore.getDeadlines().find((deadline) => deadline.id === req.params.id)
-  const isAdmin = req.user?.canDragDrop === true
-  if (current?.status === 'concluido' && !isAdmin) {
-    return res.status(403).json({ message: 'Prazos concluídos não podem ser excluídos por não-administradores.' })
-  }
+  if (!current) return res.status(404).json({ message: 'Prazo não encontrado.' })
+  if (!isCreatedByCurrentUser(current, req.user)) return res.status(403).json({ message: 'Apenas o criador pode excluir este prazo.' })
 
   memoryStore.deleteDeadline(req.params.id)
   res.json({ success: true })

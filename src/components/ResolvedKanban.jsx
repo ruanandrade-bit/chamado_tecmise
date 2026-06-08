@@ -239,6 +239,13 @@ function ConfirmDeleteModalResolved({ isOpen, onClose, onConfirm, isDeleting, ta
 export default function ResolvedKanban() {
   const { user } = useAuthStore()
   const { tasks, isLoading, loadTasks, setTasks } = useKanbanStore()
+  const currentUserName = String(user?.name || '').trim().toLowerCase()
+  const currentUserEmail = String(user?.email || '').trim().toLowerCase()
+  const isCreatedByCurrentUser = (task) => {
+    if (!task) return false
+    if (task.authorEmail) return String(task.authorEmail).trim().toLowerCase() === currentUserEmail
+    return String(task.author || '').trim().toLowerCase() === currentUserName
+  }
   const [isDeleting, setIsDeleting] = useState(false)
   const [taskToDelete, setTaskToDelete] = useState(null)
   const [selectedTaskId, setSelectedTaskId] = useState(null)
@@ -249,8 +256,6 @@ export default function ResolvedKanban() {
   const currentMonth = new Date().getMonth() + 1
   const [filterYear, setFilterYear] = useState(String(currentYear))
   const [filterMonth, setFilterMonth] = useState(String(currentMonth))
-
-  const canDeleteTask = user?.canDragDrop === true
 
   // Fetch tasks
   useEffect(() => {
@@ -318,12 +323,16 @@ export default function ResolvedKanban() {
   }, [selectedTask, taskToDelete])
 
   const handleDeleteRequest = (task) => {
-    if (!canDeleteTask) return
+    if (!isCreatedByCurrentUser(task)) return
     setTaskToDelete(task)
   }
 
   const handleConfirmDelete = async () => {
-    if (!canDeleteTask || !taskToDelete || isDeleting) return
+    if (!taskToDelete || isDeleting) return
+    if (!isCreatedByCurrentUser(taskToDelete)) {
+      alert('Apenas o criador pode excluir esta tarefa.')
+      return
+    }
     setIsDeleting(true)
     try {
       await api.delete(`/kanban/${taskToDelete.id}`)
@@ -417,7 +426,7 @@ export default function ResolvedKanban() {
                   <div className="rk-card-header-item">
                     <div className="rk-card-id">#{task.id}</div>
                     <div className="rk-card-actions">
-                      {canDeleteTask && (
+                      {isCreatedByCurrentUser(task) && (
                         <button 
                           className="rk-card-action-btn"
                           onClick={(e) => {
@@ -634,7 +643,7 @@ export default function ResolvedKanban() {
                 </div>
               )}
 
-              {canDeleteTask && (
+              {isCreatedByCurrentUser(selectedTask) && (
                 <div className="pk-modal-actions" style={{ marginTop: 16 }}>
                   <button
                     onClick={() => {

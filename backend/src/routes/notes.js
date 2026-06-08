@@ -8,6 +8,16 @@ const router = Router()
 // All routes require authentication
 router.use(authRequired)
 
+function normalizeOwner(value) {
+  return String(value || '').trim().toLowerCase()
+}
+
+function isCreatedByCurrentUser(item, user) {
+  if (!item || !user) return false
+  if (item.authorEmail) return normalizeOwner(item.authorEmail) === normalizeOwner(user.email)
+  return normalizeOwner(item.author) === normalizeOwner(user.name)
+}
+
 // GET — return instantly from memory, trigger sync in the background
 router.get('/', (_req, res) => {
   res.json(memoryStore.getNotes())
@@ -32,6 +42,7 @@ router.post('/', pedagogaOrPsicologaOnly, (req, res) => {
     category,
     noteType: noteType || 'note', // 'note' | 'reminder'
     author: req.user?.name || 'Desconhecido',
+    authorEmail: req.user?.email || '',
     authorRole: req.user?.role || '',
     isPinned: false,
     reminderDate: reminderDate || null,
@@ -65,13 +76,11 @@ router.put('/:id', pedagogaOrPsicologaOnly, (req, res) => {
   res.json(updated)
 })
 
-// DELETE — pedagoga/psicóloga/admin only (fast like tickets)
+// DELETE — only the creator can delete a note/reminder
 router.delete('/:id', pedagogaOrPsicologaOnly, (req, res) => {
   const current = memoryStore.getNotes().find((note) => note.id === req.params.id)
-  const isAdmin = req.user?.canDragDrop === true
-  if (current?.reminderStatus === 'concluido' && !isAdmin) {
-    return res.status(403).json({ message: 'Lembretes concluídos não podem ser excluídos por não-administradores.' })
-  }
+  if (!current) return res.status(404).json({ message: 'Anotação não encontrada.' })
+  if (!isCreatedByCurrentUser(current, req.user)) return res.status(403).json({ message: 'Apenas o criador pode excluir esta anotação.' })
 
   memoryStore.deleteNote(req.params.id)
   res.json({ success: true })

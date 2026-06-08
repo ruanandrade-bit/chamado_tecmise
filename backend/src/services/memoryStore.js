@@ -25,6 +25,7 @@ function loadFromDisk() {
           schoolData: data.schoolData || null,
           professionals: Array.isArray(data.professionals) ? data.professionals : null,
           cameraObstructions: Array.isArray(data.cameraObstructions) ? data.cameraObstructions : [],
+          children: Array.isArray(data.children) ? data.children : [],
           notes: Array.isArray(data.notes) ? data.notes : [],
           deadlines: Array.isArray(data.deadlines) ? data.deadlines : [],
           kanbanTasks: Array.isArray(data.kanbanTasks) ? data.kanbanTasks : []
@@ -48,6 +49,7 @@ function saveToDisk() {
       schoolData: state.schoolData,
       professionals: state.professionals,
       cameraObstructions: state.cameraObstructions,
+      children: state.children,
       notes: state.notes,
       deadlines: state.deadlines,
       kanbanTasks: state.kanbanTasks,
@@ -94,6 +96,7 @@ async function loadFromMongo() {
         schoolData: doc.schoolData || null,
         professionals: Array.isArray(doc.professionals) ? doc.professionals : null,
         cameraObstructions: Array.isArray(doc.cameraObstructions) ? doc.cameraObstructions : [],
+        children: Array.isArray(doc.children) ? doc.children : [],
         notes: Array.isArray(doc.notes) ? doc.notes : [],
         deadlines: Array.isArray(doc.deadlines) ? doc.deadlines : [],
         kanbanTasks: Array.isArray(doc.kanbanTasks) ? doc.kanbanTasks : []
@@ -118,6 +121,7 @@ async function saveToMongoNow() {
       schoolData: state.schoolData,
       professionals: state.professionals,
       cameraObstructions: state.cameraObstructions,
+      children: state.children,
       notes: state.notes,
       deadlines: state.deadlines,
       kanbanTasks: state.kanbanTasks,
@@ -149,6 +153,7 @@ const state = {
   schoolData: null,     // school→device→turma config, managed via admin panel
   professionals: null,  // [{ id, name, role }], managed via admin panel
   cameraObstructions: [], // [{ id, school, devices, startTime, endTime, percentage, createdAt, createdBy }]
+  children: [],           // [{ id, name, school, turma, birthDate, responsible, observations, createdAt }]
   notes: [],             // [{ id, title, description, category, author, authorRole, ... }]
   deadlines: [],         // [{ id, title, date, time, category, status, priority, author, createdAt }]
   kanbanTasks: []        // [{ id, title, description, status, priority, date, tags, responsible, author, createdAt }]
@@ -167,6 +172,7 @@ function syncCollaborationCollections(source) {
   state.notes = Array.isArray(payload.notes) ? payload.notes : []
   state.deadlines = Array.isArray(payload.deadlines) ? payload.deadlines : []
   state.kanbanTasks = Array.isArray(payload.kanbanTasks) ? payload.kanbanTasks : []
+  state.children = Array.isArray(payload.children) ? payload.children : []
   stripLegacyKanbanSeedTasks()
 }
 
@@ -275,6 +281,7 @@ export async function initStore() {
     if (mongoData.inventory) state.inventory = mongoData.inventory
     if (mongoData.schoolData) state.schoolData = mongoData.schoolData
     if (mongoData.professionals) state.professionals = mongoData.professionals
+    if (Array.isArray(mongoData.children)) state.children = mongoData.children
     if (Array.isArray(mongoData.notes)) state.notes = mongoData.notes
     if (Array.isArray(mongoData.deadlines)) state.deadlines = mongoData.deadlines
     if (Array.isArray(mongoData.kanbanTasks)) state.kanbanTasks = mongoData.kanbanTasks
@@ -288,6 +295,7 @@ export async function initStore() {
     if (diskData.inventory) state.inventory = diskData.inventory
     if (diskData.schoolData) state.schoolData = diskData.schoolData
     if (diskData.professionals) state.professionals = diskData.professionals
+    if (Array.isArray(diskData.children)) state.children = diskData.children
     if (Array.isArray(diskData.notes)) state.notes = diskData.notes
     if (Array.isArray(diskData.deadlines)) state.deadlines = diskData.deadlines
     if (Array.isArray(diskData.kanbanTasks)) state.kanbanTasks = diskData.kanbanTasks
@@ -800,6 +808,33 @@ export const memoryStore = {
     state.schoolData = newData
     persistState()
     return state.schoolData
+  },
+
+  // ─── Children (Crianças) ──────────────────────────────────────────
+  getChildren() {
+    return state.children || []
+  },
+
+  addChild(child) {
+    if (!Array.isArray(state.children)) state.children = []
+    state.children.unshift(child)
+    persistState()
+    return child
+  },
+
+  updateChild(id, updates) {
+    const index = (state.children || []).findIndex((child) => child.id === id)
+    if (index < 0) return null
+    state.children[index] = { ...state.children[index], ...updates, updatedAt: new Date().toISOString() }
+    persistState()
+    return state.children[index]
+  },
+
+  deleteChild(id) {
+    const before = (state.children || []).length
+    state.children = (state.children || []).filter((child) => child.id !== id)
+    persistState()
+    return state.children.length < before
   },
 
   getProfessionals() {
