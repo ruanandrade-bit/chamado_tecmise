@@ -56,6 +56,20 @@ router.post('/login', (req, res) => {
 router.get('/me', authRequired, (req, res) => {
   const email = req.user?.email
   if (!email) return res.status(401).json({ message: 'Usuário inválido.' })
+
+  // Check if user still exists in the professionals list (not deleted by admin)
+  const normalizedEmail = String(email).trim().toLowerCase()
+  const userRecord = USERS[normalizedEmail]
+  const professionals = memoryStore.getProfessionals()
+  const stillExists = professionals.some(p =>
+    String(p?.email || '').trim().toLowerCase() === normalizedEmail ||
+    (userRecord && String(p?.name || '').trim().toLowerCase() === String(userRecord?.name || '').trim().toLowerCase())
+  )
+
+  if (!stillExists) {
+    return res.status(401).json({ message: 'Esta conta foi removida pelo administrador.' })
+  }
+
   const user = buildFreshUser(email)
   if (!user) return res.status(401).json({ message: 'Usuário inválido.' })
   return res.json({ user })

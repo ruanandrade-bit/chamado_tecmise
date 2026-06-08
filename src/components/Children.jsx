@@ -23,6 +23,8 @@ function PrettySelect({ value, options, placeholder, selectKey, openSelectKey, s
   const isOpen = openSelectKey === selectKey
 
   useEffect(() => {
+    if (openSelectKey !== selectKey) return
+
     const handleOutside = (event) => {
       if (ref.current && !ref.current.contains(event.target)) {
         setOpenSelectKey(null)
@@ -31,7 +33,7 @@ function PrettySelect({ value, options, placeholder, selectKey, openSelectKey, s
 
     document.addEventListener('mousedown', handleOutside)
     return () => document.removeEventListener('mousedown', handleOutside)
-  }, [setOpenSelectKey])
+  }, [openSelectKey, selectKey, setOpenSelectKey])
 
   return (
     <div className="ch-select" ref={ref}>
@@ -409,7 +411,18 @@ export default function Children() {
                   <input
                     type="date"
                     value={form.birthDate}
-                    onChange={(event) => setForm((prev) => ({ ...prev, birthDate: event.target.value }))}
+                    max="9999-12-31"
+                    onChange={(event) => {
+                      let val = event.target.value
+                      if (val) {
+                        const parts = val.split('-')
+                        if (parts[0] && parts[0].length > 4) {
+                          parts[0] = parts[0].slice(0, 4)
+                          val = parts.join('-')
+                        }
+                      }
+                      setForm((prev) => ({ ...prev, birthDate: val }))
+                    }}
                   />
                   <CalendarDays size={14} />
                 </div>
