@@ -36,6 +36,17 @@ router.post('/login', (req, res) => {
     return res.status(401).json({ message: 'Email ou senha inválidos.' })
   }
 
+  // Check if user still exists in the professionals list (not deleted by admin)
+  const professionals = memoryStore.getProfessionals()
+  const stillExists = professionals.some(p =>
+    String(p?.email || '').trim().toLowerCase() === normalizedEmail ||
+    String(p?.name || '').trim().toLowerCase() === String(user?.name || '').trim().toLowerCase()
+  )
+
+  if (!stillExists) {
+    return res.status(401).json({ message: 'Esta conta foi removida pelo administrador.' })
+  }
+
   const safeUser = buildFreshUser(normalizedEmail)
   const token = signToken(safeUser)
 

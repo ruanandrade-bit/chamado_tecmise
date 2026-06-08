@@ -1,4 +1,4 @@
-import { LayoutDashboard, Kanban, Archive, FileText, Wifi, Package, Settings, X, EyeOff, StickyNote, Calendar, Trello } from 'lucide-react'
+import { LayoutDashboard, Kanban, Archive, FileText, Wifi, Package, Settings, X, EyeOff, StickyNote, Calendar, Trello, Users } from 'lucide-react'
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
 import { useKanbanStore } from '../stores/kanbanStore'
@@ -22,6 +22,7 @@ export default function Sidebar({ currentPage, onPageChange, isMobileOpen, onMob
     { id: 'notes', label: 'Anotações', icon: StickyNote },
     { id: 'deadlines', label: 'Datas & Prazos', icon: Calendar },
     { id: 'resolved-kanban', label: 'Kanban Resolvido', icon: Archive },
+    { id: 'children', label: 'Crianças', icon: Users },
     ...(isAdmin ? [{ id: 'devices-online', label: 'Devices Online', icon: Wifi }] : []),
     ...(isAdmin ? [{ id: 'inventory', label: 'Estoque', icon: Package }] : []),
     ...(isAdmin ? [{ id: 'school-config', label: 'Configurações', icon: Settings }] : []),

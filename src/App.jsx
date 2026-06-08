@@ -18,6 +18,7 @@ import Notes from './components/Notes'
 import Deadlines from './components/Deadlines'
 import PedagogicalKanban from './components/PedagogicalKanban'
 import ResolvedKanban from './components/ResolvedKanban'
+import Children from './components/Children'
 
 export default function App() {
   const { isAuthenticated, isAuthLoading, initAuth } = useAuthStore()
@@ -38,6 +39,7 @@ export default function App() {
     || currentPage === 'deadlines'
     || currentPage === 'pedagogical-kanban'
     || currentPage === 'resolved-kanban'
+    || currentPage === 'children'
   )
 
   useEffect(() => {
@@ -111,6 +113,7 @@ export default function App() {
             {currentPage === 'deadlines' && <Deadlines />}
             {currentPage === 'pedagogical-kanban' && <PedagogicalKanban />}
             {currentPage === 'resolved-kanban' && <ResolvedKanban />}
+            {currentPage === 'children' && <Children />}
           </div>
         </main>
       </div>
