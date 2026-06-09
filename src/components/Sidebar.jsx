@@ -19,13 +19,6 @@ export default function Sidebar({ currentPage, onPageChange, isMobileOpen, onMob
     { id: 'archived', label: 'Chamados Resolvidos', icon: Archive },
     { id: 'monthly-report', label: 'Relatório Mensal', icon: FileText },
     { id: 'camera-obstruction', label: 'Obstrução de Câmeras', icon: EyeOff },
-    ...(isRuan ? [
-      { id: 'pedagogical-kanban', label: 'Kanban', icon: Trello },
-      { id: 'notes', label: 'Anotações', icon: StickyNote },
-      { id: 'deadlines', label: 'Datas & Prazos', icon: Calendar },
-      { id: 'resolved-kanban', label: 'Kanban Resolvido', icon: Archive },
-      { id: 'children', label: 'Crianças', icon: Users }
-    ] : []),
     ...(isAdmin ? [{ id: 'devices-online', label: 'Devices Online', icon: Wifi }] : []),
     ...(isAdmin ? [{ id: 'inventory', label: 'Estoque', icon: Package }] : []),
     ...(isAdmin ? [{ id: 'school-config', label: 'Configurações', icon: Settings }] : []),
