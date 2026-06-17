@@ -61,7 +61,10 @@ function saveToDisk() {
 }
 
 // ─── MongoDB persistence (production) ───────────────────────────────
-let mongoCollection = null
+// Collections separadas — elimina o limite de 16 MB por documento BSON
+let db = null
+let col = {}
+let mongoConnected = false
 
 async function connectMongo() {
   const uri = process.env.MONGODB_URI
@@ -73,8 +76,28 @@ async function connectMongo() {
   try {
     const client = new MongoClient(uri)
     await client.connect()
-    mongoCollection = client.db('s4s_chamados').collection('state')
-    console.log('[store] ✅ Connected to MongoDB Atlas.')
+    db = client.db('s4s_chamados')
+
+    // Uma collection por entidade — cada item é um documento separado
+    col.tickets            = db.collection('tickets')
+    col.notifications      = db.collection('notifications')
+    col.monthlyReports     = db.collection('monthly_reports')
+    col.config             = db.collection('config')
+    col.children           = db.collection('children')
+    col.notes              = db.collection('notes')
+    col.deadlines          = db.collection('deadlines')
+    col.kanbanTasks        = db.collection('kanban_tasks')
+    col.cameraObstructions = db.collection('camera_obstructions')
+    col.legacy             = db.collection('state')
+
+    // TTL Index: notificações expiram automaticamente após 30 dias
+    await col.notifications.createIndex(
+      { createdAt: 1 },
+      { expireAfterSeconds: 30 * 24 * 60 * 60, background: true }
+    ).catch(() => {})
+
+    mongoConnected = true
+    console.log('[store] ✅ Connected to MongoDB Atlas (collections separadas).')
     return true
   } catch (err) {
     console.error('[store] ❌ MongoDB connection failed:', err.message)
@@ -82,25 +105,111 @@ async function connectMongo() {
   }
 }
 
-async function loadFromMongo() {
-  if (!mongoCollection) return null
+// ─── Migração do documento legado app_state ──────────────────────────
+async function migrateLegacyAppState() {
+  if (!col.legacy) return false
   try {
-    const doc = await mongoCollection.findOne({ _id: 'app_state' })
-    if (doc && Array.isArray(doc.tickets)) {
-      console.log(`[store] ☁️  Loaded ${doc.tickets.length} tickets from MongoDB.`)
-      return {
-        tickets: doc.tickets,
-        notifications: doc.notifications || [],
-        monthlyReports: doc.monthlyReports || {},
-        inventory: doc.inventory || null,
-        schoolData: doc.schoolData || null,
-        professionals: Array.isArray(doc.professionals) ? doc.professionals : null,
-        cameraObstructions: Array.isArray(doc.cameraObstructions) ? doc.cameraObstructions : [],
-        children: Array.isArray(doc.children) ? doc.children : [],
-        notes: Array.isArray(doc.notes) ? doc.notes : [],
-        deadlines: Array.isArray(doc.deadlines) ? doc.deadlines : [],
-        kanbanTasks: Array.isArray(doc.kanbanTasks) ? doc.kanbanTasks : []
-      }
+    const doc = await col.legacy.findOne({ _id: 'app_state' })
+    if (!doc) return false
+
+    console.log('[store] 🔄 Migrando documento legado app_state para collections separadas...')
+
+    if (Array.isArray(doc.tickets) && doc.tickets.length > 0) {
+      const ops = doc.tickets.map(t => ({
+        replaceOne: { filter: { _mongoId: t.id }, replacement: { _mongoId: t.id, ...t }, upsert: true }
+      }))
+      await col.tickets.bulkWrite(ops)
+      console.log(`[store] 🔄 Migrados ${doc.tickets.length} tickets.`)
+    }
+
+    if (Array.isArray(doc.notifications) && doc.notifications.length > 0) {
+      const ops = doc.notifications.map(n => ({
+        replaceOne: {
+          filter: { _mongoId: String(n.id) },
+          replacement: { _mongoId: String(n.id), createdAt: new Date(n.timestamp || Date.now()), ...n },
+          upsert: true
+        }
+      }))
+      await col.notifications.bulkWrite(ops)
+    }
+
+    if (doc.monthlyReports && typeof doc.monthlyReports === 'object') {
+      const ops = Object.entries(doc.monthlyReports).map(([key, report]) => ({
+        replaceOne: { filter: { _id: key }, replacement: { _id: key, ...report }, upsert: true }
+      }))
+      if (ops.length > 0) await col.monthlyReports.bulkWrite(ops)
+    }
+
+    await col.config.replaceOne(
+      { _id: 'app_config' },
+      { _id: 'app_config', inventory: doc.inventory || null, schoolData: doc.schoolData || null, professionals: doc.professionals || null },
+      { upsert: true }
+    )
+
+    const colEntities = [
+      { c: col.children,            arr: doc.children },
+      { c: col.notes,               arr: doc.notes },
+      { c: col.deadlines,           arr: doc.deadlines },
+      { c: col.kanbanTasks,         arr: doc.kanbanTasks },
+      { c: col.cameraObstructions,  arr: doc.cameraObstructions },
+    ]
+    for (const { c, arr } of colEntities) {
+      if (!Array.isArray(arr) || arr.length === 0) continue
+      const ops = arr.map(item => ({
+        replaceOne: { filter: { _mongoId: String(item.id) }, replacement: { _mongoId: String(item.id), ...item }, upsert: true }
+      }))
+      await c.bulkWrite(ops)
+    }
+
+    await col.legacy.deleteOne({ _id: 'app_state' })
+    console.log('[store] ✅ Migração do app_state concluída. Documento legado removido.')
+    return true
+  } catch (err) {
+    console.error('[store] ❌ Erro na migração do legado:', err.message)
+    return false
+  }
+}
+
+async function loadFromMongo() {
+  if (!mongoConnected) return null
+  try {
+    const [tickets, notifications, reports, config, children, notes, deadlines, kanbanTasks, cameraObstructions] =
+      await Promise.all([
+        col.tickets.find({}).toArray(),
+        col.notifications.find({}).toArray(),
+        col.monthlyReports.find({}).toArray(),
+        col.config.findOne({ _id: 'app_config' }),
+        col.children.find({}).toArray(),
+        col.notes.find({}).toArray(),
+        col.deadlines.find({}).toArray(),
+        col.kanbanTasks.find({}).toArray(),
+        col.cameraObstructions.find({}).toArray(),
+      ])
+
+    const strip = (arr) => arr.map(({ _id, _mongoId, ...rest }) => rest)
+
+    const monthlyReports = {}
+    for (const doc of reports) {
+      const { _id, ...rest } = doc
+      if (_id) monthlyReports[_id] = rest
+    }
+
+    if (tickets.length > 0) {
+      console.log(`[store] ☁️  Carregados ${tickets.length} tickets de collections separadas.`)
+    }
+
+    return {
+      tickets: strip(tickets),
+      notifications: strip(notifications),
+      monthlyReports,
+      inventory: config?.inventory || null,
+      schoolData: config?.schoolData || null,
+      professionals: config?.professionals || null,
+      children: strip(children),
+      notes: strip(notes),
+      deadlines: strip(deadlines),
+      kanbanTasks: strip(kanbanTasks),
+      cameraObstructions: strip(cameraObstructions),
     }
   } catch (err) {
     console.warn('[store] ⚠️  Failed to load from MongoDB:', err.message)
@@ -108,41 +217,74 @@ async function loadFromMongo() {
   return null
 }
 
-async function saveToMongoNow() {
-  if (!mongoCollection) return false
-  await mongoCollection.replaceOne(
-    { _id: 'app_state' },
-    {
-      _id: 'app_state',
-      tickets: state.tickets,
-      notifications: state.notifications,
-      monthlyReports: state.monthlyReports,
-      inventory: state.inventory,
-      schoolData: state.schoolData,
-      professionals: state.professionals,
-      cameraObstructions: state.cameraObstructions,
-      children: state.children,
-      notes: state.notes,
-      deadlines: state.deadlines,
-      kanbanTasks: state.kanbanTasks,
-      _savedAt: new Date()
-    },
+// ─── Funções granulares de persistência por entidade ─────────────────
+
+function mongoUpsertDoc(collection, mongoId, doc) {
+  if (!mongoConnected || !collection) return
+  const { _id, _mongoId, ...clean } = doc
+  collection.replaceOne(
+    { _mongoId: String(mongoId) },
+    { _mongoId: String(mongoId), ...clean },
     { upsert: true }
-  )
-  return true
+  ).catch((err) => console.error('[store] ❌ mongoUpsert failed:', err.message))
 }
 
-function saveToMongo() {
-  saveToMongoNow().catch((err) => {
-    console.error('[store] ❌ MongoDB save failed:', err.message)
-  })
+function mongoDeleteDoc(collection, mongoId) {
+  if (!mongoConnected || !collection) return
+  collection.deleteOne({ _mongoId: String(mongoId) })
+    .catch((err) => console.error('[store] ❌ mongoDelete failed:', err.message))
+}
+
+function mongoPersistConfig() {
+  if (!mongoConnected || !col.config) return
+  col.config.replaceOne(
+    { _id: 'app_config' },
+    { _id: 'app_config', inventory: state.inventory, schoolData: state.schoolData, professionals: state.professionals },
+    { upsert: true }
+  ).catch((err) => console.error('[store] ❌ mongoPersistConfig failed:', err.message))
+}
+
+function mongoPersistMonthlyReport(key, report) {
+  if (!mongoConnected || !col.monthlyReports) return
+  const { _id, ...rest } = report
+  col.monthlyReports.replaceOne(
+    { _id: key },
+    { _id: key, ...rest },
+    { upsert: true }
+  ).catch((err) => console.error('[store] ❌ mongoPersistMonthlyReport failed:', err.message))
+}
+
+function mongoPersistNotification(notification) {
+  if (!mongoConnected || !col.notifications) return
+  const mongoId = String(notification.id)
+  const { _id, _mongoId, ...clean } = notification
+  col.notifications.replaceOne(
+    { _mongoId: mongoId },
+    { _mongoId: mongoId, createdAt: new Date(notification.timestamp || Date.now()), ...clean },
+    { upsert: true }
+  ).catch((err) => console.error('[store] ❌ mongoPersistNotification failed:', err.message))
+}
+
+const mongoOps = {
+  saveTicket:             (t)  => mongoUpsertDoc(col.tickets, t.id, t),
+  deleteTicket:           (id) => mongoDeleteDoc(col.tickets, id),
+  saveChild:              (c)  => mongoUpsertDoc(col.children, c.id, c),
+  deleteChild:            (id) => mongoDeleteDoc(col.children, id),
+  saveNote:               (n)  => mongoUpsertDoc(col.notes, n.id, n),
+  deleteNote:             (id) => mongoDeleteDoc(col.notes, id),
+  saveDeadline:           (d)  => mongoUpsertDoc(col.deadlines, d.id, d),
+  deleteDeadline:         (id) => mongoDeleteDoc(col.deadlines, id),
+  saveKanbanTask:         (t)  => mongoUpsertDoc(col.kanbanTasks, t.id, t),
+  deleteKanbanTask:       (id) => mongoDeleteDoc(col.kanbanTasks, id),
+  saveCameraObstruction:  (r)  => mongoUpsertDoc(col.cameraObstructions, r.id, r),
+  deleteCameraObstruction:(id) => mongoDeleteDoc(col.cameraObstructions, id),
 }
 
 // ─── Unified persistence ────────────────────────────────────────────
 function persistState() {
-  saveToMongo()
   saveToDisk()
 }
+
 
 // ─── State ──────────────────────────────────────────────────────────
 const state = {
@@ -267,6 +409,11 @@ function syncUsersFromProfessionals() {
 export async function initStore() {
   const connected = await connectMongo()
 
+  if (connected) {
+    // Migra dados do documento legado app_state (executa uma vez e auto-remove)
+    await migrateLegacyAppState()
+  }
+
   // Priority: MongoDB → JSON file → mock data
   const mongoData = connected ? await loadFromMongo() : null
   const diskData = !mongoData ? loadFromDisk() : null
@@ -299,10 +446,18 @@ export async function initStore() {
     if (Array.isArray(diskData.notes)) state.notes = diskData.notes
     if (Array.isArray(diskData.deadlines)) state.deadlines = diskData.deadlines
     if (Array.isArray(diskData.kanbanTasks)) state.kanbanTasks = diskData.kanbanTasks
-    // Seed MongoDB if it's empty but connected
+    // Seed MongoDB com dados do disco se estiver vazio mas conectado
     if (connected) {
-      console.log('[store] 🔄 Syncing disk data to MongoDB...')
-      saveToMongo()
+      console.log('[store] 🔄 Syncing disk data to MongoDB (collections)...')
+      for (const ticket of state.tickets) mongoOps.saveTicket(ticket)
+      for (const child of state.children) mongoOps.saveChild(child)
+      for (const note of state.notes) mongoOps.saveNote(note)
+      for (const deadline of state.deadlines) mongoOps.saveDeadline(deadline)
+      for (const task of state.kanbanTasks) mongoOps.saveKanbanTask(task)
+      for (const obs of state.cameraObstructions) mongoOps.saveCameraObstruction(obs)
+      for (const notification of state.notifications) mongoPersistNotification(notification)
+      for (const [key, report] of Object.entries(state.monthlyReports)) mongoPersistMonthlyReport(key, report)
+      mongoPersistConfig()
     }
   } else {
     console.log('[store] 🆕 First run — initializing empty Kanban/Notas/Prazos.')
@@ -322,6 +477,7 @@ export async function initStore() {
 
   syncUsersFromProfessionals()
   persistState()
+  mongoPersistConfig()
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -432,6 +588,8 @@ export const memoryStore = {
     state.monthlyReports[monthKey].ticketCount = (state.monthlyReports[monthKey].ticketCount || 0) + 1
 
     persistState()
+    mongoOps.saveTicket(ticket)
+    mongoPersistMonthlyReport(monthKey, state.monthlyReports[monthKey])
 
     memoryStore.pushNotification({
       title: '🆕 Novo Chamado',
@@ -456,6 +614,7 @@ export const memoryStore = {
       addHistory(ticket, 'Atualizado', by)
     }
     persistState()
+    mongoOps.saveTicket(ticket)
     return ticket
   },
 
@@ -476,6 +635,7 @@ export const memoryStore = {
     }
 
     persistState()
+    mongoOps.saveTicket(ticket)
 
     if (status === 'resolvido') {
       // Send notification to the ticket creator, not to the admin who resolved it.
@@ -503,6 +663,7 @@ export const memoryStore = {
     ))
 
     persistState()
+    mongoOps.saveTicket(ticket)
     return ticket
   },
 
@@ -515,6 +676,7 @@ export const memoryStore = {
     ticket.checklist = [...ticket.checklist, item]
 
     persistState()
+    mongoOps.saveTicket(ticket)
     return ticket
   },
 
@@ -524,6 +686,7 @@ export const memoryStore = {
 
     ticket.checklist = (ticket.checklist || []).filter((item) => item.id !== itemId)
     persistState()
+    mongoOps.saveTicket(ticket)
     return ticket
   },
 
@@ -532,6 +695,7 @@ export const memoryStore = {
     if (index === -1) return false
     state.tickets.splice(index, 1)
     persistState()
+    mongoOps.deleteTicket(id)
     return true
   },
 
@@ -573,6 +737,7 @@ export const memoryStore = {
     state.notifications.push(entry)
     state.notifications = state.notifications.slice(-500)
     persistState()
+    mongoPersistNotification(entry)
     return entry
   },
 
@@ -642,6 +807,7 @@ export const memoryStore = {
 
     state.monthlyReports[key].observations.push(observation)
     persistState()
+    mongoPersistMonthlyReport(key, state.monthlyReports[key])
     return memoryStore.getMonthlyReport(month, year)
   },
 
@@ -655,6 +821,7 @@ export const memoryStore = {
 
     report.observations.splice(idx, 1)
     persistState()
+    mongoPersistMonthlyReport(key, report)
     return memoryStore.getMonthlyReport(month, year)
   },
 
@@ -692,6 +859,7 @@ export const memoryStore = {
     obs.assignee = normalizedAssignee
     obs.editedAt = new Date().toISOString()
     persistState()
+    mongoPersistMonthlyReport(key, report)
     return memoryStore.getMonthlyReport(month, year)
   },
 
@@ -705,6 +873,7 @@ export const memoryStore = {
 
     obs.pinned = Boolean(pinned)
     persistState()
+    mongoPersistMonthlyReport(key, report)
     return memoryStore.getMonthlyReport(month, year)
   },
 
@@ -713,6 +882,7 @@ export const memoryStore = {
     if (!state.inventory) {
       state.inventory = structuredClone(defaultItems)
       persistState()
+      mongoPersistConfig()
     } else {
       // Merge: add any new default items not yet in state
       const existingIds = new Set(state.inventory.map(i => i.id))
@@ -759,6 +929,7 @@ export const memoryStore = {
       quantity: safeQuantity
     })
     persistState()
+    mongoPersistConfig()
     return state.inventory
   },
 
@@ -768,6 +939,7 @@ export const memoryStore = {
     if (!item) return null
     item.quantity = Math.max(0, Math.floor(quantity))
     persistState()
+    mongoPersistConfig()
     return state.inventory
   },
 
@@ -781,6 +953,7 @@ export const memoryStore = {
 
     item.name = cleanName
     persistState()
+    mongoPersistConfig()
     return state.inventory
   },
 
@@ -791,6 +964,7 @@ export const memoryStore = {
 
     state.inventory.splice(index, 1)
     persistState()
+    mongoPersistConfig()
     return state.inventory
   },
 
@@ -800,6 +974,7 @@ export const memoryStore = {
       // Seed with the default configuration on first access
       state.schoolData = DEFAULT_SCHOOL_DATA
       persistState()
+      mongoPersistConfig()
     }
     return state.schoolData
   },
@@ -807,6 +982,7 @@ export const memoryStore = {
   setSchoolData(newData) {
     state.schoolData = newData
     persistState()
+    mongoPersistConfig()
     return state.schoolData
   },
 
@@ -819,6 +995,7 @@ export const memoryStore = {
     if (!Array.isArray(state.children)) state.children = []
     state.children.unshift(child)
     persistState()
+    mongoOps.saveChild(child)
     return child
   },
 
@@ -827,6 +1004,7 @@ export const memoryStore = {
     if (index < 0) return null
     state.children[index] = { ...state.children[index], ...updates, updatedAt: new Date().toISOString() }
     persistState()
+    mongoOps.saveChild(state.children[index])
     return state.children[index]
   },
 
@@ -834,6 +1012,7 @@ export const memoryStore = {
     const before = (state.children || []).length
     state.children = (state.children || []).filter((child) => child.id !== id)
     persistState()
+    mongoOps.deleteChild(id)
     return state.children.length < before
   },
 
@@ -843,6 +1022,7 @@ export const memoryStore = {
       hydrateProfessionalsFromUsers()
       syncUsersFromProfessionals()
       persistState()
+      mongoPersistConfig()
     }
     return state.professionals
   },
@@ -852,6 +1032,7 @@ export const memoryStore = {
     hydrateProfessionalsFromUsers()
     syncUsersFromProfessionals()
     persistState()
+    mongoPersistConfig()
     return state.professionals
   },
 
@@ -898,12 +1079,14 @@ export const memoryStore = {
     if (!Array.isArray(state.cameraObstructions)) state.cameraObstructions = []
     state.cameraObstructions.push(record)
     persistState()
+    mongoOps.saveCameraObstruction(record)
     return record
   },
 
   deleteCameraObstruction(id) {
     state.cameraObstructions = (state.cameraObstructions || []).filter(r => r.id !== id)
     persistState()
+    mongoOps.deleteCameraObstruction(id)
   },
 
   // ─── Notes (Anotações) ────────────────────────────────────────────
@@ -915,6 +1098,7 @@ export const memoryStore = {
     if (!Array.isArray(state.notes)) state.notes = []
     state.notes.unshift(note)
     persistState()
+    mongoOps.saveNote(note)
     return note
   },
 
@@ -923,19 +1107,21 @@ export const memoryStore = {
     if (idx === -1) return null
     state.notes[idx] = { ...state.notes[idx], ...updates }
     persistState()
+    mongoOps.saveNote(state.notes[idx])
     return state.notes[idx]
   },
 
   deleteNote(id) {
     state.notes = (state.notes || []).filter(n => n.id !== id)
     persistState()
+    mongoOps.deleteNote(id)
   },
 
   // ─── Deadlines (Datas & Prazos) ───────────────────────────────────
   getDeadlines() { return state.deadlines || [] },
-  addDeadline(d) { if (!Array.isArray(state.deadlines)) state.deadlines = []; state.deadlines.unshift(d); persistState(); return d },
-  updateDeadline(id, u) { const i = (state.deadlines||[]).findIndex(d=>d.id===id); if(i===-1) return null; state.deadlines[i]={...state.deadlines[i],...u}; persistState(); return state.deadlines[i] },
-  deleteDeadline(id) { state.deadlines=(state.deadlines||[]).filter(d=>d.id!==id); persistState() },
+  addDeadline(d) { if (!Array.isArray(state.deadlines)) state.deadlines = []; state.deadlines.unshift(d); persistState(); mongoOps.saveDeadline(d); return d },
+  updateDeadline(id, u) { const i = (state.deadlines||[]).findIndex(d=>d.id===id); if(i===-1) return null; state.deadlines[i]={...state.deadlines[i],...u}; persistState(); mongoOps.saveDeadline(state.deadlines[i]); return state.deadlines[i] },
+  deleteDeadline(id) { state.deadlines=(state.deadlines||[]).filter(d=>d.id!==id); persistState(); mongoOps.deleteDeadline(id) },
 
   // ─── Pedagogical Kanban ───────────────────────────────────────────
   getKanbanTasks() {
@@ -945,6 +1131,7 @@ export const memoryStore = {
     if (!Array.isArray(state.kanbanTasks)) state.kanbanTasks = []
     state.kanbanTasks.unshift(t)
     persistState()
+    mongoOps.saveKanbanTask(t)
     return t
   },
   updateKanbanTask(id, u) {
@@ -952,19 +1139,21 @@ export const memoryStore = {
     if (i === -1) return null
     state.kanbanTasks[i] = { ...state.kanbanTasks[i], ...u }
     persistState()
+    mongoOps.saveKanbanTask(state.kanbanTasks[i])
     return state.kanbanTasks[i]
   },
   deleteKanbanTask(id) {
     state.kanbanTasks = (state.kanbanTasks || []).filter(t => t.id !== id)
     persistState()
+    mongoOps.deleteKanbanTask(id)
   },
 
   hasMongoPersistence() {
-    return Boolean(mongoCollection)
+    return mongoConnected
   },
 
   async refreshCollaborativeData() {
-    if (mongoCollection) {
+    if (mongoConnected) {
       const mongoData = await loadFromMongo()
       if (mongoData) {
         syncCollaborationCollections(mongoData)
@@ -983,9 +1172,6 @@ export const memoryStore = {
 
   async ensureDurableCollaborativeData() {
     try {
-      if (mongoCollection) {
-        await saveToMongoNow()
-      }
       saveToDisk()
       return true
     } catch (err) {

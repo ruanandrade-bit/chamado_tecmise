@@ -2,6 +2,7 @@ import 'dotenv/config'
 import cors from 'cors'
 import express from 'express'
 import morgan from 'morgan'
+import rateLimit from 'express-rate-limit'
 import authRoutes from './routes/auth.js'
 import healthRoutes from './routes/health.js'
 import notificationsRoutes from './routes/notifications.js'
@@ -60,64 +61,6 @@ function isOriginAllowed(origin) {
   return effectiveAllowedOrigins.some((rule) => matchesOriginRule(origin, rule))
 }
 
-function getClientIp(req) {
-  const forwarded = String(req.headers['x-forwarded-for'] || '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean)[0]
-
-  return forwarded || req.ip || 'unknown'
-}
-
-function createRateLimiter({
-  windowMs,
-  max,
-  keyPrefix,
-  methods = null,
-  ignorePaths = null,
-  resolveSubject = null
-}) {
-  const hits = new Map()
-  let requestCounter = 0
-
-  return (req, res, next) => {
-    if (methods && !methods.has(req.method)) return next()
-    if (ignorePaths && ignorePaths.has(req.path)) return next()
-
-    const now = Date.now()
-    const clientIp = getClientIp(req)
-    const subject = typeof resolveSubject === 'function'
-      ? String(resolveSubject(req) || '').trim().toLowerCase()
-      : ''
-    const key = subject
-      ? `${keyPrefix}:${clientIp}:${subject}`
-      : `${keyPrefix}:${clientIp}`
-    const entry = hits.get(key)
-
-    if (!entry || now - entry.startedAt >= windowMs) {
-      hits.set(key, { count: 1, startedAt: now })
-    } else if (entry.count >= max) {
-      const retryAfterSeconds = Math.ceil((windowMs - (now - entry.startedAt)) / 1000)
-      res.setHeader('Retry-After', String(retryAfterSeconds))
-      return res.status(429).json({
-        message: 'Muitas requisições. Tente novamente em instantes.'
-      })
-    } else {
-      entry.count += 1
-    }
-
-    requestCounter += 1
-    if (requestCounter % 250 === 0) {
-      for (const [entryKey, value] of hits.entries()) {
-        if (now - value.startedAt >= windowMs) {
-          hits.delete(entryKey)
-        }
-      }
-    }
-
-    next()
-  }
-}
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -143,19 +86,28 @@ app.use((_req, res, next) => {
 
 app.use(express.json({ limit: '5mb' }))
 app.use(morgan('dev'))
-app.use('/api/auth/login', createRateLimiter({
+// ─── Rate Limiters ────────────────────────────────────────────────────────────
+// Login: 10 tentativas por IP em 10 minutos (proteção contra força bruta)
+const loginLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
-  max: 10,
-  keyPrefix: 'login',
-  resolveSubject: (req) => req.body?.email
-}))
-app.use('/api', createRateLimiter({
+  limit: 10,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  message: { message: 'Muitas tentativas de login. Tente novamente em instantes.' }
+})
+
+// API geral: 180 requisições de escrita por IP por minuto (proteção contra DoS)
+const apiWriteLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 180,
-  keyPrefix: 'write',
-  methods: new Set(['POST', 'PUT', 'PATCH', 'DELETE']),
-  ignorePaths: new Set(['/auth/login'])
-}))
+  limit: 180,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  skip: (req) => !['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method),
+  message: { message: 'Muitas requisições. Tente novamente em instantes.' }
+})
+
+app.use('/api/auth/login', loginLimiter)
+app.use('/api', apiWriteLimiter)
 
 app.get('/', (_req, res) => {
   res.json({

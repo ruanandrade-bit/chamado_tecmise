@@ -1,51 +1,32 @@
 import jwt from 'jsonwebtoken'
-import { createHash, randomBytes } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 import { USERS } from '../data/mockData.js'
 
 const configuredJwtSecret = String(process.env.JWT_SECRET || '').trim()
 const MIN_JWT_SECRET_LENGTH = 32
 const isStrongConfiguredSecret = configuredJwtSecret.length >= MIN_JWT_SECRET_LENGTH
 
-function deriveStableRuntimeSecret() {
-  const entropySources = [
-    process.env.MONGODB_URI,
-    process.env.RENDER_SERVICE_ID,
-    process.env.RENDER_GIT_REPO_SLUG,
-    process.env.RENDER_EXTERNAL_HOSTNAME,
-  ].filter((value) => String(value || '').trim().length > 0)
-
-  if (entropySources.length === 0) return null
-
-  return createHash('sha256')
-    .update(entropySources.join('|'))
-    .digest('hex')
-}
-
 let JWT_SECRET = configuredJwtSecret
 let jwtSecretSource = 'env'
 let isPersistentSecret = true
 
 if (!isStrongConfiguredSecret) {
-  const derivedSecret = deriveStableRuntimeSecret()
-  if (derivedSecret && derivedSecret.length >= MIN_JWT_SECRET_LENGTH) {
-    JWT_SECRET = derivedSecret
-    jwtSecretSource = 'derived'
-    isPersistentSecret = true
-    console.log('[auth] JWT_SECRET não definido; usando segredo determinístico estável para esta infraestrutura.')
-  } else {
-    JWT_SECRET = randomBytes(48).toString('hex')
-    jwtSecretSource = 'ephemeral'
-    isPersistentSecret = false
-    console.warn(
-      `[auth] ⚠️ JWT_SECRET ausente ou fraco (< ${MIN_JWT_SECRET_LENGTH} chars). ` +
-      'Sem fontes estáveis para derivação segura; usando segredo efêmero em runtime.'
-    )
-  }
+  // Segredo ausente ou fraco: gera um valor criptograficamente aleatório em runtime.
+  // ATENÇÃO: todos os tokens existentes serão invalidados se o servidor reiniciar.
+  // Defina JWT_SECRET (>= 32 chars) no .env para persistência entre reinicializações.
+  JWT_SECRET = randomBytes(48).toString('hex')
+  jwtSecretSource = 'ephemeral'
+  isPersistentSecret = false
+  console.warn(
+    `[auth] ⚠️ JWT_SECRET ausente ou fraco (< ${MIN_JWT_SECRET_LENGTH} chars). ` +
+    'Usando segredo efêmero gerado em runtime. Todos os usuários serão deslogados ao reiniciar o servidor. ' +
+    'Defina JWT_SECRET no .env para produção.'
+  )
 }
 
 export function getJwtSecretHealth() {
   return {
-    configured: isStrongConfiguredSecret || jwtSecretSource === 'derived',
+    configured: isStrongConfiguredSecret,
     persistent: isPersistentSecret,
     source: jwtSecretSource,
     minLength: MIN_JWT_SECRET_LENGTH,
