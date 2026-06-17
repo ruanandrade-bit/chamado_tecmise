@@ -1,5 +1,6 @@
 import { MongoClient } from 'mongodb'
-import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs'
+import { readFileSync, existsSync, mkdirSync } from 'node:fs'
+import { writeFile } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { USERS, STATUSES, TICKETS } from '../data/mockData.js'
@@ -38,26 +39,35 @@ function loadFromDisk() {
   return null
 }
 
-function saveToDisk() {
-  try {
-    if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true })
-    writeFileSync(STORE_PATH, JSON.stringify({
-      tickets: state.tickets,
-      notifications: state.notifications,
-      monthlyReports: state.monthlyReports,
-      inventory: state.inventory,
-      schoolData: state.schoolData,
-      professionals: state.professionals,
-      cameraObstructions: state.cameraObstructions,
-      children: state.children,
-      notes: state.notes,
-      deadlines: state.deadlines,
-      kanbanTasks: state.kanbanTasks,
-      _savedAt: new Date().toISOString()
-    }, null, 2))
-  } catch (err) {
-    console.error('[store] ❌ Failed to save to disk:', err.message)
-  }
+// Debounce: agrupa escritas rápidas em uma única operação async
+// (evita bloquear o Event Loop com writeFileSync)
+let _diskSaveTimer = null
+
+function scheduleDiskSave() {
+  if (_diskSaveTimer) clearTimeout(_diskSaveTimer)
+  _diskSaveTimer = setTimeout(async () => {
+    _diskSaveTimer = null
+    try {
+      if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true })
+      const payload = JSON.stringify({
+        tickets: state.tickets,
+        notifications: state.notifications,
+        monthlyReports: state.monthlyReports,
+        inventory: state.inventory,
+        schoolData: state.schoolData,
+        professionals: state.professionals,
+        cameraObstructions: state.cameraObstructions,
+        children: state.children,
+        notes: state.notes,
+        deadlines: state.deadlines,
+        kanbanTasks: state.kanbanTasks,
+        _savedAt: new Date().toISOString()
+      }, null, 2)
+      await writeFile(STORE_PATH, payload, 'utf-8')
+    } catch (err) {
+      console.error('[store] ❌ Failed to save to disk:', err.message)
+    }
+  }, 2000)
 }
 
 // ─── MongoDB persistence (production) ───────────────────────────────
@@ -282,7 +292,7 @@ const mongoOps = {
 
 // ─── Unified persistence ────────────────────────────────────────────
 function persistState() {
-  saveToDisk()
+  scheduleDiskSave()
 }
 
 
@@ -476,18 +486,31 @@ export async function initStore() {
   }
 
   syncUsersFromProfessionals()
+  rebuildTicketsMap() // constrói o index após todos os dados estarem carregados
   persistState()
   mongoPersistConfig()
 }
 
+// ─── In-memory index: O(1) lookups por ID ───────────────────────────
+// Espelho do state.tickets em Map — busca/update/delete sem varrer o array
+const ticketsMap = new Map()
+let ticketCounter = 0
+
+function rebuildTicketsMap() {
+  ticketsMap.clear()
+  let max = 0
+  for (const t of state.tickets) {
+    ticketsMap.set(t.id, t)
+    const n = Number.parseInt(t.id.split('-')[1], 10)
+    if (Number.isFinite(n) && n > max) max = n
+  }
+  ticketCounter = max
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────
 function nextTicketId() {
-  const maxId = state.tickets.reduce((max, ticket) => {
-    const numeric = Number.parseInt(ticket.id.split('-')[1], 10)
-    return Number.isFinite(numeric) ? Math.max(max, numeric) : max
-  }, 0)
-
-  return `S4S-${String(maxId + 1).padStart(3, '0')}`
+  // O(1): incrementa um contador em vez de varrer todo o array
+  return `S4S-${String(++ticketCounter).padStart(3, '0')}`
 }
 
 function addHistory(ticket, action, by) {
@@ -552,7 +575,8 @@ export const memoryStore = {
   },
 
   getTicketById(id) {
-    return state.tickets.find((ticket) => ticket.id === id) || null
+    // O(1) via Map — independente do volume de tickets
+    return ticketsMap.get(id) || null
   },
 
   createTicket(payload, currentUser) {
@@ -578,6 +602,7 @@ export const memoryStore = {
     }
 
     state.tickets.unshift(ticket)
+    ticketsMap.set(ticket.id, ticket) // mantém o index sincronizado
 
     // Increment the persistent monthly ticket counter
     const now = new Date()
@@ -694,6 +719,7 @@ export const memoryStore = {
     const index = state.tickets.findIndex((ticket) => ticket.id === id)
     if (index === -1) return false
     state.tickets.splice(index, 1)
+    ticketsMap.delete(id) // mantém o index sincronizado
     persistState()
     mongoOps.deleteTicket(id)
     return true

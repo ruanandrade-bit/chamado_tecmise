@@ -61,14 +61,50 @@ router.put('/:id', (req, res) => {
   const { title, description, category, noteType, isPinned, reminderDate, reminderTime, reminderStatus } = req.body
   const updates = {}
 
-  if (title !== undefined) updates.title = String(title).trim()
-  if (description !== undefined) updates.description = String(description).trim()
-  if (category !== undefined) updates.category = category
-  if (noteType !== undefined) updates.noteType = noteType
-  if (isPinned !== undefined) updates.isPinned = Boolean(isPinned)
-  if (reminderDate !== undefined) updates.reminderDate = reminderDate
-  if (reminderTime !== undefined) updates.reminderTime = reminderTime
-  if (reminderStatus !== undefined) updates.reminderStatus = reminderStatus
+  const VALID_CATEGORIES       = new Set(['pedagoga', 'psicologa'])
+  const VALID_NOTE_TYPES       = new Set(['note', 'reminder'])
+  const VALID_REMINDER_STATUSES = new Set(['agendado', 'enviado', 'cancelado'])
+  const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/
+  const TIME_REGEX     = /^([01]\d|2[0-3]):[0-5]\d$/
+
+  if (title !== undefined) {
+    const v = String(title).trim()
+    if (!v || v.length > 200) return res.status(400).json({ message: 'Título deve ter entre 1 e 200 caracteres.' })
+    updates.title = v
+  }
+  if (description !== undefined) {
+    const v = String(description).trim()
+    if (v.length > 2000) return res.status(400).json({ message: 'Descrição não pode ultrapassar 2000 caracteres.' })
+    updates.description = v
+  }
+  if (category !== undefined) {
+    if (!VALID_CATEGORIES.has(category)) return res.status(400).json({ message: `Categoria inválida. Valores aceitos: ${[...VALID_CATEGORIES].join(', ')}.` })
+    updates.category = category
+  }
+  if (noteType !== undefined) {
+    if (!VALID_NOTE_TYPES.has(noteType)) return res.status(400).json({ message: `noteType inválido. Valores aceitos: ${[...VALID_NOTE_TYPES].join(', ')}.` })
+    updates.noteType = noteType
+  }
+  if (isPinned !== undefined) {
+    if (typeof isPinned !== 'boolean') return res.status(400).json({ message: 'isPinned deve ser boolean.' })
+    updates.isPinned = isPinned
+  }
+  if (reminderDate !== undefined) {
+    if (reminderDate !== null && !ISO_DATE_REGEX.test(String(reminderDate))) {
+      return res.status(400).json({ message: 'reminderDate inválido. Use o formato yyyy-mm-dd ou null.' })
+    }
+    updates.reminderDate = reminderDate
+  }
+  if (reminderTime !== undefined) {
+    if (reminderTime !== null && !TIME_REGEX.test(String(reminderTime))) {
+      return res.status(400).json({ message: 'reminderTime inválido. Use o formato HH:MM ou null.' })
+    }
+    updates.reminderTime = reminderTime
+  }
+  if (reminderStatus !== undefined) {
+    if (!VALID_REMINDER_STATUSES.has(reminderStatus)) return res.status(400).json({ message: `reminderStatus inválido. Valores aceitos: ${[...VALID_REMINDER_STATUSES].join(', ')}.` })
+    updates.reminderStatus = reminderStatus
+  }
 
   const updated = memoryStore.updateNote(req.params.id, updates)
   if (!updated) {

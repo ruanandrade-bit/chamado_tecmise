@@ -43,6 +43,67 @@ function validateDueDate(date) {
   return { ok: true, value: dueDate }
 }
 
+// ─── Campos que o cliente pode alterar via PUT ────────────────────────────────
+// Qualquer chave fora desta lista é silenciosamente ignorada (Mass Assignment protection)
+const KANBAN_VALID_STATUSES  = new Set(['todo', 'in_progress', 'done'])
+const KANBAN_VALID_PRIORITIES = new Set(['low', 'medium', 'high'])
+
+function buildKanbanUpdates(body) {
+  const updates = {}
+
+  // title — obrigatório no POST, opcional no PUT; máx 200 chars
+  if ('title' in body) {
+    const v = String(body.title ?? '').trim()
+    if (!v || v.length > 200) throw new Error('Título deve ter entre 1 e 200 caracteres.')
+    updates.title = v
+  }
+
+  // description — opcional; máx 2000 chars
+  if ('description' in body) {
+    const v = String(body.description ?? '').trim()
+    if (v.length > 2000) throw new Error('Descrição não pode ultrapassar 2000 caracteres.')
+    updates.description = v
+  }
+
+  // status — enum fechado
+  if ('status' in body) {
+    const v = String(body.status ?? '').trim()
+    if (!KANBAN_VALID_STATUSES.has(v)) throw new Error(`Status inválido. Valores aceitos: ${[...KANBAN_VALID_STATUSES].join(', ')}.`)
+    updates.status = v
+  }
+
+  // priority — enum fechado
+  if ('priority' in body) {
+    const v = String(body.priority ?? '').trim()
+    if (!KANBAN_VALID_PRIORITIES.has(v)) throw new Error(`Prioridade inválida. Valores aceitos: ${[...KANBAN_VALID_PRIORITIES].join(', ')}.`)
+    updates.priority = v
+  }
+
+  // tags — array de strings, máx 10 itens de 50 chars cada
+  if ('tags' in body) {
+    if (!Array.isArray(body.tags)) throw new Error('tags deve ser um array.')
+    if (body.tags.length > 10) throw new Error('Máximo de 10 tags por tarefa.')
+    updates.tags = body.tags.map((t, i) => {
+      const s = String(t ?? '').trim()
+      if (s.length > 50) throw new Error(`Tag ${i + 1} excede 50 caracteres.`)
+      return s
+    })
+  }
+
+  // isArchived — boolean estrito
+  if ('isArchived' in body) {
+    if (typeof body.isArchived !== 'boolean') throw new Error('isArchived deve ser boolean.')
+    updates.isArchived = body.isArchived
+  }
+
+  // date — tratado separadamente pelo validateDueDate, mas aceito aqui
+  if ('date' in body) {
+    updates.date = body.date // será validado logo abaixo pelo validateDueDate
+  }
+
+  return updates
+}
+
 // GET — return instantly from memory, trigger sync in the background
 router.get('/', (_req, res) => {
   res.json(memoryStore.getKanbanTasks())
@@ -82,10 +143,14 @@ router.post('/', (req, res) => {
   res.status(201).json(created)
 })
 
-// PUT — update task, persist in background (fast like tickets)
+// PUT — update task com allowlist de campos (protege contra Mass Assignment)
 router.put('/:id', (req, res) => {
-  const updates = { ...req.body }
-  delete updates.responsible
+  let updates
+  try {
+    updates = buildKanbanUpdates(req.body)
+  } catch (err) {
+    return res.status(400).json({ message: err.message })
+  }
 
   if ('date' in updates) {
     const dateValidation = validateDueDate(updates.date)
