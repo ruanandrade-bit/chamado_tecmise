@@ -78,14 +78,18 @@ app.use((_req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY')
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
   res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()')
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'none'; frame-ancestors 'none'"
+  )
   if (IS_PRODUCTION) {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
   }
   next()
 })
 
-app.use(express.json({ limit: '5mb' }))
-app.use(morgan('dev'))
+app.use(express.json({ limit: '1mb' }))
+app.use(morgan(IS_PRODUCTION ? 'combined' : 'dev'))
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
 // Login: 10 tentativas por IP em 10 minutos (proteção contra força bruta)
 const loginLimiter = rateLimit({

@@ -96,8 +96,8 @@ router.put('/', authRequired, adminOnly, (req, res) => {
         let passwordHash = String(existing?.passwordHash || item?.passwordHash || foundByName?.user?.passwordHash || USERS[email]?.passwordHash || '')
 
         if (rawPassword) {
-          if (rawPassword.length < 6) {
-            throw new Error(`Senha muito curta para ${name}. Use pelo menos 6 caracteres.`)
+          if (rawPassword.length < 8) {
+            throw new Error(`Senha muito curta para ${name}. Use pelo menos 8 caracteres.`)
           }
           passwordHash = hashPassword(rawPassword)
         }
