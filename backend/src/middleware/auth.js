@@ -49,8 +49,10 @@ export function signToken(user) {
 }
 
 export function authRequired(req, res, next) {
+  const cookieToken = req.cookies?.s4s_auth
   const header = req.headers.authorization || ''
-  const [, token] = header.split(' ')
+  const [, bearerToken] = header.split(' ')
+  const token = cookieToken || bearerToken
 
   if (!token) {
     return res.status(401).json({ message: 'Token ausente.' })

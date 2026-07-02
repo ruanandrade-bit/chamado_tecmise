@@ -151,8 +151,8 @@ export default function Header({ onMenuClick }) {
   const { user, logout } = useAuthStore()
   const [showLogoutModal, setShowLogoutModal] = useState(false)
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     setShowLogoutModal(false)
   }
 

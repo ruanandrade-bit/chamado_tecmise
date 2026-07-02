@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import express from 'express'
 import morgan from 'morgan'
@@ -70,8 +71,11 @@ app.use(cors({
     const error = new Error('Origin não permitida no CORS.')
     error.status = 403
     return callback(error)
-  }
+  },
+  credentials: true
 }))
+
+app.use(cookieParser())
 
 app.use((_req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff')

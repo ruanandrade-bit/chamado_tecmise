@@ -1,21 +1,13 @@
 const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:4000/api').replace(/\/$/, '')
 
-function getAuthToken() {
-  return localStorage.getItem('s4s_auth_token')
-}
-
 async function request(path, options = {}) {
   const headers = new Headers(options.headers || {})
   headers.set('Content-Type', 'application/json')
 
-  const token = getAuthToken()
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`)
-  }
-
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
-    headers
+    headers,
+    credentials: 'include'
   })
 
   const contentType = response.headers.get('content-type') || ''

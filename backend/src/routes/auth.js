@@ -5,6 +5,15 @@ import { memoryStore } from '../services/memoryStore.js'
 import { verifyPassword } from '../utils/password.js'
 
 const router = Router()
+const IS_PRODUCTION = process.env.NODE_ENV === 'production'
+
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: IS_PRODUCTION,
+  sameSite: IS_PRODUCTION ? 'none' : 'lax',
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+  path: '/'
+}
 
 function buildFreshUser(email) {
   const normalizedEmail = String(email || '').trim().toLowerCase()
@@ -50,7 +59,8 @@ router.post('/login', (req, res) => {
   const safeUser = buildFreshUser(normalizedEmail)
   const token = signToken(safeUser)
 
-  return res.json({ token, user: safeUser })
+  res.cookie('s4s_auth', token, COOKIE_OPTIONS)
+  return res.json({ user: safeUser })
 })
 
 router.get('/me', authRequired, (req, res) => {
@@ -73,6 +83,11 @@ router.get('/me', authRequired, (req, res) => {
   const user = buildFreshUser(email)
   if (!user) return res.status(401).json({ message: 'Usuário inválido.' })
   return res.json({ user })
+})
+
+router.post('/logout', (_req, res) => {
+  res.clearCookie('s4s_auth', { ...COOKIE_OPTIONS, maxAge: 0 })
+  return res.json({ message: 'Sessão encerrada.' })
 })
 
 router.get('/users', authRequired, adminOnly, (_req, res) => {
