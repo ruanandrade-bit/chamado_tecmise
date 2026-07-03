@@ -29,11 +29,17 @@ router.post('/monthly', authRequired, adminOnly, (req, res) => {
   const school = String(req.body?.school || '').trim()
   const assignee = String(req.body?.assignee || '').trim()
 
-  if (!validMonthYear(month, year) || !observation?.trim()) {
+  const cleanObservation = String(observation || '').trim()
+  if (!validMonthYear(month, year) || !cleanObservation) {
     return res.status(400).json({ message: 'Parâmetros month, year e observation são obrigatórios.' })
   }
+  if (cleanObservation.length > 2000) {
+    return res.status(400).json({ message: 'Observação não pode ultrapassar 2000 caracteres.' })
+  }
+  if (school.length > 200)  return res.status(400).json({ message: 'school não pode ultrapassar 200 caracteres.' })
+  if (assignee.length > 120) return res.status(400).json({ message: 'assignee não pode ultrapassar 120 caracteres.' })
 
-  const report = memoryStore.addMonthlyObservation(month, year, observation.trim(), req.user, {
+  const report = memoryStore.addMonthlyObservation(month, year, cleanObservation, req.user, {
     school,
     assignee
   })
@@ -66,12 +72,16 @@ router.put('/monthly/:month/:year/:observationId', authRequired, adminOnly, (req
   const school = String(req.body?.school || '').trim()
   const assignee = String(req.body?.assignee || '').trim()
 
-  if (!validMonthYear(month, year) || !observationId || !text?.trim()) {
+  const cleanText = String(text || '').trim()
+  if (!validMonthYear(month, year) || !observationId || !cleanText) {
     return res.status(400).json({ message: 'Parâmetros inválidos.' })
   }
+  if (cleanText.length > 2000)  return res.status(400).json({ message: 'Texto não pode ultrapassar 2000 caracteres.' })
+  if (school.length   > 200)    return res.status(400).json({ message: 'school não pode ultrapassar 200 caracteres.' })
+  if (assignee.length > 120)    return res.status(400).json({ message: 'assignee não pode ultrapassar 120 caracteres.' })
 
   const report = memoryStore.editMonthlyObservation(month, year, observationId, {
-    text: text.trim(),
+    text: cleanText,
     school,
     assignee
   })

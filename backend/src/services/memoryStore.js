@@ -4,6 +4,7 @@ import { writeFile } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { USERS, STATUSES, TICKETS } from '../data/mockData.js'
+import { hashPassword } from '../utils/password.js'
 
 // ─── File persistence (fallback for local dev) ──────────────────────
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -486,6 +487,32 @@ export async function initStore() {
   }
 
   syncUsersFromProfessionals()
+
+  // Primeiro deploy: se o admin ainda não tem hash (MongoDB vazio),
+  // usa INITIAL_ADMIN_PASSWORD para criar a senha inicial do admin.
+  const adminEmail = 'ruan@s4s.com'
+  const initialPass = String(process.env.INITIAL_ADMIN_PASSWORD || '').trim()
+  if (initialPass && !USERS[adminEmail]?.passwordHash) {
+    if (initialPass.length < 8) {
+      console.warn('[store] ⚠️  INITIAL_ADMIN_PASSWORD tem menos de 8 caracteres — ignorado.')
+    } else {
+      USERS[adminEmail].passwordHash = hashPassword(initialPass)
+      const adminProf = state.professionals.find(p => p.email === adminEmail)
+      if (adminProf) adminProf.passwordHash = USERS[adminEmail].passwordHash
+      console.log('[store] 🔑 Admin password seeded from INITIAL_ADMIN_PASSWORD.')
+      persistState()
+      mongoPersistConfig()
+    }
+  }
+
+  if (!USERS[adminEmail]?.passwordHash) {
+    console.warn(
+      '[store] ⚠️  Nenhum hash de senha encontrado para o admin. ' +
+      'Defina INITIAL_ADMIN_PASSWORD no .env para primeiro deploy, ' +
+      'ou verifique a conexão com o MongoDB.'
+    )
+  }
+
   rebuildTicketsMap() // constrói o index após todos os dados estarem carregados
   persistState()
   mongoPersistConfig()
@@ -1257,6 +1284,7 @@ const DEFAULT_SCHOOL_DATA = {
   },
 }
 
+// Profissionais iniciais: sem passwordHash — hashes vêm do MongoDB ou de INITIAL_ADMIN_PASSWORD
 const DEFAULT_PROFESSIONALS = Object.entries(USERS)
   .filter(([, user]) => !user.viewOnly)
   .map(([email, user]) => ({
@@ -1264,5 +1292,5 @@ const DEFAULT_PROFESSIONALS = Object.entries(USERS)
     name: user.name,
     role: user.role,
     email,
-    passwordHash: user.passwordHash
+    passwordHash: ''
   }))

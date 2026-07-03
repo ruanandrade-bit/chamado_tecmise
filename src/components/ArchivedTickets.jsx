@@ -4,6 +4,7 @@ import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
 import TicketCard from './TicketCard'
 import TicketDetailsModal from './TicketDetailsModal'
+import './ArchivedTickets.css'
 
 function ArcPrettySelect({
   value,
@@ -263,18 +264,10 @@ export default function ArchivedTickets() {
   const currentMonth = new Date().getMonth() + 1
   const [filterYear, setFilterYear] = useState(String(currentYear))
   const [filterMonth, setFilterMonth] = useState(String(currentMonth))
+  const [visibleCount, setVisibleCount] = useState(30)
 
   const archivedTickets = getArchivedTickets()
-  const canDeleteTicket = user?.canDragDrop === true
-
-  // Build available years from ticket data
-  const availableYears = [...new Set(archivedTickets.map(t => {
-    const d = new Date(t.resolvedAt || t.archivedAt || t.createdAt)
-    return d.getFullYear()
-  }))].sort((a, b) => b - a)
-
-  // If current year has no tickets, add it anyway
-  if (!availableYears.includes(currentYear)) availableYears.unshift(currentYear)
+  const canDeleteTicket = user?.role === 'Admin'
 
   const months = [
     { value: '0', label: 'Todos os meses' },
@@ -291,18 +284,33 @@ export default function ArchivedTickets() {
     { value: '11', label: 'Novembro' },
     { value: '12', label: 'Dezembro' },
   ]
-  const yearOptions = availableYears.map((year) => ({ value: String(year), label: String(year) }))
 
-  // Filter by year and month
-  const filteredTickets = archivedTickets.filter(ticket => {
-    const d = new Date(ticket.resolvedAt || ticket.archivedAt || ticket.createdAt)
-    const ticketYear = d.getFullYear()
-    const ticketMonth = d.getMonth() + 1
+  const { availableYears, yearOptions, filteredTickets } = useMemo(() => {
+    const years = [...new Set(archivedTickets.map(t => {
+      const d = new Date(t.resolvedAt || t.archivedAt || t.createdAt)
+      return d.getFullYear()
+    }))].sort((a, b) => b - a)
+    if (!years.includes(currentYear)) years.unshift(currentYear)
 
-    if (String(ticketYear) !== filterYear) return false
-    if (filterMonth !== '0' && ticketMonth !== Number(filterMonth)) return false
-    return true
-  })
+    const filtered = archivedTickets.filter(ticket => {
+      const d = new Date(ticket.resolvedAt || ticket.archivedAt || ticket.createdAt)
+      if (String(d.getFullYear()) !== filterYear) return false
+      if (filterMonth !== '0' && d.getMonth() + 1 !== Number(filterMonth)) return false
+      return true
+    })
+
+    return {
+      availableYears: years,
+      yearOptions: years.map(y => ({ value: String(y), label: String(y) })),
+      filteredTickets: filtered
+    }
+  }, [archivedTickets, filterYear, filterMonth, currentYear])
+
+  // Reset visible count when filters change
+  useEffect(() => { setVisibleCount(30) }, [filterYear, filterMonth])
+
+  const visibleTickets = filteredTickets.slice(0, visibleCount)
+  const hasMore = filteredTickets.length > visibleCount
 
   const selectedTicket = filteredTickets.find((ticket) => ticket.id === selectedTicketId) || null
 
@@ -382,22 +390,34 @@ export default function ArchivedTickets() {
       {filteredTickets.length === 0 ? (
         <div className="arc-empty">
           <div className="arc-empty-icon">
-            <Archive size={28} style={{ color: '#4b5563' }} />
+            <Archive size={28} style={{ color: 'var(--gray-600)' }} />
           </div>
           <p className="arc-empty-text">Nenhum chamado encontrado para o período selecionado.</p>
         </div>
       ) : (
-        <div className="arc-grid">
-          {filteredTickets.map((ticket, index) => (
-            <div key={ticket.id} className="arc-card-wrap" style={{ animationDelay: `${index * 0.06}s` }}>
-              <TicketCard
-                ticket={ticket}
-                onClick={() => setSelectedTicketId(ticket.id)}
-                draggable={false}
-              />
+        <>
+          <div className="arc-grid">
+            {visibleTickets.map((ticket, index) => (
+              <div key={ticket.id} className="arc-card-wrap" style={{ animationDelay: `${index * 0.06}s` }}>
+                <TicketCard
+                  ticket={ticket}
+                  onClick={() => setSelectedTicketId(ticket.id)}
+                  draggable={false}
+                />
+              </div>
+            ))}
+          </div>
+          {hasMore && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
+              <button
+                onClick={() => setVisibleCount(c => c + 30)}
+                className="arc-load-more-btn"
+              >
+                Carregar mais ({filteredTickets.length - visibleCount} restantes)
+              </button>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       {selectedTicket && (
@@ -406,368 +426,6 @@ export default function ArchivedTickets() {
           onClose={() => setSelectedTicketId(null)}
         />
       )}
-
-      <style>{`
-        .arc-container {
-          display: flex;
-          flex-direction: column;
-          gap: 34px;
-          width: 100%;
-          max-width: 1700px;
-          margin: 0 auto;
-          position: relative;
-          isolation: isolate;
-          animation: arcFadeIn 0.55s ease-out;
-        }
-
-        .arc-container::before,
-        .arc-container::after {
-          content: '';
-          position: absolute;
-          border-radius: 999px;
-          pointer-events: none;
-          z-index: -1;
-          filter: blur(42px);
-          opacity: 0.28;
-        }
-
-        .arc-container::before {
-          width: 320px;
-          height: 320px;
-          top: -72px;
-          right: 10%;
-          background: radial-gradient(circle, rgba(34, 197, 94, 0.24), rgba(34, 197, 94, 0));
-          animation: arcGlowMove 9s ease-in-out infinite;
-        }
-
-        .arc-container::after {
-          width: 300px;
-          height: 300px;
-          bottom: 8%;
-          left: 4%;
-          background: radial-gradient(circle, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0));
-          animation: arcGlowMove 11s ease-in-out infinite reverse;
-        }
-
-        @keyframes arcFadeIn {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes arcRiseIn {
-          from { opacity: 0; transform: translateY(14px) scale(0.992); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        @keyframes arcFloat {
-          0% { transform: translateY(0); }
-          50% { transform: translateY(-3px); }
-          100% { transform: translateY(0); }
-        }
-
-        @keyframes arcGlowMove {
-          0% { transform: translate3d(0, 0, 0); }
-          50% { transform: translate3d(8px, -10px, 0); }
-          100% { transform: translate3d(0, 0, 0); }
-        }
-
-        /* ── Page Header ── */
-        .arc-page-header {
-          display: flex;
-          align-items: center;
-          gap: 18px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-          padding-bottom: 24px;
-          animation: arcRiseIn 0.45s ease both;
-        }
-
-        .arc-header-icon {
-          width: 50px;
-          height: 50px;
-          border-radius: 14px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(22,163,74,0.08));
-          border: 1px solid rgba(34,197,94,0.2);
-          box-shadow: 0 0 20px rgba(34,197,94,0.06);
-          animation: arcFloat 5.6s ease-in-out infinite;
-        }
-
-        .arc-page-title {
-          font-size: 1.875rem;
-          font-weight: 700;
-          color: #f3f4f6;
-          letter-spacing: -0.01em;
-        }
-
-        .arc-page-subtitle {
-          font-size: 0.9375rem;
-          color: #9ca3af;
-          margin-top: 2px;
-        }
-
-        /* ── Filter Bar ── */
-        .arc-filter-bar {
-          position: relative;
-          z-index: 60;
-          isolation: isolate;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-          padding: 16px 22px;
-          background: linear-gradient(155deg, rgba(15, 15, 30, 0.55) 0%, rgba(11, 15, 28, 0.6) 100%);
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.07);
-          border-radius: 18px;
-          box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
-          flex-wrap: wrap;
-          animation: arcRiseIn 0.45s ease both;
-          animation-delay: 0.08s;
-          transition: transform 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
-        }
-
-        .arc-filter-bar:hover {
-          transform: translateY(-1px);
-          border-color: rgba(134, 239, 172, 0.2);
-          box-shadow: 0 20px 34px rgba(2, 8, 23, 0.3), 0 0 18px rgba(34, 197, 94, 0.06);
-        }
-
-        .arc-filter-group {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-
-        .arc-pretty-select {
-          position: relative;
-          min-width: 148px;
-        }
-
-        .arc-pretty-select-open {
-          z-index: 80;
-        }
-
-        .arc-pretty-trigger {
-          width: 100%;
-          min-height: 40px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          padding: 10px 12px;
-          border-radius: 11px;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          background: rgba(255, 255, 255, 0.03);
-          color: #e5e7eb;
-          cursor: pointer;
-          transition: all 0.24s ease;
-        }
-
-        .arc-pretty-trigger:hover {
-          border-color: rgba(34, 197, 94, 0.24);
-          background: rgba(255, 255, 255, 0.06);
-        }
-
-        .arc-pretty-select-open .arc-pretty-trigger {
-          border-color: rgba(34, 197, 94, 0.42);
-          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08), 0 0 16px rgba(34, 197, 94, 0.06);
-          background: rgba(255, 255, 255, 0.06);
-        }
-
-        .arc-pretty-label {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          color: #d1d5db;
-          text-align: left;
-          font-size: 0.8rem;
-          line-height: 1.15;
-          font-weight: 500;
-          white-space: nowrap;
-        }
-
-        .arc-pretty-label-filled {
-          color: #e5e7eb;
-        }
-
-        .arc-pretty-chevron {
-          color: #64748b;
-          transition: transform 0.2s ease, color 0.2s ease;
-          flex-shrink: 0;
-        }
-
-        .arc-pretty-chevron-open {
-          transform: rotate(180deg);
-          color: #86efac;
-        }
-
-        .arc-pretty-options {
-          position: absolute;
-          top: calc(100% + 8px);
-          left: 0;
-          right: 0;
-          z-index: 120;
-          display: flex;
-          flex-direction: column;
-          gap: 4px;
-          max-height: 260px;
-          overflow-y: auto;
-          padding: 8px;
-          border-radius: 12px;
-          border: 1px solid rgba(34, 197, 94, 0.22);
-          background: linear-gradient(170deg, rgba(17, 22, 36, 0.98) 0%, rgba(10, 14, 26, 0.98) 100%);
-          box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55), 0 0 25px rgba(34, 197, 94, 0.06);
-          backdrop-filter: blur(14px);
-          -webkit-backdrop-filter: blur(14px);
-          animation: arcSelectPanelIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .arc-pretty-options::-webkit-scrollbar {
-          width: 4px;
-        }
-
-        .arc-pretty-options::-webkit-scrollbar-thumb {
-          background: rgba(148, 163, 184, 0.3);
-          border-radius: 99px;
-        }
-
-        .arc-pretty-option {
-          width: 100%;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 9px 10px;
-          border: none;
-          border-radius: 10px;
-          background: transparent;
-          color: #cbd5e1;
-          text-align: left;
-          font-size: 0.8rem;
-          font-weight: 500;
-          cursor: pointer;
-          opacity: 1;
-          transform: none;
-          animation: none;
-        }
-
-        .arc-pretty-option:hover {
-          background: rgba(34, 197, 94, 0.1);
-          color: #dcfce7;
-        }
-
-        .arc-pretty-option-active {
-          background: linear-gradient(135deg, rgba(34, 197, 94, 0.24), rgba(22, 163, 74, 0.14));
-          color: #ecfdf5;
-          border: 1px solid rgba(134, 239, 172, 0.35);
-        }
-
-        .arc-pretty-option-check {
-          color: #86efac;
-          flex-shrink: 0;
-        }
-
-        @keyframes arcSelectPanelIn {
-          from {
-            opacity: 0;
-            transform: translateY(-6px) scale(0.985);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        .arc-filter-count {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 0.8125rem;
-          color: #6b7280;
-          font-weight: 500;
-          padding: 8px 12px;
-          border-radius: 999px;
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          background: rgba(255, 255, 255, 0.02);
-        }
-
-        /* ── Empty State ── */
-        .arc-empty {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 76px 20px;
-          background: linear-gradient(160deg, rgba(15, 15, 30, 0.52) 0%, rgba(10, 13, 24, 0.58) 100%);
-          backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.07);
-          border-radius: 22px;
-          text-align: center;
-          box-shadow: 0 18px 34px rgba(0, 0, 0, 0.28);
-          animation: arcRiseIn 0.45s ease both;
-        }
-
-        .arc-empty-icon {
-          width: 68px;
-          height: 68px;
-          border-radius: 18px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          margin-bottom: 18px;
-        }
-
-        .arc-empty-text {
-          color: #7b8496;
-          font-size: 0.95rem;
-        }
-
-        /* ── Grid ── */
-        .arc-grid {
-          display: grid;
-          grid-template-columns: repeat(1, minmax(0, 1fr));
-          gap: 18px;
-        }
-
-        @media (min-width: 860px) {
-          .arc-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        }
-
-        @media (min-width: 1320px) {
-          .arc-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-        }
-
-        @media (min-width: 1720px) {
-          .arc-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-        }
-
-        .arc-card-wrap {
-          animation: arcCardIn 0.44s ease-out both;
-          transition: transform 0.24s ease;
-        }
-
-        .arc-card-wrap:hover {
-          transform: translateY(-2px);
-        }
-
-        @keyframes arcCardIn {
-          from { opacity: 0; transform: translateY(12px) scale(0.98); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .arc-container,
-          .arc-container * {
-            animation: none !important;
-            transition: none !important;
-          }
-        }
-      `}</style>
     </div>
   )
 }

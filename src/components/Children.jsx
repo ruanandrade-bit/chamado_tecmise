@@ -102,8 +102,8 @@ function formatDayMonthInput(value) {
 export default function Children() {
   const { user } = useAuthStore()
   const role = normalizeRole(user?.role)
-  const canAccess = user?.canDragDrop === true || role === 'pedagoga' || role === 'psicologa'
-  const isAdmin = user?.canDragDrop === true || user?.email === 'ruan@s4s.com'
+  const canAccess = user?.role === 'Admin' || role === 'pedagoga' || role === 'psicologa'
+  const isAdmin = user?.role === 'Admin'
   const loggedUserName = user?.name || 'Usuário'
 
   const [selectedCategory, setSelectedCategory] = useState('Criança Psicóloga')

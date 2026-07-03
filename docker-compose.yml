@@ -13,8 +13,9 @@ services:
     image: mongo:7
     container_name: s4s-mongo
     restart: unless-stopped
-    ports:
-      - "27017:27017"
+    # Porta não exposta ao host — MongoDB acessível apenas pelos containers internos
+    expose:
+      - "27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-s4s_admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-s4s_secret_2026}

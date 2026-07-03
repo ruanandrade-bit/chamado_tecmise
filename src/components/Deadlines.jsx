@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Calendar, Plus, Trash2, CalendarDays, Clock, CheckCircle2, AlertTriangle, AlertCircle, Search, Filter, Loader2, ShieldCheck, X, Edit3, ChevronRight, Tag, ChevronDown, ExternalLink, UserPlus, Check } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
@@ -53,7 +53,7 @@ const generateGoogleCalendarUrl = (item) => {
 
 const CATEGORY_CONFIG = {
   pedagoga: { label: 'Pedagogia', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.25)' },
-  psicologa: { label: 'Psicologia', color: '#34d399', bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.25)' },
+  psicologa: { label: 'Psicologia', color: '#86efac', bg: 'rgba(134,239,172,0.12)', border: 'rgba(134,239,172,0.25)' },
   geral: { label: 'Geral / Outros', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)', border: 'rgba(96,165,250,0.25)' }
 }
 
@@ -66,13 +66,13 @@ const PRIORITY_CONFIG = {
 const STATUS_CONFIG = {
   pendente: { label: 'Pendente', color: '#f87171', bg: 'rgba(248,113,113,0.08)' },
   em_andamento: { label: 'Em Andamento', color: '#fbbf24', bg: 'rgba(251,191,36,0.08)' },
-  concluido: { label: 'Concluído', color: '#34d399', bg: 'rgba(52,211,153,0.08)' }
+  concluido: { label: 'Concluído', color: '#86efac', bg: 'rgba(134,239,172,0.08)' }
 }
 
 export default function Deadlines() {
   const { user } = useAuthStore()
   const role = (user?.role || '').toLowerCase()
-  const canEdit = role === 'pedagoga' || role === 'psicóloga' || user?.canDragDrop === true
+  const canEdit = role === 'pedagoga' || role === 'psicóloga' || user?.role === 'Admin'
   const currentUserName = String(user?.name || '').trim().toLowerCase()
   const currentUserEmail = String(user?.email || '').trim().toLowerCase()
 
@@ -328,48 +328,57 @@ export default function Deadlines() {
   }
 
   // Derived filter
-  const mappedReminders = notes
-    .filter(n => n.noteType === 'reminder')
-    .map(n => ({
-      id: n.id,
-      title: n.title,
-      description: n.description,
-      date: n.reminderDate || n.createdAt.split('T')[0],
-      time: n.reminderTime || '00:00',
-      category: n.category || 'pedagoga',
-      status: n.reminderStatus === 'concluido' ? 'concluido' : 'pendente',
-      priority: 'media',
-      author: n.author,
-      authorEmail: n.authorEmail,
-      createdAt: n.createdAt,
-      isReminder: true
-    }))
+  const {
+    allDeadlinesAndReminders,
+    sortedDeadlines,
+    total,
+    pending,
+    completed,
+    urgent,
+    uniqueAuthors
+  } = useMemo(() => {
+    const mappedReminders = notes
+      .filter(n => n.noteType === 'reminder')
+      .map(n => ({
+        id: n.id,
+        title: n.title,
+        description: n.description,
+        date: n.reminderDate || n.createdAt.split('T')[0],
+        time: n.reminderTime || '00:00',
+        category: n.category || 'pedagoga',
+        status: n.reminderStatus === 'concluido' ? 'concluido' : 'pendente',
+        priority: 'media',
+        author: n.author,
+        authorEmail: n.authorEmail,
+        createdAt: n.createdAt,
+        isReminder: true
+      }))
 
-  const allDeadlinesAndReminders = [...deadlines, ...mappedReminders]
+    const all = [...deadlines, ...mappedReminders]
 
-  const filtered = allDeadlinesAndReminders.filter(d => {
-    const q = searchQuery.toLowerCase()
-    const matchSearch = !q || d.title.toLowerCase().includes(q) || (d.description || '').toLowerCase().includes(q)
-    const matchAuthor = !filterAuthor || d.author === filterAuthor
-    const matchPriority = !filterPriority || d.priority === filterPriority
-    const matchStatus = !filterStatus || d.status === filterStatus
-    return matchSearch && matchAuthor && matchPriority && matchStatus
-  })
+    const filtered = all.filter(d => {
+      const q = searchQuery.toLowerCase()
+      const matchSearch = !q || d.title.toLowerCase().includes(q) || (d.description || '').toLowerCase().includes(q)
+      const matchAuthor = !filterAuthor || d.author === filterAuthor
+      const matchPriority = !filterPriority || d.priority === filterPriority
+      const matchStatus = !filterStatus || d.status === filterStatus
+      return matchSearch && matchAuthor && matchPriority && matchStatus
+    })
 
-  // Sort deadlines: concluidos at the bottom, others sorted by date (closer first)
-  const sortedDeadlines = [...filtered].sort((a, b) => {
-    if (a.status === 'concluido' && b.status !== 'concluido') return 1
-    if (a.status !== 'concluido' && b.status === 'concluido') return -1
-    return new Date(a.date) - new Date(b.date)
-  })
-
-  // Stats
-  const total = allDeadlinesAndReminders.length
-  const pending = allDeadlinesAndReminders.filter(d => d.status !== 'concluido').length
-  const completed = allDeadlinesAndReminders.filter(d => d.status === 'concluido').length
-  const urgent = allDeadlinesAndReminders.filter(d => d.status !== 'concluido' && d.priority === 'alta').length
-
-  const uniqueAuthors = Array.from(new Set(allDeadlinesAndReminders.map(d => d.author).filter(Boolean)))
+    return {
+      allDeadlinesAndReminders: all,
+      sortedDeadlines: [...filtered].sort((a, b) => {
+        if (a.status === 'concluido' && b.status !== 'concluido') return 1
+        if (a.status !== 'concluido' && b.status === 'concluido') return -1
+        return new Date(a.date) - new Date(b.date)
+      }),
+      total: all.length,
+      pending: all.filter(d => d.status !== 'concluido').length,
+      completed: all.filter(d => d.status === 'concluido').length,
+      urgent: all.filter(d => d.status !== 'concluido' && d.priority === 'alta').length,
+      uniqueAuthors: Array.from(new Set(all.map(d => d.author).filter(Boolean)))
+    }
+  }, [notes, deadlines, searchQuery, filterAuthor, filterPriority, filterStatus])
 
   const formatDateDisplay = (dateStr) => {
     if (!dateStr) return ''
@@ -386,15 +395,15 @@ export default function Deadlines() {
   return (
     <div className="dl-container">
       {/* Header */}
-      <div className="dl-page-header">
-        <div className="dl-header-left">
-          <div className="dl-header-icon"><CalendarDays size={24} /></div>
+      <div className="page-header">
+        <div className="page-header-left">
+          <div className="page-header-icon dl-header-icon"><CalendarDays size={24} /></div>
           <div>
-            <h1 className="dl-page-title">Datas & Prazos</h1>
-            <p className="dl-page-sub">Controle cronograma de metas, atendimentos, entregas e relatórios</p>
+            <h1 className="page-title">Datas & Prazos</h1>
+            <p className="page-sub">Controle cronograma de metas, atendimentos, entregas e relatórios</p>
           </div>
         </div>
-        <div className="dl-header-right">
+        <div className="page-header-right">
           <div className="dl-search-box">
             <Search size={14} />
             <input placeholder="Buscar prazos ou descrições..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
@@ -428,7 +437,7 @@ export default function Deadlines() {
           <div><p className="dl-stat-num">{pending}</p><p className="dl-stat-label">prazos ativos</p></div>
         </div>
         <div className="dl-stat-card">
-          <div className="dl-stat-icon" style={{ color: '#34d399', background: 'rgba(52,211,153,0.1)' }}><CheckCircle2 size={20} /></div>
+          <div className="dl-stat-icon" style={{ color: '#86efac', background: 'rgba(134,239,172,0.1)' }}><CheckCircle2 size={20} /></div>
           <div><p className="dl-stat-num">{completed}</p><p className="dl-stat-label">concluídos</p></div>
         </div>
         <div className="dl-stat-card">
@@ -578,7 +587,7 @@ export default function Deadlines() {
                 className={`dl-dropdown-option ${filterStatus === 'concluido' ? 'selected' : ''}`}
                 onClick={() => { setFilterStatus('concluido'); setIsStatusOpen(false) }}
               >
-                <span className="dl-option-dot" style={{ background: '#34d399' }} />
+                <span className="dl-option-dot" style={{ background: '#86efac' }} />
                 Concluído
               </div>
             </div>
@@ -820,7 +829,7 @@ export default function Deadlines() {
                         className={`dl-form-option ${form.status === 'concluido' ? 'selected' : ''}`}
                         onClick={() => { setForm(p => ({ ...p, status: 'concluido' })); setIsFormStatusOpen(false) }}
                       >
-                        <span className="dl-option-dot" style={{ background: '#34d399' }} />
+                        <span className="dl-option-dot" style={{ background: '#86efac' }} />
                         Concluído
                       </div>
                     </div>
@@ -892,12 +901,12 @@ export default function Deadlines() {
                         <div style={{
                           display: 'flex', alignItems: 'center', gap: '8px',
                           padding: '8px 12px',
-                          background: 'rgba(52, 211, 153, 0.08)',
-                          border: '1px solid rgba(52, 211, 153, 0.2)',
+                          background: 'rgba(134, 239, 172, 0.08)',
+                          border: '1px solid rgba(134, 239, 172, 0.2)',
                           borderRadius: '10px'
                         }}>
-                          <CheckCircle2 size={14} style={{ color: '#34d399' }} />
-                          <span style={{ color: '#34d399', fontSize: '0.75rem', fontWeight: 600 }}>
+                          <CheckCircle2 size={14} style={{ color: '#86efac' }} />
+                          <span style={{ color: '#86efac', fontSize: '0.75rem', fontWeight: 600 }}>
                             {editTarget.googleCalendarUser || 'Usuário'} já agendou no Google Agenda
                           </span>
                         </div>
@@ -1009,10 +1018,10 @@ export default function Deadlines() {
                               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                               padding: '10px 16px',
                               background: googleCalendarOpened
-                                ? 'rgba(52, 211, 153, 0.12)'
+                                ? 'rgba(134, 239, 172, 0.12)'
                                 : 'linear-gradient(135deg, #fbbf24, #d97706)',
-                              color: googleCalendarOpened ? '#34d399' : '#000',
-                              border: googleCalendarOpened ? '1px solid rgba(52, 211, 153, 0.3)' : 'none',
+                              color: googleCalendarOpened ? '#86efac' : '#000',
+                              border: googleCalendarOpened ? '1px solid rgba(134, 239, 172, 0.3)' : 'none',
                               borderRadius: '12px',
                               fontSize: '0.8125rem',
                               fontWeight: 700,
@@ -1198,7 +1207,7 @@ export default function Deadlines() {
                     <span className="dl-detail-label">Google Agenda</span>
                     {viewDeadline.googleCalendarConfirmed ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        <span style={{ color: '#34d399', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span style={{ color: '#86efac', fontSize: '0.8125rem', display: 'flex', alignItems: 'center', gap: 4 }}>
                           <CheckCircle2 size={14} /> Confirmado por {viewDeadline.googleCalendarUser || viewDeadline.author}
                         </span>
                         {viewDeadline.googleCalendarGuest && (

@@ -148,9 +148,9 @@ router.put('/:id', (req, res) => {
 })
 
 router.delete('/:id', (req, res) => {
-  const isRuan = req.user?.email === 'ruan@s4s.com' || req.user?.canDragDrop === true
-  if (!isRuan) {
-    return res.status(403).json({ message: 'Apenas a conta de administrador (Ruan) pode excluir crianças.' })
+  const isAdmin = req.user?.role === 'Admin'
+  if (!isAdmin) {
+    return res.status(403).json({ message: 'Apenas administradores podem excluir crianças.' })
   }
   const deleted = memoryStore.deleteChild(req.params.id)
   if (!deleted) return res.status(404).json({ message: 'Criança não encontrada.' })

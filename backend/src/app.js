@@ -94,6 +94,13 @@ app.use((_req, res, next) => {
 
 app.use(express.json({ limit: '1mb' }))
 app.use(morgan(IS_PRODUCTION ? 'combined' : 'dev'))
+
+app.use((_req, res, next) => {
+  res.setTimeout(30000, () => {
+    res.status(503).json({ message: 'Requisição expirou.' })
+  })
+  next()
+})
 // ─── Rate Limiters ────────────────────────────────────────────────────────────
 // Login: 10 tentativas por IP em 10 minutos (proteção contra força bruta)
 const loginLimiter = rateLimit({
@@ -104,10 +111,10 @@ const loginLimiter = rateLimit({
   message: { message: 'Muitas tentativas de login. Tente novamente em instantes.' }
 })
 
-// API geral: 180 requisições de escrita por IP por minuto (proteção contra DoS)
+// API geral: 60 requisições de escrita por IP por minuto (proteção contra DoS)
 const apiWriteLimiter = rateLimit({
   windowMs: 60 * 1000,
-  limit: 180,
+  limit: 60,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   skip: (req) => !['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method),

@@ -4,26 +4,17 @@ import { memoryStore } from '../services/memoryStore.js'
 
 const router = Router()
 
+// Endpoint público — apenas status operacional, sem detalhes internos de segurança
 router.get('/', (_req, res) => {
   const jwt = getJwtSecretHealth()
   const isProduction = process.env.NODE_ENV === 'production'
   const mongoConnected = memoryStore.hasMongoPersistence()
   const persistenceHealthy = !isProduction || mongoConnected
+  const healthy = jwt.configured && jwt.persistent && persistenceHealthy
 
   res.json({
-    status: jwt.configured && jwt.persistent && persistenceHealthy ? 'ok' : 'degraded',
+    status: healthy ? 'ok' : 'degraded',
     service: 's4s-backend',
-    security: {
-      jwtConfigured: jwt.configured,
-      jwtPersistent: jwt.persistent,
-      jwtSource: jwt.source,
-      jwtMinLength: jwt.minLength,
-    },
-    persistence: {
-      mongoConnected,
-      mode: mongoConnected ? 'mongodb' : 'local-file',
-      productionRequiresMongo: true
-    },
     timestamp: new Date().toISOString()
   })
 })

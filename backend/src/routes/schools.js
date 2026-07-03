@@ -13,8 +13,11 @@ router.get('/', authRequired, (_req, res) => {
 // PUT  /api/schools — admin only, replaces the entire school config
 router.put('/', authRequired, adminOnly, (req, res) => {
   const { schoolData } = req.body
-  if (!schoolData || typeof schoolData !== 'object') {
-    return res.status(400).json({ message: 'schoolData é obrigatório.' })
+  if (!schoolData || typeof schoolData !== 'object' || Array.isArray(schoolData)) {
+    return res.status(400).json({ message: 'schoolData deve ser um objeto.' })
+  }
+  if (Object.keys(schoolData).length > 200) {
+    return res.status(400).json({ message: 'schoolData excede o limite de escolas permitido.' })
   }
   const updated = memoryStore.setSchoolData(schoolData)
   res.json(updated)

@@ -19,14 +19,19 @@ router.post('/', adminOnly, (req, res) => {
   const { school, devices, startTime, endTime, percentage } = req.body
 
   // Validation
-  if (!school || typeof school !== 'string') {
-    return res.status(400).json({ message: 'Escola é obrigatória.' })
+  const cleanSchool = String(school || '').trim()
+  if (!cleanSchool || cleanSchool.length > 200) {
+    return res.status(400).json({ message: 'Escola é obrigatória e deve ter no máximo 200 caracteres.' })
   }
-  if (!Array.isArray(devices) || devices.length === 0) {
-    return res.status(400).json({ message: 'Selecione pelo menos 1 device.' })
+  if (!Array.isArray(devices) || devices.length === 0 || devices.length > 50) {
+    return res.status(400).json({ message: 'Selecione entre 1 e 50 devices.' })
   }
-  if (!startTime || !endTime) {
-    return res.status(400).json({ message: 'Horário de início e fim são obrigatórios.' })
+  const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/
+  if (!startTime || !TIME_REGEX.test(String(startTime))) {
+    return res.status(400).json({ message: 'startTime inválido. Use o formato HH:MM.' })
+  }
+  if (!endTime || !TIME_REGEX.test(String(endTime))) {
+    return res.status(400).json({ message: 'endTime inválido. Use o formato HH:MM.' })
   }
   const pct = Number(percentage)
   if (isNaN(pct) || pct < 0 || pct > 100) {
@@ -35,8 +40,8 @@ router.post('/', adminOnly, (req, res) => {
 
   const record = {
     id: `CO-${crypto.randomBytes(4).toString('hex')}`,
-    school: school.trim(),
-    devices,
+    school: cleanSchool,
+    devices: devices.map(d => String(d).trim()).filter(Boolean),
     startTime,
     endTime,
     percentage: pct,

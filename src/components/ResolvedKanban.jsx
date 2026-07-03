@@ -5,6 +5,7 @@ import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import { useKanbanStore } from '../stores/kanbanStore'
 import './PedagogicalKanban.css'
+import './ResolvedKanban.css'
 
 function ResolvedPrettySelect({
   value,
@@ -98,7 +99,7 @@ function ConfirmDeleteModalResolved({ isOpen, onClose, onConfirm, isDeleting, ta
   return createPortal((
     <div
       className="pk-modal-overlay"
-      style={{ zIndex: 99999 }}
+      style={{ zIndex: 'var(--z-modal)' }}
       onClick={!isDeleting ? onClose : undefined}
       onKeyDown={handleKeyDown}
       tabIndex={-1}
@@ -256,6 +257,7 @@ export default function ResolvedKanban() {
   const currentMonth = new Date().getMonth() + 1
   const [filterYear, setFilterYear] = useState(String(currentYear))
   const [filterMonth, setFilterMonth] = useState(String(currentMonth))
+  const [visibleCount, setVisibleCount] = useState(30)
 
   // Fetch tasks
   useEffect(() => {
@@ -263,17 +265,6 @@ export default function ResolvedKanban() {
   }, [loadTasks])
 
   const fetchTasks = loadTasks
-
-  // Build available years from task data
-  const availableYears = [...new Set(tasks.filter(t => t.isArchived).map(t => {
-    const val = t.archivedAt || t.createdAt
-    if (!val) return null
-    const d = new Date(val)
-    return isNaN(d.getTime()) ? null : d.getFullYear()
-  }).filter(Boolean))].sort((a, b) => b - a)
-
-  // If current year has no tasks, add it anyway
-  if (!availableYears.includes(currentYear)) availableYears.unshift(currentYear)
 
   const months = [
     { value: '0', label: 'Todos os meses' },
@@ -290,24 +281,39 @@ export default function ResolvedKanban() {
     { value: '11', label: 'Novembro' },
     { value: '12', label: 'Dezembro' },
   ]
-  const yearOptions = availableYears.map((year) => ({ value: String(year), label: String(year) }))
 
-  // Filter by year and month
-  const filteredTasks = tasks.filter(task => {
-    if (!task.isArchived) return false
-    
-    const val = task.archivedAt || task.createdAt
-    if (!val) return false
-    const d = new Date(val)
-    if (isNaN(d.getTime())) return false
+  const { availableYears, yearOptions, filteredTasks } = useMemo(() => {
+    const years = [...new Set(tasks.filter(t => t.isArchived).map(t => {
+      const val = t.archivedAt || t.createdAt
+      if (!val) return null
+      const d = new Date(val)
+      return isNaN(d.getTime()) ? null : d.getFullYear()
+    }).filter(Boolean))].sort((a, b) => b - a)
+    if (!years.includes(currentYear)) years.unshift(currentYear)
 
-    const taskYear = d.getFullYear()
-    const taskMonth = d.getMonth() + 1
+    const filtered = tasks.filter(task => {
+      if (!task.isArchived) return false
+      const val = task.archivedAt || task.createdAt
+      if (!val) return false
+      const d = new Date(val)
+      if (isNaN(d.getTime())) return false
+      if (String(d.getFullYear()) !== filterYear) return false
+      if (filterMonth !== '0' && d.getMonth() + 1 !== Number(filterMonth)) return false
+      return true
+    })
 
-    if (String(taskYear) !== filterYear) return false
-    if (filterMonth !== '0' && taskMonth !== Number(filterMonth)) return false
-    return true
-  })
+    return {
+      availableYears: years,
+      yearOptions: years.map(y => ({ value: String(y), label: String(y) })),
+      filteredTasks: filtered
+    }
+  }, [tasks, filterYear, filterMonth, currentYear])
+
+  // Reset visible count when filters change
+  useEffect(() => { setVisibleCount(30) }, [filterYear, filterMonth])
+
+  const visibleTasks = filteredTasks.slice(0, visibleCount)
+  const hasMore = filteredTasks.length > visibleCount
 
   const selectedTask = filteredTasks.find((task) => task.id === selectedTaskId) || null
 
@@ -404,13 +410,14 @@ export default function ResolvedKanban() {
       {filteredTasks.length === 0 ? (
         <div className="rk-empty">
           <div className="rk-empty-icon">
-            <Archive size={28} style={{ color: '#4b5563' }} />
+            <Archive size={28} style={{ color: 'var(--gray-600)' }} />
           </div>
           <p className="rk-empty-text">Nenhuma tarefa encontrada para o período selecionado.</p>
         </div>
       ) : (
+        <>
         <div className="rk-grid">
-          {filteredTasks.map((task, index) => {
+          {visibleTasks.map((task, index) => {
             const status = task.status === 'todo' ? 'A Fazer' : 
                            task.status === 'inprogress' ? 'Em Andamento' : 
                            task.status === 'inrevision' ? 'Em Revisão' : 'Concluído'
@@ -480,6 +487,17 @@ export default function ResolvedKanban() {
             )
           })}
         </div>
+        {hasMore && (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '24px' }}>
+            <button
+              onClick={() => setVisibleCount(c => c + 30)}
+              className="rk-load-more-btn"
+            >
+              Carregar mais ({filteredTasks.length - visibleCount} restantes)
+            </button>
+          </div>
+        )}
+        </>
       )}
 
       {/* Details Modal */}
@@ -491,12 +509,12 @@ export default function ResolvedKanban() {
             style={{ maxHeight: '90vh', overflowY: 'auto' }}
           >
             {/* Top green accent bar */}
-            <div className="pk-modal-accent" style={{ background: '#10b981' }} />
+            <div className="pk-modal-accent" style={{ background: '#22c55e' }} />
 
             {/* Close button */}
             <div className="pk-modal-head">
               <div className="pk-modal-head-left">
-                <div className="pk-modal-head-icon" style={{ background: 'rgba(16,185,129,0.12)', color: '#10b981' }}>
+                <div className="pk-modal-head-icon" style={{ background: 'rgba(34,197,94,0.12)', color: '#22c55e' }}>
                   <Check size={18} />
                 </div>
                 <div>
@@ -593,12 +611,12 @@ export default function ResolvedKanban() {
                       switch (entry.action) {
                         case 'created':
                           icon = <Plus size={12} />
-                          color = '#10b981'
+                          color = '#22c55e'
                           text = <><strong>{entry.user}</strong> criou a tarefa</>
                           break
                         case 'status_changed':
                           icon = <ArrowRight size={12} />
-                          color = entry.to === 'completed' || entry.to === 'Concluído' ? '#10b981' : '#38bdf8'
+                          color = entry.to === 'completed' || entry.to === 'Concluído' ? '#22c55e' : '#38bdf8'
                           text = <><strong>{entry.user}</strong> moveu de <em>{statusLabel(entry.from)}</em> para <em>{statusLabel(entry.to)}</em></>
                           break
                         case 'priority_changed':
@@ -661,440 +679,6 @@ export default function ResolvedKanban() {
           </div>
         </div>
       ), document.body)}
-
-      <style>{`
-        .rk-container {
-          display: flex;
-          flex-direction: column;
-          gap: 34px;
-          width: 100%;
-          max-width: 1700px;
-          margin: 0 auto;
-          position: relative;
-          isolation: isolate;
-          animation: rkFadeIn 0.55s ease-out;
-        }
-
-        @keyframes rkFadeIn {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        .rk-page-header {
-          display: flex;
-          align-items: center;
-          gap: 18px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-          padding-bottom: 24px;
-          animation: rkRiseIn 0.45s ease both;
-        }
-
-        @keyframes rkRiseIn {
-          from { opacity: 0; transform: translateY(14px) scale(0.992); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        .rk-header-icon {
-          width: 50px;
-          height: 50px;
-          border-radius: 14px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(22,163,74,0.08));
-          border: 1px solid rgba(34,197,94,0.2);
-          box-shadow: 0 0 20px rgba(34,197,94,0.06);
-        }
-
-        .rk-page-title {
-          font-size: 1.875rem;
-          font-weight: 700;
-          color: #f3f4f6;
-          letter-spacing: -0.01em;
-        }
-
-        .rk-page-subtitle {
-          font-size: 0.9375rem;
-          color: #9ca3af;
-          margin-top: 2px;
-        }
-
-        .rk-filter-bar {
-          position: relative;
-          z-index: 60;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-          padding: 16px 22px;
-          background: linear-gradient(155deg, rgba(15, 15, 30, 0.55) 0%, rgba(11, 15, 28, 0.6) 100%);
-          backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.07);
-          border-radius: 18px;
-          box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
-          flex-wrap: wrap;
-          animation: rkRiseIn 0.45s ease both;
-          animation-delay: 0.08s;
-        }
-
-        .rk-filter-bar:hover {
-          border-color: rgba(134, 239, 172, 0.2);
-          box-shadow: 0 20px 34px rgba(2, 8, 23, 0.3), 0 0 18px rgba(34, 197, 94, 0.06);
-        }
-
-        .rk-filter-group {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          flex-wrap: wrap;
-        }
-
-        .rk-pretty-select {
-          position: relative;
-          min-width: 148px;
-        }
-
-        .rk-pretty-select-open {
-          z-index: 80;
-        }
-
-        .rk-pretty-trigger {
-          width: 100%;
-          min-height: 40px;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          padding: 10px 12px;
-          border-radius: 11px;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          background: rgba(255, 255, 255, 0.03);
-          color: #e5e7eb;
-          cursor: pointer;
-          transition: all 0.24s ease;
-        }
-
-        .rk-pretty-trigger:hover {
-          border-color: rgba(34, 197, 94, 0.24);
-          background: rgba(255, 255, 255, 0.06);
-        }
-
-        .rk-pretty-select-open .rk-pretty-trigger {
-          border-color: rgba(34, 197, 94, 0.42);
-          box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.08), 0 0 16px rgba(34, 197, 94, 0.06);
-          background: rgba(255, 255, 255, 0.06);
-        }
-
-        .rk-pretty-label {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          color: #d1d5db;
-          text-align: left;
-          font-size: 0.8rem;
-          line-height: 1.15;
-          font-weight: 500;
-          white-space: nowrap;
-        }
-
-        .rk-pretty-label-filled {
-          color: #e5e7eb;
-        }
-
-        .rk-pretty-chevron {
-          color: #64748b;
-          transition: transform 0.2s ease;
-          flex-shrink: 0;
-        }
-
-        .rk-pretty-chevron-open {
-          transform: rotate(180deg);
-        }
-
-        .rk-pretty-options {
-          position: absolute;
-          top: calc(100% + 4px);
-          left: 0;
-          right: 0;
-          z-index: 100;
-          background: linear-gradient(135deg, rgba(15, 15, 30, 0.95) 0%, rgba(11, 15, 28, 0.98) 100%);
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
-          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
-          backdrop-filter: blur(16px);
-          overflow: hidden;
-          max-height: 320px;
-          overflow-y: auto;
-        }
-
-        .rk-pretty-option {
-          width: 100%;
-          padding: 10px 12px;
-          border: none;
-          background: transparent;
-          color: #d1d5db;
-          text-align: left;
-          font-size: 0.85rem;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          transition: all 0.15s ease;
-        }
-
-        .rk-pretty-option:hover {
-          background: rgba(34, 197, 94, 0.08);
-          color: #86efac;
-        }
-
-        .rk-pretty-option-active {
-          background: rgba(34, 197, 94, 0.12);
-          color: #86efac;
-          font-weight: 500;
-        }
-
-        .rk-pretty-option-check {
-          color: #86efac;
-        }
-
-        .rk-filter-count {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 6px 12px;
-          border-radius: 8px;
-          background: rgba(255, 255, 255, 0.03);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          font-size: 0.8rem;
-          color: #9ca3af;
-        }
-
-        .rk-empty {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 16px;
-          padding: 60px 24px;
-          background: linear-gradient(135deg, rgba(15, 15, 30, 0.4) 0%, rgba(11, 15, 28, 0.45) 100%);
-          border: 1px solid rgba(255, 255, 255, 0.05);
-          border-radius: 18px;
-          animation: rkRiseIn 0.45s ease both;
-          animation-delay: 0.16s;
-        }
-
-        .rk-empty-icon {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 64px;
-          height: 64px;
-          border-radius: 14px;
-          background: rgba(34, 197, 94, 0.05);
-          border: 1px solid rgba(34, 197, 94, 0.1);
-        }
-
-        .rk-empty-text {
-          font-size: 0.95rem;
-          color: #9ca3af;
-          text-align: center;
-          margin: 0;
-        }
-
-        .rk-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-          gap: 20px;
-          animation: rkRiseIn 0.45s ease both;
-          animation-delay: 0.12s;
-        }
-
-        .rk-card-wrap {
-          animation: rkCardIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
-        }
-
-        @keyframes rkCardIn {
-          from { opacity: 0; transform: translateY(16px) scale(0.96); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        .rk-card-item {
-          padding: 20px;
-          background: linear-gradient(135deg, rgba(20, 25, 40, 0.6) 0%, rgba(15, 20, 35, 0.7) 100%);
-          border: 1px solid rgba(255, 255, 255, 0.06);
-          border-radius: 14px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          backdrop-filter: blur(8px);
-        }
-
-        .rk-card-item:hover {
-          border-color: rgba(34, 197, 94, 0.3);
-          background: linear-gradient(135deg, rgba(20, 25, 40, 0.8) 0%, rgba(15, 20, 35, 0.9) 100%);
-          box-shadow: 0 8px 32px rgba(34, 197, 94, 0.08), 0 0 20px rgba(34, 197, 94, 0.04);
-          transform: translateY(-4px);
-        }
-
-        .rk-card-header-item {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-        }
-
-        .rk-card-id {
-          font-size: 0.75rem;
-          font-weight: 700;
-          color: #86efac;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-        }
-
-        .rk-card-actions {
-          display: flex;
-          gap: 6px;
-        }
-
-        .rk-card-action-btn {
-          width: 32px;
-          height: 32px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: none;
-          background: rgba(239, 68, 68, 0.05);
-          border-radius: 8px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-          opacity: 0;
-        }
-
-        .rk-card-item:hover .rk-card-action-btn {
-          opacity: 1;
-        }
-
-        .rk-card-action-btn:hover {
-          background: rgba(239, 68, 68, 0.15);
-        }
-
-        .rk-card-title-item {
-          font-size: 1rem;
-          font-weight: 700;
-          color: #f1f5f9;
-          margin: 0;
-          line-height: 1.4;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-        .rk-card-desc-item {
-          font-size: 0.85rem;
-          color: #cbd5e1;
-          margin: 0;
-          line-height: 1.4;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-        .rk-card-tags-item {
-          display: flex;
-          gap: 6px;
-          flex-wrap: wrap;
-        }
-
-        .rk-card-tag-item {
-          display: inline-block;
-          font-size: 0.7rem;
-          padding: 3px 8px;
-          background: rgba(34, 197, 94, 0.1);
-          border: 1px solid rgba(34, 197, 94, 0.2);
-          border-radius: 6px;
-          color: #86efac;
-          font-weight: 500;
-        }
-
-        .rk-card-tag-more {
-          background: rgba(100, 116, 139, 0.1);
-          border-color: rgba(100, 116, 139, 0.2);
-          color: #94a3b8;
-        }
-
-        .rk-card-meta-item {
-          display: flex;
-          gap: 8px;
-          margin-top: 4px;
-        }
-
-        .rk-card-priority-item {
-          display: inline-block;
-          font-size: 0.7rem;
-          padding: 3px 8px;
-          border-radius: 6px;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.03em;
-        }
-
-        .rk-card-priority-item.prio-high {
-          background: rgba(239, 68, 68, 0.15);
-          color: #fca5a5;
-        }
-
-        .rk-card-priority-item.prio-medium {
-          background: rgba(59, 130, 246, 0.15);
-          color: #93c5fd;
-        }
-
-        .rk-card-priority-item.prio-low {
-          background: rgba(34, 197, 94, 0.15);
-          color: #86efac;
-        }
-
-        .rk-card-status-item {
-          font-size: 0.7rem;
-          padding: 3px 8px;
-          background: rgba(100, 116, 139, 0.1);
-          border-radius: 6px;
-          color: #cbd5e1;
-          font-weight: 500;
-        }
-
-        .rk-card-footer-item {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-top: 4px;
-          padding-top: 12px;
-          border-top: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .rk-card-date-item {
-          font-size: 0.75rem;
-          color: #64748b;
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        @keyframes slideInUp {
-          from { 
-            opacity: 0; 
-            transform: translateY(20px);
-          }
-          to { 
-            opacity: 1; 
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </div>
   )
 }

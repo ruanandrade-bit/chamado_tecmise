@@ -2,6 +2,7 @@ import { AlertCircle, CheckCircle, MessageCircle, X } from 'lucide-react'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useAuthStore } from '../stores/authStore'
 import { api } from '../services/api'
+import './NotificationCenter.css'
 
 const HISTORY_PREFIX = 's4s_notification_history:'
 const LAST_POLL_PREFIX = 's4s_notification_poll:'
@@ -148,6 +149,7 @@ export default function NotificationCenter() {
           const freshNotes = dedupeAndSortById(notes, 20)
           setNotifications((prev) => dedupeAndSortById([...prev, ...freshNotes], 5))
           appendHistory(user.email, freshNotes)
+          window.dispatchEvent(new CustomEvent('s4s-notification'))
 
           // Show browser native notification for each new one
           freshNotes.forEach((note) => {
@@ -173,8 +175,24 @@ export default function NotificationCenter() {
     }
 
     checkNotifications()
-    const interval = setInterval(checkNotifications, 1500)
-    return () => clearInterval(interval)
+
+    let interval = setInterval(checkNotifications, 5000)
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        clearInterval(interval)
+        interval = null
+      } else {
+        checkNotifications()
+        interval = setInterval(checkNotifications, 5000)
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
   }, [isAuthenticated, user?.email])
 
   const removeNotification = (id) => {
@@ -193,15 +211,15 @@ export default function NotificationCenter() {
   const getNotifStyle = (type) => {
     if (type === 'success') {
       return {
-        bg: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(6, 78, 59, 0.25) 100%)',
-        border: 'rgba(16, 185, 129, 0.35)',
-        shadow: '0 8px 32px rgba(16, 185, 129, 0.15), 0 0 0 1px rgba(16, 185, 129, 0.05)',
-        iconBg: 'rgba(16, 185, 129, 0.2)',
-        iconGlow: '0 0 12px rgba(16, 185, 129, 0.3)',
-        iconColor: '#34d399',
+        bg: 'linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(6, 78, 59, 0.25) 100%)',
+        border: 'rgba(34, 197, 94, 0.35)',
+        shadow: '0 8px 32px rgba(34, 197, 94, 0.15), 0 0 0 1px rgba(34, 197, 94, 0.05)',
+        iconBg: 'rgba(34, 197, 94, 0.2)',
+        iconGlow: '0 0 12px rgba(34, 197, 94, 0.3)',
+        iconColor: '#86efac',
         textColor: '#a7f3d0',
-        barColor: '#34d399',
-        barBg: 'rgba(16, 185, 129, 0.15)',
+        barColor: '#86efac',
+        barBg: 'rgba(34, 197, 94, 0.15)',
       }
     }
     if (type === 'info') {
@@ -357,13 +375,6 @@ export default function NotificationCenter() {
           </div>
         )
       })}
-
-      <style>{`
-        @keyframes notifProgress {
-          from { width: 100%; }
-          to { width: 0%; }
-        }
-      `}</style>
     </div>
   )
 }

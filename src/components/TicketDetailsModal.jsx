@@ -15,11 +15,11 @@ export default function TicketDetailsModal({ ticket, onClose, onImageClick }) {
   const [confirmDeleteIndex, setConfirmDeleteIndex] = useState(null)
   const [confirmUndoChecklist, setConfirmUndoChecklist] = useState(false)
   const fileInputRef = useRef(null)
-  const canManageChecklist = user?.canDragDrop === true
+  const canManageChecklist = user?.role === 'Admin'
   const isViewOnly = user?.viewOnly === true
 
-  // Permission: owner of the ticket OR admin (Ruan)
-  const isAdmin = user?.canDragDrop === true
+  // Permission: owner of the ticket OR admin
+  const isAdmin = user?.role === 'Admin'
   const isOwner = user?.name === ticket?.responsible
   const canManageAttachments = !isViewOnly && (isAdmin || isOwner)
   

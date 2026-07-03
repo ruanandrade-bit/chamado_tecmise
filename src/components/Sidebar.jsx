@@ -10,8 +10,8 @@ export default function Sidebar({ currentPage, onPageChange, isMobileOpen, onMob
   const stats = getStatistics()
   const openKanbanCount = tasks.filter(t => !t.isArchived && t.status !== 'completed').length
   const uniqueResponsibles = Object.keys(stats.byResponsible).length
-  const isRuan = user?.email === 'ruan@s4s.com' || user?.canDragDrop === true
-  const isAdmin = user?.canDragDrop === true
+  const isRuan = user?.role === 'Admin'
+  const isAdmin = user?.role === 'Admin'
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },

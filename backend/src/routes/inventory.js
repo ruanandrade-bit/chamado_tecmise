@@ -35,8 +35,8 @@ router.post('/', (req, res) => {
   const { name, quantity } = req.body
   const numericQuantity = Number(quantity ?? 0)
 
-  if (typeof name !== 'string' || name.trim().length < 2) {
-    return res.status(400).json({ message: 'Nome inválido. Use pelo menos 2 caracteres.' })
+  if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 100) {
+    return res.status(400).json({ message: 'Nome inválido. Use entre 2 e 100 caracteres.' })
   }
 
   if (!Number.isFinite(numericQuantity) || numericQuantity < 0) {
@@ -76,8 +76,8 @@ router.patch('/:id/name', (req, res) => {
     return res.status(400).json({ message: 'Só itens personalizados podem ter nome editado.' })
   }
 
-  if (typeof name !== 'string' || name.trim().length < 2) {
-    return res.status(400).json({ message: 'Nome inválido. Use pelo menos 2 caracteres.' })
+  if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 100) {
+    return res.status(400).json({ message: 'Nome inválido. Use entre 2 e 100 caracteres.' })
   }
 
   const items = memoryStore.renameInventoryItem(id, name)

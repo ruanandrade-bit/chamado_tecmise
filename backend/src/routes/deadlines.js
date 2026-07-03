@@ -26,13 +26,17 @@ router.get('/', (_req, res) => {
 // POST — create deadline, persist in background (fast like tickets)
 router.post('/', (req, res) => {
   const { title, description, date, time, category, status, priority, googleCalendarConfirmed, googleCalendarUser, googleCalendarGuest } = req.body
-  if (!title?.trim()) return res.status(400).json({ message: 'Título é obrigatório.' })
+  const cleanTitle = String(title || '').trim()
+  if (!cleanTitle) return res.status(400).json({ message: 'Título é obrigatório.' })
+  if (cleanTitle.length > 200) return res.status(400).json({ message: 'Título não pode ultrapassar 200 caracteres.' })
+  const cleanDesc = String(description || '').trim()
+  if (cleanDesc.length > 2000) return res.status(400).json({ message: 'Descrição não pode ultrapassar 2000 caracteres.' })
   if (!date) return res.status(400).json({ message: 'Data é obrigatória.' })
 
   const d = {
     id: `DL-${crypto.randomBytes(4).toString('hex')}`,
-    title: title.trim(),
-    description: (description || '').trim(),
+    title: cleanTitle,
+    description: cleanDesc,
     date,
     time: time || '',
     category: category || 'pedagoga',

@@ -49,11 +49,11 @@ export default function NotificationsPanel() {
     checkUnread()
   }, [isOpen, user?.email, checkUnread])
 
-  // Poll for new notifications to update the badge
+  // Update badge when NotificationCenter writes a new notification
   useEffect(() => {
     if (!user?.email) return
-    const interval = setInterval(checkUnread, 2000)
-    return () => clearInterval(interval)
+    window.addEventListener('s4s-notification', checkUnread)
+    return () => window.removeEventListener('s4s-notification', checkUnread)
   }, [user?.email, checkUnread])
 
   // Mark as read when opening the panel
@@ -91,8 +91,8 @@ export default function NotificationsPanel() {
               width: '8px',
               height: '8px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #34d399, #10b981)',
-              boxShadow: '0 0 8px rgba(16, 185, 129, 0.6)',
+              background: 'linear-gradient(135deg, #86efac, #22c55e)',
+              boxShadow: '0 0 8px rgba(34, 197, 94, 0.6)',
             }}
           />
         )}
@@ -136,13 +136,13 @@ export default function NotificationsPanel() {
                     width: '36px',
                     height: '36px',
                     borderRadius: '10px',
-                    background: 'rgba(16, 185, 129, 0.15)',
+                    background: 'rgba(34, 197, 94, 0.15)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <Bell size={18} style={{ color: '#34d399' }} />
+                  <Bell size={18} style={{ color: '#86efac' }} />
                 </div>
                 <div>
                   <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#f1f5f9', margin: 0 }}>
@@ -234,19 +234,19 @@ export default function NotificationsPanel() {
                             padding: '14px 16px',
                             borderRadius: '14px',
                             background: isSuccess
-                              ? 'rgba(16, 185, 129, 0.06)'
+                              ? 'rgba(34, 197, 94, 0.06)'
                               : 'rgba(239, 68, 68, 0.06)',
-                            border: `1px solid ${isSuccess ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)'}`,
+                            border: `1px solid ${isSuccess ? 'rgba(34, 197, 94, 0.12)' : 'rgba(239, 68, 68, 0.12)'}`,
                             transition: 'all 0.2s',
                           }}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.background = isSuccess
-                              ? 'rgba(16, 185, 129, 0.1)'
+                              ? 'rgba(34, 197, 94, 0.1)'
                               : 'rgba(239, 68, 68, 0.1)'
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.background = isSuccess
-                              ? 'rgba(16, 185, 129, 0.06)'
+                              ? 'rgba(34, 197, 94, 0.06)'
                               : 'rgba(239, 68, 68, 0.06)'
                           }}
                         >
@@ -261,12 +261,12 @@ export default function NotificationsPanel() {
                               justifyContent: 'center',
                               flexShrink: 0,
                               background: isSuccess
-                                ? 'rgba(16, 185, 129, 0.15)'
+                                ? 'rgba(34, 197, 94, 0.15)'
                                 : 'rgba(239, 68, 68, 0.15)',
                             }}
                           >
                             {isSuccess ? (
-                              <CheckCircle size={16} style={{ color: '#34d399' }} />
+                              <CheckCircle size={16} style={{ color: '#86efac' }} />
                             ) : (
                               <AlertCircle size={16} style={{ color: '#f87171' }} />
                             )}

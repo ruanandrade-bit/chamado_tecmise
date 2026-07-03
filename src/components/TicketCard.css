@@ -1,0 +1,265 @@
+/* ═══════════════════════════════════════════════════════════════
+   TicketCard.css — Card de chamado para o Kanban
+   ═══════════════════════════════════════════════════════════════ */
+
+.tk-card-wrapper {
+  position: relative;
+  background: rgba(var(--rgb-dark), 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(var(--rgb-white), 0.06);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(var(--rgb-black), 0.15);
+  animation: tkCardIn 0.36s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--tk-enter-delay, 0ms);
+}
+
+.tk-card-wrapper:hover {
+  border-color: rgba(var(--rgb-green-300), 0.25);
+  box-shadow: 0 8px 24px rgba(var(--rgb-black), 0.25), 0 0 20px rgba(var(--rgb-green), 0.05);
+  transform: translateY(-2px);
+}
+
+.tk-card-wrapper:active {
+  cursor: grabbing;
+}
+
+/* ── Priority Badge ── */
+.tk-priority-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 6px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.tk-card-wrapper:hover .tk-priority-badge {
+  transform: translateY(-1px);
+}
+
+.tk-priority-icon-wrap {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+}
+
+.tk-priority-label {
+  line-height: 1;
+}
+
+.tk-priority-high {
+  color: #fda4af;
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.16), rgba(190, 24, 93, 0.12));
+  border-color: rgba(244, 63, 94, 0.35);
+  box-shadow: 0 0 0 1px rgba(244, 63, 94, 0.09) inset;
+}
+
+.tk-priority-high .tk-priority-icon-wrap {
+  color: #fda4af;
+  background: rgba(244, 63, 94, 0.14);
+  border-color: rgba(244, 63, 94, 0.35);
+}
+
+.tk-priority-medium {
+  color: #fcd34d;
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.16), rgba(202, 138, 4, 0.12));
+  border-color: rgba(234, 179, 8, 0.35);
+  box-shadow: 0 0 0 1px rgba(234, 179, 8, 0.08) inset;
+}
+
+.tk-priority-medium .tk-priority-icon-wrap {
+  color: #fcd34d;
+  background: rgba(234, 179, 8, 0.12);
+  border-color: rgba(234, 179, 8, 0.32);
+}
+
+.tk-priority-low {
+  color: var(--blue-300);
+  background: linear-gradient(135deg, rgba(var(--rgb-blue), 0.15), rgba(37, 99, 235, 0.1));
+  border-color: rgba(var(--rgb-blue), 0.32);
+  box-shadow: 0 0 0 1px rgba(var(--rgb-blue), 0.08) inset;
+}
+
+.tk-priority-low .tk-priority-icon-wrap {
+  color: var(--blue-300);
+  background: rgba(var(--rgb-blue), 0.12);
+  border-color: rgba(var(--rgb-blue), 0.3);
+}
+
+/* ── Card Header ── */
+.tk-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.tk-card-title-area {
+  flex: 1;
+  min-width: 0;
+}
+
+.tk-card-id {
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: var(--green-300);
+  transition: color 0.2s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tk-card-wrapper:hover .tk-card-id {
+  color: var(--green-500);
+}
+
+.tk-card-school {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Card Meta ── */
+.tk-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.tk-card-meta-line {
+  font-size: 0.75rem;
+  color: var(--gray-300);
+}
+
+.tk-card-meta-icon {
+  color: var(--gray-500);
+}
+
+/* ── Description ── */
+.tk-card-desc {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.tk-card-wrapper:hover .tk-card-desc {
+  -webkit-line-clamp: 3;
+}
+
+/* ── Footer ── */
+.tk-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(var(--rgb-white), 0.06);
+}
+
+.tk-card-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tk-card-attach {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--gray-500);
+  font-size: 0.75rem;
+  transition: color 0.2s;
+}
+
+.tk-card-wrapper:hover .tk-card-attach {
+  color: var(--green-300);
+}
+
+.tk-card-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tk-card-action-archive {
+  background: rgba(var(--rgb-white), 0.04);
+  color: var(--gray-400);
+}
+
+.tk-card-action-archive:hover {
+  background: rgba(var(--rgb-green-300), 0.1);
+  color: var(--green-300);
+}
+
+.tk-card-action-delete {
+  background: rgba(var(--rgb-red), 0.08);
+  color: var(--red-300);
+}
+
+.tk-card-action-delete:hover {
+  background: rgba(var(--rgb-red), 0.18);
+  color: var(--red-400);
+}
+
+.tk-card-footer-dates {
+  display: flex;
+  justify-content: space-between;
+  flex: 1;
+}
+
+.tk-card-date {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+}
+
+.tk-card-date-right {
+  margin-left: auto;
+}
+
+/* ── Animation ── */
+@keyframes tkCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tk-card-wrapper {
+    animation: none;
+  }
+}

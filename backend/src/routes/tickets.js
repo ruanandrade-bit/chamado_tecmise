@@ -222,7 +222,7 @@ router.patch('/:id', viewOnlyBlock, (req, res) => {
   const existing = memoryStore.getTicketById(req.params.id)
   if (!existing) return res.status(404).json({ message: 'Chamado não encontrado.' })
 
-  const isAdmin = req.user?.canDragDrop === true
+  const isAdmin = req.user?.role === 'Admin'
   if (!isAdmin) {
     const isOwner = existing.createdByEmail
       ? existing.createdByEmail === req.user?.email
@@ -273,7 +273,7 @@ router.patch('/:id', viewOnlyBlock, (req, res) => {
 })
 
 router.post('/:id/move', viewOnlyBlock, (req, res) => {
-  const isAdmin = req.user?.canDragDrop === true
+  const isAdmin = req.user?.role === 'Admin'
   if (!isAdmin) {
     return res.status(403).json({ message: 'Apenas admin pode mover chamados.' })
   }

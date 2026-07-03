@@ -113,7 +113,27 @@ router.get('/', (_req, res) => {
 // POST — create task, persist in background (fast like tickets)
 router.post('/', (req, res) => {
   const { title, description, status, priority, date, tags } = req.body
-  if (!title?.trim()) return res.status(400).json({ message: 'Título é obrigatório.' })
+
+  const cleanTitle = String(title || '').trim()
+  if (!cleanTitle) return res.status(400).json({ message: 'Título é obrigatório.' })
+  if (cleanTitle.length > 200) return res.status(400).json({ message: 'Título não pode ultrapassar 200 caracteres.' })
+
+  const cleanDesc = String(description || '').trim()
+  if (cleanDesc.length > 2000) return res.status(400).json({ message: 'Descrição não pode ultrapassar 2000 caracteres.' })
+
+  if (status != null && !KANBAN_VALID_STATUSES.has(status)) {
+    return res.status(400).json({ message: `Status inválido. Valores aceitos: ${[...KANBAN_VALID_STATUSES].join(', ')}.` })
+  }
+  if (priority != null && !KANBAN_VALID_PRIORITIES.has(priority)) {
+    return res.status(400).json({ message: `Prioridade inválida. Valores aceitos: ${[...KANBAN_VALID_PRIORITIES].join(', ')}.` })
+  }
+  if (tags != null) {
+    if (!Array.isArray(tags)) return res.status(400).json({ message: 'tags deve ser um array.' })
+    if (tags.length > 10) return res.status(400).json({ message: 'Máximo de 10 tags por tarefa.' })
+    for (let i = 0; i < tags.length; i++) {
+      if (String(tags[i] ?? '').trim().length > 50) return res.status(400).json({ message: `Tag ${i + 1} excede 50 caracteres.` })
+    }
+  }
 
   const dateValidation = validateDueDate(date)
   if (!dateValidation.ok) {
@@ -125,12 +145,12 @@ router.post('/', (req, res) => {
 
   const task = {
     id: `KB-${crypto.randomBytes(4).toString('hex')}`,
-    title: title.trim(),
-    description: (description || '').trim(),
+    title: cleanTitle,
+    description: cleanDesc,
     status: status || 'todo',
     priority: priority || 'medium',
     date: dateValidation.value,
-    tags: Array.isArray(tags) ? tags : [],
+    tags: Array.isArray(tags) ? tags.map(t => String(t ?? '').trim()) : [],
     responsible: userName,
     author: userName,
     authorEmail: req.user?.email || '',

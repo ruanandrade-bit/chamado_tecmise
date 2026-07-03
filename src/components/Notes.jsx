@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { StickyNote, Plus, Trash2, Pin, PinOff, Calendar, CalendarDays, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
@@ -6,20 +6,20 @@ import './Notes.css'
 
 const CATEGORY_CONFIG = {
   pedagoga: { label: 'Pedagoga', color: '#a78bfa', bg: 'rgba(167,139,250,0.12)', border: 'rgba(167,139,250,0.25)' },
-  psicologa: { label: 'Psicóloga', color: '#34d399', bg: 'rgba(52,211,153,0.12)', border: 'rgba(52,211,153,0.25)' }
+  psicologa: { label: 'Psicóloga', color: '#86efac', bg: 'rgba(134,239,172,0.12)', border: 'rgba(134,239,172,0.25)' }
 }
 
 const STATUS_CONFIG = {
   agendado: { label: 'Agendado', color: '#60a5fa', bg: 'rgba(96,165,250,0.12)' },
   urgente: { label: 'Urgente', color: '#f87171', bg: 'rgba(248,113,113,0.12)' },
   hoje: { label: 'Hoje', color: '#fbbf24', bg: 'rgba(251,191,36,0.12)' },
-  confirmado: { label: 'Confirmado', color: '#34d399', bg: 'rgba(52,211,153,0.12)' }
+  confirmado: { label: 'Confirmado', color: '#86efac', bg: 'rgba(134,239,172,0.12)' }
 }
 
 export default function Notes() {
   const { user } = useAuthStore()
   const role = (user?.role || '').toLowerCase()
-  const canEdit = role === 'pedagoga' || role === 'psicóloga' || user?.canDragDrop === true
+  const canEdit = role === 'pedagoga' || role === 'psicóloga' || user?.role === 'Admin'
   const currentUserName = String(user?.name || '').trim().toLowerCase()
   const currentUserEmail = String(user?.email || '').trim().toLowerCase()
 
@@ -158,98 +158,92 @@ export default function Notes() {
   }
 
   // Derived data
-  const filtered = notes.filter(n => {
+  const {
+    filtered,
+    pinned,
+    recentNotes,
+    notesReminders,
+    mappedDeadlines,
+    sortedNotesReminders,
+    sortedDeadlines,
+    reminders,
+    activeNotes,
+    pendingReminders,
+    allNotesAndDeadlines
+  } = useMemo(() => {
     const q = searchQuery.toLowerCase()
-    const matchSearch = !q || n.title.toLowerCase().includes(q) || (n.description || '').toLowerCase().includes(q) || (n.author || '').toLowerCase().includes(q)
-    const matchCat = !filterCategory || n.category === filterCategory
-    const matchType = !filterType || n.noteType === filterType
-    return matchSearch && matchCat && matchType
-  })
+    const matchSearch = (item) => !q || item.title.toLowerCase().includes(q) || (item.description || '').toLowerCase().includes(q) || (item.author || '').toLowerCase().includes(q)
+    const matchCat = (item) => !filterCategory || item.category === filterCategory
 
-  const pinned = filtered.filter(n => n.isPinned)
-  const recentNotes = filtered.filter(n => n.noteType === 'note' && !n.isPinned).slice(0, 6)
+    const filt = notes.filter(n => {
+      const matchType = !filterType || n.noteType === filterType
+      return matchSearch(n) && matchCat(n) && matchType
+    })
 
-  const matchSearch = (item, q) => !q || item.title.toLowerCase().includes(q) || (item.description || '').toLowerCase().includes(q) || (item.author || '').toLowerCase().includes(q)
-  const matchCat = (item, cat) => !cat || item.category === cat
+    const noteRems = notes
+      .filter(n => n.noteType === 'reminder')
+      .filter(n => matchSearch(n) && matchCat(n))
 
-  const q = searchQuery.toLowerCase()
+    const mapDl = deadlines
+      .filter(d => d.status !== 'concluido')
+      .map(d => ({
+        id: d.id,
+        title: d.title,
+        description: d.description,
+        category: d.category || 'pedagoga',
+        noteType: 'reminder',
+        author: d.author,
+        authorEmail: d.authorEmail,
+        reminderDate: d.date,
+        reminderTime: d.time,
+        reminderStatus: d.status === 'concluido' ? 'concluido' : 'agendado',
+        createdAt: d.createdAt,
+        isDeadline: true,
+        priority: d.priority,
+        status: d.status
+      }))
+      .filter(d => matchSearch(d) && matchCat(d))
 
-  const notesReminders = notes
-    .filter(n => n.noteType === 'reminder')
-    .filter(n => matchSearch(n, q) && matchCat(n, filterCategory))
+    const sortByDate = (list) => [...list].sort((a, b) => {
+      const isCompA = a.reminderStatus === 'concluido'
+      const isCompB = b.reminderStatus === 'concluido'
+      if (isCompA && !isCompB) return 1
+      if (!isCompA && isCompB) return -1
+      return new Date(a.reminderDate || a.createdAt) - new Date(b.reminderDate || b.createdAt)
+    })
 
-  const mappedDeadlines = deadlines
-    .filter(d => d.status !== 'concluido')
-    .map(d => ({
-      id: d.id,
-      title: d.title,
-      description: d.description,
-      category: d.category || 'pedagoga',
-      noteType: 'reminder',
-      author: d.author,
-      authorEmail: d.authorEmail,
-      reminderDate: d.date,
-      reminderTime: d.time,
-      reminderStatus: d.status === 'concluido' ? 'concluido' : 'agendado',
-      createdAt: d.createdAt,
-      isDeadline: true,
-      priority: d.priority,
-      status: d.status
-    }))
-    .filter(d => matchSearch(d, q) && matchCat(d, filterCategory))
-
-  const sortedNotesReminders = [...notesReminders].sort((a, b) => {
-    const isCompA = a.reminderStatus === 'concluido'
-    const isCompB = b.reminderStatus === 'concluido'
-    if (isCompA && !isCompB) return 1
-    if (!isCompA && isCompB) return -1
-    const dateA = a.reminderDate || a.createdAt
-    const dateB = b.reminderDate || b.createdAt
-    return new Date(dateA) - new Date(dateB)
-  })
-
-  const sortedDeadlines = [...mappedDeadlines].sort((a, b) => {
-    const isCompA = a.reminderStatus === 'concluido'
-    const isCompB = b.reminderStatus === 'concluido'
-    if (isCompA && !isCompB) return 1
-    if (!isCompA && isCompB) return -1
-    const dateA = a.reminderDate || a.createdAt
-    const dateB = b.reminderDate || b.createdAt
-    return new Date(dateA) - new Date(dateB)
-  })
-
-  const reminders = [...notesReminders, ...mappedDeadlines].sort((a, b) => {
-    const isCompA = a.reminderStatus === 'concluido'
-    const isCompB = b.reminderStatus === 'concluido'
-    if (isCompA && !isCompB) return 1
-    if (!isCompA && isCompB) return -1
-    const dateA = a.reminderDate || a.createdAt
-    const dateB = b.reminderDate || b.createdAt
-    return new Date(dateA) - new Date(dateB)
-  })
-
-  const activeNotes = notes.filter(n => n.noteType === 'note').length
-  const pendingReminders = notes.filter(n => n.noteType === 'reminder').length + deadlines.filter(d => d.status !== 'concluido').length
-
-  const allNotesAndDeadlines = [
-    ...notes,
-    ...deadlines.map(d => ({
-      id: d.id,
-      title: d.title,
-      description: d.description,
-      category: d.category || 'pedagoga',
-      noteType: 'reminder',
-      author: d.author,
-      authorEmail: d.authorEmail,
-      reminderDate: d.date,
-      reminderTime: d.time,
-      reminderStatus: d.status === 'concluido' ? 'concluido' : 'agendado',
-      createdAt: d.createdAt,
-      isDeadline: true,
-      priority: d.priority,
-      status: d.status
-    }))
-  ]
+    return {
+      filtered: filt,
+      pinned: filt.filter(n => n.isPinned),
+      recentNotes: filt.filter(n => n.noteType === 'note' && !n.isPinned).slice(0, 6),
+      notesReminders: noteRems,
+      mappedDeadlines: mapDl,
+      sortedNotesReminders: sortByDate(noteRems),
+      sortedDeadlines: sortByDate(mapDl),
+      reminders: sortByDate([...noteRems, ...mapDl]),
+      activeNotes: notes.filter(n => n.noteType === 'note').length,
+      pendingReminders: notes.filter(n => n.noteType === 'reminder').length + deadlines.filter(d => d.status !== 'concluido').length,
+      allNotesAndDeadlines: [
+        ...notes,
+        ...deadlines.map(d => ({
+          id: d.id,
+          title: d.title,
+          description: d.description,
+          category: d.category || 'pedagoga',
+          noteType: 'reminder',
+          author: d.author,
+          authorEmail: d.authorEmail,
+          reminderDate: d.date,
+          reminderTime: d.time,
+          reminderStatus: d.status === 'concluido' ? 'concluido' : 'agendado',
+          createdAt: d.createdAt,
+          isDeadline: true,
+          priority: d.priority,
+          status: d.status
+        }))
+      ]
+    }
+  }, [notes, deadlines, searchQuery, filterCategory, filterType])
 
   const todayStr = new Date().toISOString().split('T')[0]
 
@@ -288,15 +282,15 @@ export default function Notes() {
   return (
     <div className="nt-container">
       {/* Header */}
-      <div className="nt-page-header">
-        <div className="nt-header-left">
-          <div className="nt-header-icon"><StickyNote size={24} /></div>
+      <div className="page-header">
+        <div className="page-header-left">
+          <div className="page-header-icon nt-header-icon"><StickyNote size={24} /></div>
           <div>
-            <h1 className="nt-page-title">Anotações</h1>
-            <p className="nt-page-sub">Registre observações, lembretes, acompanhamentos e datas importantes</p>
+            <h1 className="page-title">Anotações</h1>
+            <p className="page-sub">Registre observações, lembretes, acompanhamentos e datas importantes</p>
           </div>
         </div>
-        <div className="nt-header-right">
+        <div className="page-header-right">
           <div className="nt-search-box">
             <Search size={14} />
             <input placeholder="Buscar anotações, responsáveis, turmas..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
@@ -369,7 +363,7 @@ export default function Notes() {
                 className={`nt-dropdown-option ${filterCategory === 'psicologa' ? 'selected' : ''}`}
                 onClick={() => { setFilterCategory('psicologa'); setIsCategoryOpen(false) }}
               >
-                <span className="nt-option-dot" style={{ background: '#34d399' }} />
+                <span className="nt-option-dot" style={{ background: '#86efac' }} />
                 Psicóloga
               </div>
             </div>
@@ -759,7 +753,7 @@ export default function Notes() {
                           className={`nt-dropdown-option ${form.category === 'psicologa' ? 'selected' : ''}`}
                           onClick={() => { setForm(p => ({ ...p, category: 'psicologa' })); setIsFormCategoryOpen(false) }}
                         >
-                          <span className="nt-option-dot" style={{ background: '#34d399' }} />
+                          <span className="nt-option-dot" style={{ background: '#86efac' }} />
                           Psicóloga
                         </div>
                       </div>
@@ -877,7 +871,7 @@ export default function Notes() {
                             className={`nt-dropdown-option ${form.reminderStatus === 'confirmado' ? 'selected' : ''}`}
                             onClick={() => { setForm(p => ({ ...p, reminderStatus: 'confirmado' })); setIsFormStatusOpen(false) }}
                           >
-                            <span className="nt-option-dot" style={{ background: '#34d399' }} />
+                            <span className="nt-option-dot" style={{ background: '#86efac' }} />
                             Confirmado
                           </div>
                         </div>

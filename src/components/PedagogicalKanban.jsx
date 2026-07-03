@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Kanban as KanbanIcon, Plus, Trash2, Calendar, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronRight, ChevronLeft, ChevronDown, Archive, History } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
@@ -31,7 +31,7 @@ const normalizeDateForInput = (value) => {
 export default function PedagogicalKanban() {
   const { user } = useAuthStore()
   const role = (user?.role || '').toLowerCase()
-  const canEdit = role === 'pedagoga' || role === 'psicóloga' || user?.canDragDrop === true
+  const canEdit = role === 'pedagoga' || role === 'psicóloga' || user?.role === 'Admin'
   const currentUserName = (user?.name || '').trim() || 'Usuário'
   const currentUserEmail = String(user?.email || '').trim().toLowerCase()
   const minDueDate = getTodayIsoLocal()
@@ -303,7 +303,7 @@ export default function PedagogicalKanban() {
   }
 
   // Filter Tasks
-  const filteredTasks = tasks.filter(t => {
+  const filteredTasks = useMemo(() => tasks.filter(t => {
     if (t.isArchived) return false
 
     const matchesSearch =
@@ -316,32 +316,34 @@ export default function PedagogicalKanban() {
     const matchesResp = !filterResp || t.responsible.toLowerCase() === filterResp.toLowerCase()
 
     return matchesSearch && matchesPriority && matchesResp
-  })
+  }), [tasks, searchQuery, filterPriority, filterResp])
 
   // Dynamic Statistics
-  const openTasksCount = tasks.filter(t => !t.isArchived && ['todo', 'inprogress', 'inrevision'].includes(t.status)).length
-  const highPriorityCount = tasks.filter(t => !t.isArchived && t.priority === 'high' && t.status !== 'completed').length
-  const completedTasksCount = tasks.filter(t => !t.isArchived && t.status === 'completed').length
+  const { openTasksCount, highPriorityCount, completedTasksCount } = useMemo(() => ({
+    openTasksCount: tasks.filter(t => !t.isArchived && ['todo', 'inprogress', 'inrevision'].includes(t.status)).length,
+    highPriorityCount: tasks.filter(t => !t.isArchived && t.priority === 'high' && t.status !== 'completed').length,
+    completedTasksCount: tasks.filter(t => !t.isArchived && t.status === 'completed').length
+  }), [tasks])
 
   const columns = [
     { id: 'todo', label: 'A Fazer', color: '#a78bfa' },
     { id: 'inprogress', label: 'Em Andamento', color: '#38bdf8' },
     { id: 'inrevision', label: 'Em Revisão', color: '#fbbf24' },
-    { id: 'completed', label: 'Concluído', color: '#10b981' }
+    { id: 'completed', label: 'Concluído', color: '#22c55e' }
   ]
 
   return (
     <div className="pk-container">
       {/* Header */}
-      <div className="pk-page-header">
-        <div className="pk-header-left">
-          <div className="pk-header-icon"><KanbanIcon size={24} /></div>
+      <div className="page-header">
+        <div className="page-header-left">
+          <div className="page-header-icon pk-header-icon"><KanbanIcon size={24} /></div>
           <div>
-            <h1 className="pk-page-title">Kanban</h1>
-            <p className="pk-page-sub">Acompanhe tarefas, projetos pedagógicos e psicológicos</p>
+            <h1 className="page-title">Kanban</h1>
+            <p className="page-sub">Acompanhe tarefas, projetos pedagógicos e psicológicos</p>
           </div>
         </div>
-        <div className="pk-header-right">
+        <div className="page-header-right">
           <div className="pk-search-box">
             <Search size={14} />
             <input
@@ -412,7 +414,7 @@ export default function PedagogicalKanban() {
         </div>
         <div className="pk-stat-card">
           <div className="pk-stat-card-left">
-            <div className="pk-stat-icon" style={{ color: '#10b981', background: 'rgba(16,185,129,0.1)' }}><Check size={20} /></div>
+            <div className="pk-stat-icon" style={{ color: '#22c55e', background: 'rgba(34,197,94,0.1)' }}><Check size={20} /></div>
             <div>
               <p className="pk-stat-num">{completedTasksCount}</p>
               <p className="pk-stat-label">Concluídas</p>
@@ -421,17 +423,17 @@ export default function PedagogicalKanban() {
           <svg className="pk-sparkline-svg" viewBox="0 0 100 40">
             <defs>
               <linearGradient id="pk-sparkline-green" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#059669" stopOpacity="0.2" />
-                <stop offset="100%" stopColor="#10b981" stopOpacity="1" />
+                <stop offset="0%" stopColor="#16a34a" stopOpacity="0.2" />
+                <stop offset="100%" stopColor="#22c55e" stopOpacity="1" />
               </linearGradient>
               <linearGradient id="pk-sparkline-green-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#10b981" stopOpacity="0.15" />
-                <stop offset="100%" stopColor="#10b981" stopOpacity="0" />
+                <stop offset="0%" stopColor="#22c55e" stopOpacity="0.15" />
+                <stop offset="100%" stopColor="#22c55e" stopOpacity="0" />
               </linearGradient>
             </defs>
             <path d="M 0 38 Q 20 30 50 15 T 80 18 T 100 2 L 100 40 L 0 40 Z" fill="url(#pk-sparkline-green-fill)" className="pk-sparkline-fill" />
             <path d="M 0 38 Q 20 30 50 15 T 80 18 T 100 2" stroke="url(#pk-sparkline-green)" className="pk-sparkline-path" />
-            <circle cx="100" cy="2" r="3" fill="#10b981" className="pk-sparkline-circle" style={{ color: '#10b981' }} />
+            <circle cx="100" cy="2" r="3" fill="#22c55e" className="pk-sparkline-circle" style={{ color: '#22c55e' }} />
           </svg>
         </div>
       </div>
@@ -527,7 +529,7 @@ export default function PedagogicalKanban() {
                 className={`pk-dropdown-option ${filterResp === 'Psicóloga' ? 'selected' : ''}`}
                 onClick={() => { setFilterResp('Psicóloga'); setIsRespOpen(false) }}
               >
-                <span className="pk-option-dot" style={{ background: '#10b981' }} />
+                <span className="pk-option-dot" style={{ background: '#22c55e' }} />
                 Psicóloga
               </div>
             </div>
@@ -646,14 +648,14 @@ export default function PedagogicalKanban() {
       {showDetailModal && viewTarget && (
         <div className="pk-modal-overlay" onClick={() => setShowDetailModal(false)}>
           <div className="pk-modal-card" onClick={e => e.stopPropagation()}>
-            <div className="pk-modal-accent" style={{ background: viewTarget.status === 'completed' ? '#10b981' : '#a78bfa' }} />
+            <div className="pk-modal-accent" style={{ background: viewTarget.status === 'completed' ? '#22c55e' : '#a78bfa' }} />
             <div className="pk-modal-head">
               <div className="pk-modal-head-left">
                 <div
                   className="pk-modal-head-icon"
                   style={{
-                    background: viewTarget.status === 'completed' ? 'rgba(16,185,129,0.1)' : 'rgba(167,139,250,0.1)',
-                    color: viewTarget.status === 'completed' ? '#10b981' : '#a78bfa'
+                    background: viewTarget.status === 'completed' ? 'rgba(34,197,94,0.1)' : 'rgba(167,139,250,0.1)',
+                    color: viewTarget.status === 'completed' ? '#22c55e' : '#a78bfa'
                   }}
                 >
                   <KanbanIcon size={18} />
@@ -740,12 +742,12 @@ export default function PedagogicalKanban() {
                       switch (entry.action) {
                         case 'created':
                           icon = <Plus size={12} />
-                          color = '#10b981'
+                          color = '#22c55e'
                           text = <><strong>{entry.user}</strong> criou a tarefa</>
                           break
                         case 'status_changed':
                           icon = <ArrowRight size={12} />
-                          color = entry.to === 'completed' ? '#10b981' : '#38bdf8'
+                          color = entry.to === 'completed' ? '#22c55e' : '#38bdf8'
                           text = <><strong>{entry.user}</strong> moveu de <em>{statusLabel(entry.from)}</em> para <em>{statusLabel(entry.to)}</em></>
                           break
                         case 'priority_changed':
@@ -795,7 +797,7 @@ export default function PedagogicalKanban() {
                   {viewTarget.status === 'completed' && (
                     <button 
                       className="pk-btn-cancel" 
-                      style={{ border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', display: 'flex', alignItems: 'center', gap: 6 }} 
+                      style={{ border: '1px solid rgba(34,197,94,0.3)', color: '#22c55e', display: 'flex', alignItems: 'center', gap: 6 }} 
                       onClick={() => { setArchiveTarget(viewTarget); setShowArchiveModal(true) }}
                     >
                       <Archive size={14} /> Arquivar
@@ -904,7 +906,7 @@ export default function PedagogicalKanban() {
                           className={`pk-dropdown-option ${form.priority === 'low' ? 'selected' : ''}`}
                           onClick={() => { setForm(p => ({ ...p, priority: 'low' })); setIsFormPriorityOpen(false) }}
                         >
-                          <span className="pk-option-dot" style={{ background: '#10b981' }} />
+                          <span className="pk-option-dot" style={{ background: '#22c55e' }} />
                           Baixa
                         </div>
                       </div>
@@ -982,7 +984,7 @@ export default function PedagogicalKanban() {
                           className={`pk-dropdown-option ${form.status === 'completed' ? 'selected' : ''}`}
                           onClick={() => { setForm(p => ({ ...p, status: 'completed' })); setIsFormStatusOpen(false) }}
                         >
-                          <span className="pk-option-dot" style={{ background: '#10b981' }} />
+                          <span className="pk-option-dot" style={{ background: '#22c55e' }} />
                           Concluído
                         </div>
                       </div>
