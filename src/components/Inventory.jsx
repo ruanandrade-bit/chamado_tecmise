@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { api } from '../services/api'
 import { S4S_LOGO_BASE64 } from '../utils/logoBase64'
+import { toast } from '../stores/toastStore'
 import './Inventory.css'
 
 const ITEM_CONFIG = {
@@ -107,12 +108,12 @@ export default function Inventory() {
     const num = parseInt(editValue, 10)
 
     if (isCustomItem(item.id) && trimmedName.length < 2) {
-      window.alert('Digite um nome com pelo menos 2 caracteres.')
+      toast.warning('Digite um nome com pelo menos 2 caracteres.')
       return
     }
 
     if (isNaN(num) || num < 0) {
-      window.alert('A quantidade precisa ser 0 ou maior.')
+      toast.warning('A quantidade precisa ser 0 ou maior.')
       return
     }
 
@@ -139,7 +140,7 @@ export default function Inventory() {
       cancelEdit()
     } catch (err) {
       console.error('Erro ao editar item:', err)
-      window.alert(err.message || 'Não foi possível editar o item.')
+      toast.error(err.message || 'Não foi possível editar o item.')
     } finally {
       setUpdatingId(null)
     }
@@ -210,7 +211,7 @@ export default function Inventory() {
       setItems(data.items || [])
     } catch (err) {
       console.error('Erro ao remover item:', err)
-      window.alert(err.message || 'Não foi possível remover o item.')
+      toast.error(err.message || 'Não foi possível remover o item.')
     } finally {
       setUpdatingId(null)
     }

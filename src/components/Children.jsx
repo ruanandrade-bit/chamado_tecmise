@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { AlertCircle, ArrowLeft, ArrowRight, BookOpen, Check, ChevronDown, Edit3, Loader2, Plus, Search, ShieldAlert, Trash2, UserRound, Users, X } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
+import { toast } from '../stores/toastStore'
 import './Children.css'
 
 const emptyForm = {
@@ -325,7 +326,7 @@ export default function Children() {
       setDeleteTarget(null)
     } catch (error) {
       console.error('Error deleting child:', error)
-      alert(error.response?.data?.message || 'Erro ao excluir criança')
+      toast.error(error.response?.data?.message || 'Erro ao excluir criança.')
     } finally {
       setIsDeleting(false)
     }

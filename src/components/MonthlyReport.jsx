@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { FileText, Plus, Trash2, Send, CalendarDays, ClipboardList, Loader2, Ticket, Pencil, X, Check, AlertTriangle, ShieldAlert, School, UserRound, ChevronDown, Pin, PinOff } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { api } from '../services/api'
+import { toast } from '../stores/toastStore'
 import './MonthlyReport.css'
 
 const MONTH_NAMES = [
@@ -391,7 +392,7 @@ export default function MonthlyReport() {
       setNewSchool('')
       setNewAssignee('')
     } catch (err) {
-      alert(err.message || 'Erro ao adicionar observação.')
+      toast.error(err.message || 'Erro ao adicionar observação.')
     } finally {
       setIsSending(false)
     }
@@ -408,7 +409,7 @@ export default function MonthlyReport() {
       setTicketsThisMonth(data.ticketCount || 0)
       setConfirmDeleteId(null)
     } catch (err) {
-      alert(err.message || 'Erro ao remover observação.')
+      toast.error(err.message || 'Erro ao remover observação.')
     } finally {
       setDeletingId(null)
     }
@@ -474,7 +475,7 @@ export default function MonthlyReport() {
       setTicketsThisMonth(data.ticketCount || 0)
       cancelEditing()
     } catch (err) {
-      alert(err.message || 'Erro ao editar observação.')
+      toast.error(err.message || 'Erro ao editar observação.')
     } finally {
       setIsSavingEdit(false)
     }
@@ -491,7 +492,7 @@ export default function MonthlyReport() {
       setObservations(data.observations || [])
       setTicketsThisMonth(data.ticketCount || 0)
     } catch (err) {
-      alert(err.message || 'Erro ao fixar observação.')
+      toast.error(err.message || 'Erro ao fixar observação.')
     } finally {
       setPinningId(null)
     }

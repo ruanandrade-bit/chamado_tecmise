@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { Calendar, Plus, Trash2, CalendarDays, Clock, CheckCircle2, AlertTriangle, AlertCircle, Search, Filter, Loader2, ShieldCheck, X, Edit3, ChevronRight, Tag, ChevronDown, ExternalLink, UserPlus, Check } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
+import { toast } from '../stores/toastStore'
 import './Deadlines.css'
 
 const generateGoogleCalendarUrl = (item) => {
@@ -291,7 +292,7 @@ export default function Deadlines() {
     try {
       const target = allDeadlinesAndReminders.find(d => d.id === id)
       if (!isCreatedByCurrentUser(target)) {
-        alert('Apenas o criador pode excluir este item.')
+        toast.warning('Apenas o criador pode excluir este item.')
         return
       }
 
@@ -303,7 +304,7 @@ export default function Deadlines() {
         setDeadlines(prev => prev.filter(d => d.id !== id))
       }
       setDeleteTarget(null)
-    } catch (e) { alert('Falha ao deletar.') }
+    } catch (e) { toast.error('Falha ao deletar.') }
   }
 
   const toggleStatus = async (d) => {

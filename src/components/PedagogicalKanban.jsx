@@ -3,6 +3,7 @@ import { Kanban as KanbanIcon, Plus, Trash2, Calendar, Clock, Bell, BookOpen, Br
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import { useKanbanStore } from '../stores/kanbanStore'
+import { toast } from '../stores/toastStore'
 import './PedagogicalKanban.css'
 
 const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/
@@ -157,7 +158,7 @@ export default function PedagogicalKanban() {
   const handleDeleteTask = async () => {
     if (!deleteTarget) return
     if (!isCreatedByCurrentUser(deleteTarget)) {
-      alert('Apenas o criador pode excluir esta tarefa.')
+      toast.warning('Apenas o criador pode excluir esta tarefa.')
       return
     }
     setIsSaving(true)
@@ -169,7 +170,7 @@ export default function PedagogicalKanban() {
       setDeleteTarget(null)
       setViewTarget(null)
     } catch (err) {
-      alert(`Erro ao excluir tarefa: ${err.message}`)
+      toast.error(err.message || 'Erro ao excluir tarefa.')
     } finally {
       setIsSaving(false)
     }
@@ -191,7 +192,7 @@ export default function PedagogicalKanban() {
       setArchiveTarget(null)
       setViewTarget(null)
     } catch (err) {
-      alert(`Erro ao arquivar tarefa: ${err.message}`)
+      toast.error(err.message || 'Erro ao arquivar tarefa.')
     } finally {
       setIsSaving(false)
     }
@@ -236,7 +237,7 @@ export default function PedagogicalKanban() {
     } catch (err) {
       // Revert if API fails
       setTasks(previousTasks)
-      alert(`Falha ao mover tarefa: ${err.message}`)
+      toast.error(err.message || 'Falha ao mover tarefa.')
     } finally {
       setDraggedTaskId(null)
     }
@@ -257,7 +258,7 @@ export default function PedagogicalKanban() {
         setTasks(prev => prev.map(t => t.id === updated.id ? updated : t))
       } catch (err) {
         fetchTasks()
-        alert(`Erro ao atualizar status: ${err.message}`)
+        toast.error(err.message || 'Erro ao atualizar status.')
       }
     }
   }

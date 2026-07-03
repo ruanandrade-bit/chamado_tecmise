@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { EyeOff, Plus, Trash2, ShieldAlert, Clock, Percent, School, Monitor, Loader2, AlertCircle, Sparkles, Filter, ShieldCheck, ChevronDown, Check, CalendarDays } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
+import { toast } from '../stores/toastStore'
 import './CameraObstruction.css'
 
 function CobPrettySelect({
@@ -370,7 +371,7 @@ export default function CameraObstruction() {
       fetchRecordsOnly()
       setDeleteTarget(null)
     } catch (err) {
-      alert(err.message || 'Falha ao deletar registro.')
+      toast.error(err.message || 'Falha ao deletar registro.')
     } finally {
       setIsDeleting(false)
     }

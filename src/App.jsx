@@ -6,6 +6,8 @@ import Login from './components/Login'
 import Header from './components/Header'
 import Sidebar from './components/Sidebar'
 import NotificationCenter from './components/NotificationCenter'
+import ToastContainer from './components/Toast'
+import ErrorBoundary from './components/ErrorBoundary'
 
 const Dashboard        = lazy(() => import('./components/Dashboard'))
 const Kanban           = lazy(() => import('./components/Kanban'))
@@ -108,6 +110,7 @@ export default function App() {
     <div className="flex h-screen bg-dark-950 text-dark-100">
       {/* Notifications */}
       <NotificationCenter />
+      <ToastContainer />
 
       {/* Sidebar */}
       <Sidebar
@@ -126,19 +129,19 @@ export default function App() {
         <main className="flex-1 overflow-y-auto">
           <div className={isWidePage ? 'p-4 sm:p-6 lg:p-8 w-full max-w-none' : 'p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full'}>
             <Suspense fallback={<PageLoader />}>
-              {currentPage === 'dashboard' && <Dashboard />}
-              {currentPage === 'kanban' && <Kanban />}
-              {currentPage === 'archived' && <ArchivedTickets />}
-              {currentPage === 'monthly-report' && <MonthlyReport />}
-              {currentPage === 'devices-online' && <DevicesOnline />}
-              {currentPage === 'inventory' && <Inventory />}
-              {currentPage === 'school-config' && <SchoolConfig />}
-              {currentPage === 'camera-obstruction' && <CameraObstruction />}
-              {currentPage === 'notes' && <Notes />}
-              {currentPage === 'deadlines' && <Deadlines />}
-              {currentPage === 'pedagogical-kanban' && <PedagogicalKanban />}
-              {currentPage === 'resolved-kanban' && <ResolvedKanban />}
-              {currentPage === 'children' && <Children />}
+              {currentPage === 'dashboard'          && <ErrorBoundary label="o Dashboard"><Dashboard /></ErrorBoundary>}
+              {currentPage === 'kanban'             && <ErrorBoundary label="o Kanban"><Kanban /></ErrorBoundary>}
+              {currentPage === 'archived'           && <ErrorBoundary label="os Chamados Resolvidos"><ArchivedTickets /></ErrorBoundary>}
+              {currentPage === 'monthly-report'     && <ErrorBoundary label="o Relatório Mensal"><MonthlyReport /></ErrorBoundary>}
+              {currentPage === 'devices-online'     && <ErrorBoundary label="os Devices Online"><DevicesOnline /></ErrorBoundary>}
+              {currentPage === 'inventory'          && <ErrorBoundary label="o Inventário"><Inventory /></ErrorBoundary>}
+              {currentPage === 'school-config'      && <ErrorBoundary label="as Configurações"><SchoolConfig /></ErrorBoundary>}
+              {currentPage === 'camera-obstruction' && <ErrorBoundary label="a Obstrução de Câmera"><CameraObstruction /></ErrorBoundary>}
+              {currentPage === 'notes'              && <ErrorBoundary label="as Anotações"><Notes /></ErrorBoundary>}
+              {currentPage === 'deadlines'          && <ErrorBoundary label="os Prazos"><Deadlines /></ErrorBoundary>}
+              {currentPage === 'pedagogical-kanban' && <ErrorBoundary label="o Kanban Pedagógico"><PedagogicalKanban /></ErrorBoundary>}
+              {currentPage === 'resolved-kanban'    && <ErrorBoundary label="o Kanban Resolvidos"><ResolvedKanban /></ErrorBoundary>}
+              {currentPage === 'children'           && <ErrorBoundary label="as Crianças"><Children /></ErrorBoundary>}
             </Suspense>
           </div>
         </main>

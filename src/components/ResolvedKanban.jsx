@@ -5,6 +5,7 @@ import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import { useKanbanStore } from '../stores/kanbanStore'
 import './PedagogicalKanban.css'
+import { toast } from '../stores/toastStore'
 import './ResolvedKanban.css'
 
 function ResolvedPrettySelect({
@@ -336,7 +337,7 @@ export default function ResolvedKanban() {
   const handleConfirmDelete = async () => {
     if (!taskToDelete || isDeleting) return
     if (!isCreatedByCurrentUser(taskToDelete)) {
-      alert('Apenas o criador pode excluir esta tarefa.')
+      toast.warning('Apenas o criador pode excluir esta tarefa.')
       return
     }
     setIsDeleting(true)
@@ -347,7 +348,7 @@ export default function ResolvedKanban() {
         setSelectedTaskId(null)
       }
     } catch (error) {
-      alert(error.message || 'Não foi possível excluir a tarefa.')
+      toast.error(error.message || 'Não foi possível excluir a tarefa.')
     } finally {
       setIsDeleting(false)
       setTaskToDelete(null)

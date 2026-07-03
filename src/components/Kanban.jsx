@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/authStore'
 import TicketCard from './TicketCard'
 import CreateTicketModal from './CreateTicketModal'
 import TicketDetailsModal from './TicketDetailsModal'
+import { toast } from '../stores/toastStore'
 import './Kanban.css'
 
 /* ─── Confirm‑Archive Modal (premium glassmorphism) ────────────────── */
@@ -200,7 +201,7 @@ export default function Kanban() {
 
   const ticketsByStatus = getTicketsByStatus()
   const selectedTicket = tickets.find((ticket) => ticket.id === selectedTicketId) || null
-  const canDragDrop = user?.canDragDrop
+  const canEdit = user?.canEdit
 
   const handleDragOver = (e, statusValue) => {
     e.preventDefault()
@@ -215,7 +216,7 @@ export default function Kanban() {
   const handleDrop = (e, statusValue) => {
     setDragOverCol(null)
     setIsDraggingTicket(false)
-    if (!canDragDrop) {
+    if (!canEdit) {
       e.preventDefault()
       return
     }
@@ -223,7 +224,7 @@ export default function Kanban() {
     const ticketId = e.dataTransfer.getData('ticketId')
     if (ticketId) {
       moveTicket(ticketId, statusValue).catch((error) => {
-        alert(error.message || 'Não foi possível mover o chamado.')
+        toast.error(error.message || 'Não foi possível mover o chamado.')
       })
     }
   }
@@ -237,7 +238,7 @@ export default function Kanban() {
   }
 
   const handleTicketDragStart = () => {
-    if (!canDragDrop) return
+    if (!canEdit) return
     setIsDraggingTicket(true)
   }
 
@@ -251,7 +252,7 @@ export default function Kanban() {
     try {
       await archiveTicket(ticketToArchive.id)
     } catch (error) {
-      alert(error.message || 'Não foi possível arquivar o chamado.')
+      toast.error(error.message || 'Não foi possível arquivar o chamado.')
     } finally {
       setIsArchiving(false)
       setTicketToArchive(null)
@@ -404,15 +405,15 @@ export default function Kanban() {
                       <div
                         key={ticket.id}
                         onClick={() => handleTicketClick(ticket)}
-                        draggable={canDragDrop}
+                        draggable={canEdit}
                         onDragStart={handleTicketDragStart}
                         onDragEnd={handleTicketDragEnd}
                       >
                         <TicketCard
                           ticket={ticket}
                           onClick={() => handleTicketClick(ticket)}
-                          draggable={canDragDrop}
-                          showArchiveAction={status.value === 'resolvido' && canDragDrop}
+                          draggable={canEdit}
+                          showArchiveAction={status.value === 'resolvido' && canEdit}
                           onArchive={handleArchiveRequest}
                         />
                       </div>

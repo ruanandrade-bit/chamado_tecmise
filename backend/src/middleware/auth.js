@@ -40,7 +40,7 @@ export function signToken(user) {
       email: user.email,
       name: user.name,
       role: user.role,
-      canDragDrop: user.canDragDrop,
+      canEdit: user.canEdit,
       viewOnly: user.viewOnly || false
     },
     JWT_SECRET,
@@ -69,7 +69,7 @@ export function authRequired(req, res, next) {
       ...payload,
       name: freshUser.name,
       role: freshUser.role,
-      canDragDrop: Boolean(freshUser.canDragDrop),
+      canEdit: Boolean(freshUser.canEdit),
       viewOnly: Boolean(freshUser.viewOnly)
     }
     next()
@@ -123,7 +123,7 @@ export function sanitizeUser(email) {
     name: user.name,
     email,
     role: user.role,
-    canDragDrop: user.canDragDrop,
+    canEdit: user.canEdit,
     viewOnly: user.viewOnly || false
   }
 }

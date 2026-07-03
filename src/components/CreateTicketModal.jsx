@@ -3,6 +3,7 @@ import { X, Upload, Plus, Loader2, Lock, ChevronDown, Check, School, MapPin, Fla
 import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
 import { api } from '../services/api'
+import { toast } from '../stores/toastStore'
 import './CreateTicketModal.css'
 
 function PrettySelectField({
@@ -282,7 +283,7 @@ export default function CreateTicketModal({ onClose }) {
     if (!formData.description.trim()) missingFields.push('Descrição')
 
     if (missingFields.length > 0) {
-      alert(`Por favor, preencha os campos obrigatórios: ${missingFields.join(', ')}`)
+      toast.warning(`Por favor, preencha os campos obrigatórios: ${missingFields.join(', ')}`)
       return
     }
 
@@ -315,7 +316,7 @@ export default function CreateTicketModal({ onClose }) {
 
       onClose()
     } catch (error) {
-      alert(error.message || 'Não foi possível criar o chamado.')
+      toast.error(error.message || 'Não foi possível criar o chamado.')
     } finally {
       setLoading(false)
     }

@@ -23,6 +23,12 @@ router.get('/', (_req, res) => {
   memoryStore.refreshCollaborativeData().catch(() => {})
 })
 
+const VALID_CATEGORIES_DL = new Set(['pedagoga', 'psicologa'])
+const VALID_STATUSES_DL   = new Set(['pendente', 'em-andamento', 'concluido'])
+const VALID_PRIORITIES_DL = new Set(['alta', 'media', 'baixa'])
+const ISO_DATE_REGEX      = /^\d{4}-\d{2}-\d{2}$/
+const TIME_REGEX_DL       = /^([01]\d|2[0-3]):[0-5]\d$/
+
 // POST — create deadline, persist in background (fast like tickets)
 router.post('/', (req, res) => {
   const { title, description, date, time, category, status, priority, googleCalendarConfirmed, googleCalendarUser, googleCalendarGuest } = req.body
@@ -32,6 +38,17 @@ router.post('/', (req, res) => {
   const cleanDesc = String(description || '').trim()
   if (cleanDesc.length > 2000) return res.status(400).json({ message: 'Descrição não pode ultrapassar 2000 caracteres.' })
   if (!date) return res.status(400).json({ message: 'Data é obrigatória.' })
+  if (!ISO_DATE_REGEX.test(String(date))) return res.status(400).json({ message: 'Data inválida. Use o formato yyyy-mm-dd.' })
+  if (time && !TIME_REGEX_DL.test(String(time))) return res.status(400).json({ message: 'Hora inválida. Use o formato HH:MM.' })
+
+  const cleanCategory = String(category || 'pedagoga').trim()
+  if (!VALID_CATEGORIES_DL.has(cleanCategory)) return res.status(400).json({ message: 'Categoria inválida. Valores aceitos: pedagoga, psicologa.' })
+
+  const cleanStatus = String(status || 'pendente').trim()
+  if (!VALID_STATUSES_DL.has(cleanStatus)) return res.status(400).json({ message: 'Status inválido. Valores aceitos: pendente, em-andamento, concluido.' })
+
+  const cleanPriority = String(priority || 'media').trim()
+  if (!VALID_PRIORITIES_DL.has(cleanPriority)) return res.status(400).json({ message: 'Prioridade inválida. Valores aceitos: alta, media, baixa.' })
 
   const d = {
     id: `DL-${crypto.randomBytes(4).toString('hex')}`,
@@ -39,9 +56,9 @@ router.post('/', (req, res) => {
     description: cleanDesc,
     date,
     time: time || '',
-    category: category || 'pedagoga',
-    status: status || 'pendente',
-    priority: priority || 'media',
+    category: cleanCategory,
+    status: cleanStatus,
+    priority: cleanPriority,
     author: req.user?.name || 'Desconhecido',
     authorEmail: req.user?.email || '',
     googleCalendarConfirmed: !!googleCalendarConfirmed,

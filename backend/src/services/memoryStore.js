@@ -397,7 +397,7 @@ function syncUsersFromProfessionals() {
       name,
       role,
       passwordHash,
-      canDragDrop: Boolean(existing?.canDragDrop || false),
+      canEdit: Boolean(existing?.canEdit || false),
       viewOnly: Boolean(existing?.viewOnly || false),
       managedByProfessionals: !isCoreUser
     }

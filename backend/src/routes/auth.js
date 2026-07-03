@@ -95,7 +95,7 @@ router.get('/users', authRequired, adminOnly, (_req, res) => {
     email,
     name: user.name,
     role: buildFreshUser(email)?.role || user.role,
-    canDragDrop: user.canDragDrop,
+    canEdit: user.canEdit,
     viewOnly: user.viewOnly || false
   }))
 

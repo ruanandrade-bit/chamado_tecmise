@@ -1,13 +1,13 @@
 // Senhas NÃO ficam aqui. Hashes são carregados do MongoDB (professionals)
 // ou, em primeiro deploy, do env var INITIAL_ADMIN_PASSWORD.
 export const USERS = {
-  'ruan@s4s.com':    { id: 0, name: 'Ruan',    role: 'Admin',       passwordHash: '', canDragDrop: true },
-  'ana@s4s.com':     { id: 1, name: 'Ana',      role: 'Psicóloga',   passwordHash: '', canDragDrop: false },
-  'carol@s4s.com':   { id: 2, name: 'Carol',    role: 'Psicóloga',   passwordHash: '', canDragDrop: false },
-  'beatriz@s4s.com': { id: 3, name: 'Beatriz',  role: 'Pedagoga',    passwordHash: '', canDragDrop: false },
-  'jessica@s4s.com': { id: 4, name: 'Jessica',  role: 'Pedagoga',    passwordHash: '', canDragDrop: false },
-  'gabi@s4s.com':    { id: 5, name: 'Gabi',     role: 'Pedagoga',    passwordHash: '', canDragDrop: false },
-  'tecmise@s4s.com': { id: 6, name: 'Tecmise',  role: 'Visualização',passwordHash: '', canDragDrop: false, viewOnly: true }
+  'ruan@s4s.com':    { id: 0, name: 'Ruan',    role: 'Admin',       passwordHash: '', canEdit: true },
+  'ana@s4s.com':     { id: 1, name: 'Ana',      role: 'Psicóloga',   passwordHash: '', canEdit: false },
+  'carol@s4s.com':   { id: 2, name: 'Carol',    role: 'Psicóloga',   passwordHash: '', canEdit: false },
+  'beatriz@s4s.com': { id: 3, name: 'Beatriz',  role: 'Pedagoga',    passwordHash: '', canEdit: false },
+  'jessica@s4s.com': { id: 4, name: 'Jessica',  role: 'Pedagoga',    passwordHash: '', canEdit: false },
+  'gabi@s4s.com':    { id: 5, name: 'Gabi',     role: 'Pedagoga',    passwordHash: '', canEdit: false },
+  'tecmise@s4s.com': { id: 6, name: 'Tecmise',  role: 'Visualização',passwordHash: '', canEdit: false, viewOnly: true }
 }
 
 export const STATUSES = [

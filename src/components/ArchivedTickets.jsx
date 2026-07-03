@@ -4,6 +4,7 @@ import { useTicketsStore } from '../stores/ticketsStore'
 import { useAuthStore } from '../stores/authStore'
 import TicketCard from './TicketCard'
 import TicketDetailsModal from './TicketDetailsModal'
+import { toast } from '../stores/toastStore'
 import './ArchivedTickets.css'
 
 function ArcPrettySelect({
@@ -327,7 +328,7 @@ export default function ArchivedTickets() {
         setSelectedTicketId(null)
       }
     } catch (error) {
-      alert(error.message || 'Não foi possível excluir o chamado.')
+      toast.error(error.message || 'Não foi possível excluir o chamado.')
     } finally {
       setIsDeleting(false)
       setTicketToDelete(null)

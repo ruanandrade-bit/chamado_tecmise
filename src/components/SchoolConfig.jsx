@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Settings, School, Cpu, BookOpen, Plus, Trash2, Save, Loader2, AlertTriangle, ChevronDown, ChevronRight, ShieldAlert, Pencil, Check, Briefcase, Users, KeyRound, Mail } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
+import { toast } from '../stores/toastStore'
 import './SchoolConfig.css'
 
 const PROFESSIONAL_ROLE_OPTIONS = ['Psicóloga', 'Pedagoga']
@@ -155,7 +156,7 @@ export default function SchoolConfig() {
 
       setHasChanges(false)
     } catch (err) {
-      alert(err.message || 'Erro ao salvar configuração.')
+      toast.error(err.message || 'Erro ao salvar configuração.')
     } finally {
       setIsSaving(false)
     }
@@ -217,7 +218,7 @@ export default function SchoolConfig() {
       return
     }
     if (schoolData[school]?.[trimmed]) {
-      alert('Já existe um device com esse número nesta escola.')
+      toast.warning('Já existe um device com esse número nesta escola.')
       return
     }
     setSchoolData(prev => {
@@ -267,7 +268,7 @@ export default function SchoolConfig() {
     const password = String(newProfessionalPassword || '').trim()
     if (!name || !role || !password) return
     if (password.length < 6) {
-      alert('A senha precisa ter pelo menos 6 caracteres.')
+      toast.warning('A senha precisa ter pelo menos 6 caracteres.')
       return
     }
     if (!PROFESSIONAL_ROLE_OPTIONS.includes(role)) return

@@ -208,13 +208,27 @@ router.get('/:id', (req, res) => {
 })
 
 router.post('/', viewOnlyBlock, (req, res) => {
-  const { school, classroom, device, description } = req.body || {}
+  const body = req.body || {}
+  let sanitizedBody
 
-  if (!String(school || '').trim() || !String(classroom || '').trim() || !String(device || '').trim() || !String(description || '').trim()) {
-    return res.status(400).json({ message: 'Campos obrigatórios: school, classroom, device e description.' })
+  try {
+    const school      = normalizeText(body.school,                    { fieldName: 'school',      min: 1, max: 120 })
+    const classroom   = normalizeText(body.classroom,                 { fieldName: 'classroom',   min: 1, max: 120 })
+    const device      = normalizeText(String(body.device      ?? ''), { fieldName: 'device',      min: 1, max: 120 })
+    const description = normalizeText(body.description,               { fieldName: 'description', min: 1, max: 5000 })
+    const period      = normalizeText(String(body.period      ?? ''), { fieldName: 'period',      min: 0, max: 80 })
+    const problemType = normalizeText(String(body.problemType ?? ''), { fieldName: 'problemType', min: 0, max: 220 })
+    const responsible = normalizeText(String(body.responsible ?? ''), { fieldName: 'responsible', min: 0, max: 120 })
+    const priority    = String(body.priority || 'media').trim().toLowerCase()
+
+    if (!PRIORITIES.has(priority)) throw new Error('priority inválida.')
+
+    sanitizedBody = { school, classroom, device, description, period, problemType, responsible, priority }
+  } catch (err) {
+    return res.status(400).json({ message: err.message })
   }
 
-  const ticket = memoryStore.createTicket(req.body, req.user)
+  const ticket = memoryStore.createTicket(sanitizedBody, req.user)
   return res.status(201).json({ ticket })
 })
 

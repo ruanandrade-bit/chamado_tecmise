@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { StickyNote, Plus, Trash2, Pin, PinOff, Calendar, CalendarDays, Clock, Bell, BookOpen, Brain, Search, Filter, Loader2, AlertCircle, ShieldCheck, X, Edit3, Check, ArrowRight, AlertTriangle, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react'
 import { api } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
+import { toast } from '../stores/toastStore'
 import './Notes.css'
 
 const CATEGORY_CONFIG = {
@@ -142,7 +143,7 @@ export default function Notes() {
         : notes.find(n => n.id === id)
 
       if (!isCreatedByCurrentUser(target)) {
-        alert('Apenas o criador pode excluir este item.')
+        toast.warning('Apenas o criador pode excluir este item.')
         return
       }
 
@@ -154,7 +155,7 @@ export default function Notes() {
         setNotes(prev => prev.filter(n => n.id !== id))
       }
       setDeleteTarget(null)
-    } catch (e) { alert('Falha ao deletar.') }
+    } catch (e) { toast.error('Falha ao deletar.') }
   }
 
   // Derived data
